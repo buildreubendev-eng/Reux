@@ -6,6 +6,7 @@ import { databaseUrl, loadConfig } from "../src/config.js";
 import { emitInsertStatement, emitQuerySql } from "../src/compiler.js";
 import { mapDatabaseError } from "../src/db-errors.js";
 import { parseJsonObject } from "../src/data.js";
+import { parseSeedSpec, runSeed } from "../src/seed.js";
 import {
   applyMigrations,
   claimOutboxEvents,
@@ -193,6 +194,61 @@ entity User {
     writeFileSync(path, '{"name":"Ada"}');
 
     expect(parseJsonObject(`@${path}`)).toEqual({ name: "Ada" });
+  });
+
+  it("parses and runs seed records with aliases", async () => {
+    const db = new FakeDb();
+    const source = `module commerce
+
+entity User {
+  id: Id<User> primary generated
+  email: String
+}
+
+entity Order {
+  id: Id<Order> primary generated
+  user: User required
+  total: Decimal
+}
+`;
+
+    const result = await runSeed(
+      db,
+      source,
+      parseSeedSpec(
+        JSON.stringify({
+          records: [
+            { entity: "User", as: "ada", data: { email: "ada@example.com" } },
+            { entity: "Order", as: "order1", data: { user: "$ada", total: "100" } },
+          ],
+        }),
+      ),
+    );
+
+    expect(result.inserted).toEqual([
+      { entity: "User", as: "ada", id: "row-1" },
+      { entity: "Order", as: "order1", id: "row-2" },
+    ]);
+    expect(db.queryCalls[1]).toEqual({
+      sql: "INSERT INTO orders (user_id, total) VALUES ($1, $2) RETURNING *;",
+      params: ["row-1", "100"],
+    });
+  });
+
+  it("rejects seed references before their alias is inserted", async () => {
+    await expect(
+      runSeed(
+        new FakeDb(),
+        `module commerce
+
+entity Order {
+  id: Id<Order> primary generated
+  user: String
+}
+`,
+        parseSeedSpec(JSON.stringify({ records: [{ entity: "Order", data: { user: "$missing" } }] })),
+      ),
+    ).rejects.toThrow("seed reference $missing has not been inserted yet");
   });
 
   it("maps PostgreSQL errors into DL database errors", () => {
@@ -511,6 +567,12 @@ class FakeDb implements Database {
         filename: params?.[0] as string,
         hash: params?.[1] as string,
       });
+    }
+    if (sql.startsWith("INSERT INTO users") || sql.startsWith("INSERT INTO orders")) {
+      return {
+        rows: [{ id: `row-${this.queryCalls.filter((call) => call.sql.startsWith("INSERT INTO users") || call.sql.startsWith("INSERT INTO orders")).length}` }] as T[],
+        rowCount: 1,
+      };
     }
     if (sql.startsWith("INSERT INTO _dl_outbox")) {
       const row = {

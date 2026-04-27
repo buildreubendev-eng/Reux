@@ -65,6 +65,7 @@ node dist/cli.js project-query-run highValueUsers '[1000]'
 node dist/cli.js project-tx-sql rewardUser
 node dist/cli.js project-tx-run rewardUser '["user-id","100"]'
 node dist/cli.js project-data-insert-sql User '{"name":"Ada","email":"ada@example.com","balance":"1200"}'
+node dist/cli.js project-seed-run pilot/seeds/smoke.json
 ```
 
 The initial source discovery supports exact paths plus `*` and `**` glob patterns, deduplicates overlapping matches, and reports each compiled file in stable path order. `project-summary` also reports duplicate declaration names across configured files by module and declaration kind.
@@ -149,6 +150,42 @@ node dist/cli.js data-insert-sql examples/commerce.dl User '{"name":"Ada","email
 For larger fixtures or shells that strip JSON quotes, pass `@path/to/file.json`.
 
 The JSON object keys must match entity fields. Generated primary keys and omitted fields are left to database defaults or nullable columns.
+
+## Seed Files
+
+Run a seed file against an explicit source:
+
+```bash
+node dist/cli.js seed-run examples/pilot_reux.dl pilot/seeds/smoke.json
+```
+
+Run a seed file against the configured project source:
+
+```powershell
+$env:REUX_CONFIG="pilot/dl.json"
+node dist/cli.js project-seed-run pilot/seeds/smoke.json
+```
+
+Seed files insert records in order:
+
+```json
+{
+  "records": [
+    {
+      "entity": "Account",
+      "as": "ada",
+      "data": { "email": "ada@example.com", "balance": "50" }
+    },
+    {
+      "entity": "Order",
+      "as": "adaOrder",
+      "data": { "account": "$ada", "total": "250", "status": "Pending" }
+    }
+  ]
+}
+```
+
+`as` stores the inserted row id under an alias. A later string value of `$alias` is replaced with that id before insertion. This is enough for simple relationship fixtures such as account-owned orders and order-owned payments.
 
 ## Error Mapping
 

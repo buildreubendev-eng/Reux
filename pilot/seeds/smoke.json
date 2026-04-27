@@ -1,0 +1,40 @@
+{
+  "records": [
+    {
+      "entity": "Account",
+      "as": "ada",
+      "data": {
+        "email": "ada.pilot@example.com",
+        "displayName": "Ada Pilot",
+        "balance": "50"
+      }
+    },
+    {
+      "entity": "Product",
+      "as": "starterKit",
+      "data": {
+        "sku": "PILOT-STARTER-KIT",
+        "name": "Pilot Starter Kit",
+        "price": "250"
+      }
+    },
+    {
+      "entity": "Order",
+      "as": "adaOrder",
+      "data": {
+        "account": "$ada",
+        "total": "250",
+        "status": "Pending"
+      }
+    },
+    {
+      "entity": "Payment",
+      "as": "adaPayment",
+      "data": {
+        "order": "$adaOrder",
+        "amount": "125",
+        "status": "Authorized"
+      }
+    }
+  ]
+}

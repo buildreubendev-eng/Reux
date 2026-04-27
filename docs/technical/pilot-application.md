@@ -36,6 +36,7 @@ node dist/cli.js project-query-sql orderPayments
 node dist/cli.js project-query-sql accountOrderSummary
 node dist/cli.js project-tx-sql capturePayment
 node dist/cli.js project-tx-sql creditAccount
+node dist/cli.js project-seed-run pilot/seeds/smoke.json
 ```
 
 The pilot is activated through `pilot/dl.json`, `pilot/.dl/schema-manifest.json`, and `pilot/migrations/`. Keeping those separate lets the root `dl.json` and root `migrations/` continue to drive the commerce fixtures while the completed Phase 6 pilot remains available as an independent application slice.
@@ -87,10 +88,21 @@ node dist/cli.js project-tx-sql creditAccount
 
 `test:pilot:postgres` creates a temporary PostgreSQL schema, applies the pilot migrations, seeds accounts/orders/payments data, runs the join and aggregation queries, runs `capturePayment` and `creditAccount`, then drops the temporary schema. This verifies the pilot without requiring Docker Desktop and without colliding with the root commerce fixtures.
 
+## Pilot Seed
+
+`pilot/seeds/smoke.json` is the first reusable pilot fixture. It inserts:
+
+- one account aliased as `ada`;
+- one product aliased as `starterKit`;
+- one order aliased as `adaOrder`;
+- one payment aliased as `adaPayment`.
+
+The order references `$ada`, and the payment references `$adaOrder`, so the seed can be run on a fresh database without manually copying UUIDs.
+
 Likely next language/runtime needs exposed by this pilot:
 
 - typed money/currency conventions;
 - transaction-local generated IDs;
 - richer insert result binding;
 - status transition validation;
-- first-class fixture/seed tooling outside the integration harness.
+- idempotent seed/upsert modes for repeated local development runs.

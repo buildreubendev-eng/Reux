@@ -44,6 +44,7 @@ node dist/cli.js query-sql examples/commerce.dl highValueUsers
 node dist/cli.js query-run examples/commerce.dl highValueUsers '[1000]'
 node dist/cli.js data-insert-sql examples/commerce.dl User '{"name":"Ada","email":"ada@example.com","balance":"1200"}'
 node dist/cli.js data-insert examples/commerce.dl User '{"name":"Ada","email":"ada@example.com","balance":"1200"}'
+node dist/cli.js seed-run examples/pilot_reux.dl pilot/seeds/smoke.json
 node dist/cli.js tx-ir examples/commerce_v2.dl rewardUser
 node dist/cli.js tx-sql examples/commerce_v2.dl rewardUser
 node dist/cli.js tx-run examples/commerce_v2.dl rewardUser '["user-id","100"]'
@@ -54,6 +55,7 @@ node dist/cli.js tx-sql examples/pilot_reux.dl creditAccount
 $env:REUX_CONFIG='pilot/dl.json'
 node dist/cli.js project-doctor
 node dist/cli.js project-query-sql accountOrders
+node dist/cli.js project-seed-run pilot/seeds/smoke.json
 Remove-Item Env:REUX_CONFIG
 node dist/cli.js outbox-list
 node dist/cli.js outbox-list failed 10

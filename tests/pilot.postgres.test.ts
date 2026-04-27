@@ -2,7 +2,6 @@ import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
-  emitInsertStatement,
   emitQuerySql,
   emitTransactionSql,
   transactionRetryAttempts,
@@ -15,6 +14,7 @@ import {
   runSqlQuery,
   runTransactionSql,
 } from "../src/runtime.js";
+import { parseSeedSpec, runSeed } from "../src/seed.js";
 
 const runIntegration = Boolean(process.env.DATABASE_URL);
 const describeIntegration = runIntegration ? describe : describe.skip;
@@ -47,26 +47,51 @@ describeIntegration("pilot postgres smoke", () => {
       expect(status.pending).toEqual([]);
 
       const source = readFileSync("examples/pilot_reux.dl", "utf8");
-      const account = await insertOne<{ id: string }>(pilotDb, source, "Account", {
-        email: `pilot-${schemaName}@example.com`,
-        displayName: "Pilot Account",
-        balance: "50",
-      });
-      await insertOne(pilotDb, source, "Product", {
-        sku: `SKU-${schemaName}`,
-        name: "Pilot Product",
-        price: "250",
-      });
-      const order = await insertOne<{ id: string }>(pilotDb, source, "Order", {
-        account: account.id,
-        total: "250",
-        status: "Pending",
-      });
-      await insertOne(pilotDb, source, "Payment", {
-        order: order.id,
-        amount: "125",
-        status: "Authorized",
-      });
+      const seed = parseSeedSpec(
+        JSON.stringify({
+          records: [
+            {
+              entity: "Account",
+              as: "account",
+              data: {
+                email: `pilot-${schemaName}@example.com`,
+                displayName: "Pilot Account",
+                balance: "50",
+              },
+            },
+            {
+              entity: "Product",
+              as: "product",
+              data: {
+                sku: `SKU-${schemaName}`,
+                name: "Pilot Product",
+                price: "250",
+              },
+            },
+            {
+              entity: "Order",
+              as: "order",
+              data: {
+                account: "$account",
+                total: "250",
+                status: "Pending",
+              },
+            },
+            {
+              entity: "Payment",
+              as: "payment",
+              data: {
+                order: "$order",
+                amount: "125",
+                status: "Authorized",
+              },
+            },
+          ],
+        }),
+      );
+      const seedResult = await runSeed(pilotDb, source, seed);
+      const account = seeded(seedResult, "account");
+      const order = seeded(seedResult, "order");
 
       const accountOrders = await runSqlQuery(pilotDb, emitQuerySql(source, "accountOrders"), ["100"]);
       expect(accountOrders.rows).toEqual([
@@ -136,17 +161,6 @@ describeIntegration("pilot postgres smoke", () => {
   });
 });
 
-async function insertOne<T>(
-  db: ReturnType<typeof createPostgresDatabase>,
-  source: string,
-  entity: string,
-  record: Record<string, unknown>,
-): Promise<T> {
-  const statement = emitInsertStatement(source, entity, record);
-  const result = await runSqlQuery(db, statement.sql, statement.params);
-  return result.rows[0] as T;
-}
-
 function databaseUrlWithSearchPath(source: string, schemaName: string): string {
   const url = new URL(source);
   url.searchParams.set("options", `-c search_path=${schemaName},public`);
@@ -155,4 +169,12 @@ function databaseUrlWithSearchPath(source: string, schemaName: string): string {
 
 function quoteIdentifier(value: string): string {
   return `"${value.replaceAll('"', '""')}"`;
+}
+
+function seeded(result: { inserted: { as?: string; id?: unknown }[] }, alias: string): { id: string } {
+  const match = result.inserted.find((record) => record.as === alias);
+  if (!match?.id || typeof match.id !== "string") {
+    throw new Error(`seed alias ${alias} was not inserted`);
+  }
+  return { id: match.id };
 }
