@@ -6,7 +6,7 @@ import { databaseUrl, loadConfig } from "../src/config.js";
 import { emitInsertStatement, emitQuerySql } from "../src/compiler.js";
 import { mapDatabaseError } from "../src/db-errors.js";
 import { parseJsonObject } from "../src/data.js";
-import { deleteSeed, parseSeedSpec, runSeed } from "../src/seed.js";
+import { checkSeed, deleteSeed, parseSeedSpec, runSeed } from "../src/seed.js";
 import {
   applyMigrations,
   claimOutboxEvents,
@@ -233,6 +233,76 @@ entity Order {
       sql: "INSERT INTO orders (user_id, total) VALUES ($1, $2) RETURNING *;",
       params: ["row-1", "100"],
     });
+  });
+
+  it("checks seed records without a database", () => {
+    const source = `module commerce
+
+entity User {
+  id: Id<User> primary generated
+  email: String unique
+}
+
+entity Order {
+  id: Id<Order> primary generated
+  user: User required
+  total: Decimal
+}
+`;
+
+    const result = checkSeed(
+      source,
+      parseSeedSpec(
+        JSON.stringify({
+          mode: "upsert",
+          records: [
+            { entity: "User", as: "ada", by: ["email"], data: { email: "ada@example.com" } },
+            { entity: "Order", as: "order1", by: ["id"], data: { id: "order-1", user: "$ada", total: "100" } },
+          ],
+        }),
+      ),
+    );
+
+    expect(result).toEqual({
+      records: [
+        { entity: "User", as: "ada", mode: "upsert", by: ["email"], fields: ["email"] },
+        { entity: "Order", as: "order1", mode: "upsert", by: ["id"], fields: ["id", "user", "total"] },
+      ],
+    });
+  });
+
+  it("rejects invalid seed checks before opening a database connection", () => {
+    const source = `module commerce
+
+entity User {
+  id: Id<User> primary generated
+  email: String unique
+}
+`;
+
+    expect(() =>
+      checkSeed(
+        source,
+        parseSeedSpec(
+          JSON.stringify({
+            mode: "upsert",
+            records: [{ entity: "User", by: ["email"], data: { name: "Ada" } }],
+          }),
+        ),
+      ),
+    ).toThrow("entity User has no field name");
+
+    expect(() =>
+      checkSeed(
+        source,
+        parseSeedSpec(
+          JSON.stringify({
+            mode: "upsert",
+            records: [{ entity: "User", by: ["email"], data: { id: "$missing", email: "ada@example.com" } }],
+          }),
+        ),
+      ),
+    ).toThrow("seed reference $missing has not been inserted yet");
   });
 
   it("runs upsert seed records with explicit conflict fields", async () => {

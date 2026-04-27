@@ -65,6 +65,7 @@ node dist/cli.js project-query-run highValueUsers '[1000]'
 node dist/cli.js project-tx-sql rewardUser
 node dist/cli.js project-tx-run rewardUser '["user-id","100"]'
 node dist/cli.js project-data-insert-sql User '{"name":"Ada","email":"ada@example.com","balance":"1200"}'
+node dist/cli.js project-seed-check pilot/seeds/smoke.json
 node dist/cli.js project-seed-run pilot/seeds/smoke.json
 node dist/cli.js project-seed-delete pilot/seeds/smoke.json
 ```
@@ -157,6 +158,7 @@ The JSON object keys must match entity fields. Generated primary keys and omitte
 Run a seed file against an explicit source:
 
 ```bash
+node dist/cli.js seed-check examples/pilot_reux.dl pilot/seeds/smoke.json
 node dist/cli.js seed-run examples/pilot_reux.dl pilot/seeds/smoke.json
 node dist/cli.js seed-delete examples/pilot_reux.dl pilot/seeds/smoke.json
 ```
@@ -165,9 +167,12 @@ Run a seed file against the configured project source:
 
 ```powershell
 $env:REUX_CONFIG="pilot/dl.json"
+node dist/cli.js project-seed-check pilot/seeds/smoke.json
 node dist/cli.js project-seed-run pilot/seeds/smoke.json
 node dist/cli.js project-seed-delete pilot/seeds/smoke.json
 ```
+
+`seed-check` and `project-seed-check` validate a seed file without connecting to PostgreSQL. They compile the source, verify that every record targets a known entity, reject unknown data fields, verify each `by` field exists and is present in the record data, and ensure `$alias` values only reference earlier seed records.
 
 Seed files insert records in order. The default mode is `insert`:
 

@@ -67,6 +67,7 @@ node dist/cli.js project-tx-sql rewardUser
 node dist/cli.js project-tx-run rewardUser '["user-id","100"]'
 node dist/cli.js project-data-insert-sql User '{"name":"Ada","email":"ada@example.com","balance":"1200"}'
 node dist/cli.js project-data-insert User '{"name":"Ada","email":"ada@example.com","balance":"1200"}'
+node dist/cli.js project-seed-check pilot/seeds/smoke.json
 node dist/cli.js project-seed-run pilot/seeds/smoke.json
 ```
 
@@ -129,11 +130,15 @@ node dist/cli.js data-insert-sql examples/commerce.dl User @seed/user.json
 Run an ordered seed file:
 
 ```bash
+node dist/cli.js seed-check examples/pilot_reux.dl pilot/seeds/smoke.json
 node dist/cli.js seed-run examples/pilot_reux.dl pilot/seeds/smoke.json
 node dist/cli.js seed-delete examples/pilot_reux.dl pilot/seeds/smoke.json
+node dist/cli.js project-seed-check pilot/seeds/smoke.json
 node dist/cli.js project-seed-run pilot/seeds/smoke.json
 node dist/cli.js project-seed-delete pilot/seeds/smoke.json
 ```
+
+`seed-check` and `project-seed-check` compile the Reux source and validate the seed file without opening a database connection. The check verifies entity names, data field names, `by` fields, required conflict keys for upsert records, and `$alias` references in declaration order.
 
 Seed files contain ordered records. `as` creates an alias for the inserted row id; later records can use `$alias` in their data. Use `mode: "upsert"` with `by` to make a seed rerunnable:
 

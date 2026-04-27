@@ -26,6 +26,18 @@ export interface SeedDeleteResult {
   deleted: SeedDeletedRecord[];
 }
 
+export interface SeedCheckResult {
+  records: SeedCheckedRecord[];
+}
+
+export interface SeedCheckedRecord {
+  entity: string;
+  as?: string;
+  mode: SeedMode;
+  by: string[];
+  fields: string[];
+}
+
 export interface SeedInsertedRecord {
   entity: string;
   as?: string;
@@ -55,6 +67,31 @@ export function parseSeedSpec(source: string): SeedSpec {
     mode,
     records: records.map((record, index) => parseSeedRecord(record, index, aliases)),
   };
+}
+
+export function checkSeed(source: string, spec: SeedSpec): SeedCheckResult {
+  const schema = compileSource(source).schema;
+  const aliases = new Set<string>();
+  const records: SeedCheckedRecord[] = [];
+
+  for (const record of spec.records) {
+    const entity = findRequiredEntity(schema.entities, record.entity);
+    const mode = record.mode ?? spec.mode;
+    validateSeedRecord(entity, record.data, record.by, mode);
+    validateSeedReferences(record.data, aliases);
+    if (record.as) {
+      aliases.add(record.as);
+    }
+    records.push({
+      entity: record.entity,
+      as: record.as,
+      mode,
+      by: record.by ?? (mode === "upsert" ? defaultConflictFields(entity) : []),
+      fields: Object.keys(record.data),
+    });
+  }
+
+  return { records };
 }
 
 export async function runSeed(db: Database, source: string, spec: SeedSpec): Promise<SeedRunResult> {
@@ -148,10 +185,8 @@ function seedDeleteStatement(entity: EntityIr, record: Record<string, unknown>, 
   if (fields.length === 0) {
     throw new Error(`seed delete for ${entity.name} needs a by field because the entity has no unique non-generated field`);
   }
+  validateConflictFieldValues(entity, record, fields, "delete");
   const params = fields.map((fieldName) => {
-    if (!Object.prototype.hasOwnProperty.call(record, fieldName)) {
-      throw new Error(`seed delete for ${entity.name} is missing by field ${fieldName}`);
-    }
     return record[fieldName];
   });
   const predicate = fields
@@ -169,6 +204,7 @@ function seedUpsertStatement(entity: EntityIr, record: Record<string, unknown>, 
   if (fields.length === 0) {
     throw new Error(`seed upsert for ${entity.name} needs a by field because the entity has no unique non-generated field`);
   }
+  validateConflictFieldValues(entity, record, fields, "upsert");
   const conflictColumns = fields.map((fieldName) => fieldColumn(entity, fieldName).columnName);
   const updateColumns = insert.columns.filter((column) => !conflictColumns.includes(column));
   const updateSql =
@@ -182,13 +218,19 @@ function seedUpsertStatement(entity: EntityIr, record: Record<string, unknown>, 
   };
 }
 
-function insertColumns(entity: EntityIr, record: Record<string, unknown>): { columns: string[]; placeholders: string[]; params: unknown[] } {
-  const knownFields = new Set(entity.fields.map((field) => field.name));
-  for (const key of Object.keys(record)) {
-    if (!knownFields.has(key)) {
-      throw new Error(`entity ${entity.name} has no field ${key}`);
-    }
+function validateSeedRecord(entity: EntityIr, record: Record<string, unknown>, conflictFields: string[] | undefined, mode: SeedMode): void {
+  validateRecordFields(entity, record);
+  const fields = conflictFields ?? (mode === "upsert" ? defaultConflictFields(entity) : []);
+  if (mode === "upsert" && fields.length === 0) {
+    throw new Error(`seed upsert for ${entity.name} needs a by field because the entity has no unique non-generated field`);
   }
+  if (fields.length > 0) {
+    validateConflictFieldValues(entity, record, fields, mode === "upsert" ? "upsert" : "record");
+  }
+}
+
+function insertColumns(entity: EntityIr, record: Record<string, unknown>): { columns: string[]; placeholders: string[]; params: unknown[] } {
+  validateRecordFields(entity, record);
 
   const columns: string[] = [];
   const params: unknown[] = [];
@@ -203,6 +245,24 @@ function insertColumns(entity: EntityIr, record: Record<string, unknown>): { col
     placeholders: params.map((_param, index) => `$${index + 1}`),
     params,
   };
+}
+
+function validateRecordFields(entity: EntityIr, record: Record<string, unknown>): void {
+  const knownFields = new Set(entity.fields.map((field) => field.name));
+  for (const key of Object.keys(record)) {
+    if (!knownFields.has(key)) {
+      throw new Error(`entity ${entity.name} has no field ${key}`);
+    }
+  }
+}
+
+function validateConflictFieldValues(entity: EntityIr, record: Record<string, unknown>, fields: string[], action: "delete" | "record" | "upsert"): void {
+  for (const fieldName of fields) {
+    fieldColumn(entity, fieldName);
+    if (!Object.prototype.hasOwnProperty.call(record, fieldName)) {
+      throw new Error(`seed ${action} for ${entity.name} is missing by field ${fieldName}`);
+    }
+  }
 }
 
 function defaultConflictFields(entity: EntityIr): string[] {
@@ -246,6 +306,23 @@ function parseConflictFields(value: unknown, index: number): string[] | undefine
 
 function resolveRecord(record: Record<string, unknown>, aliases: Map<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(Object.entries(record).map(([key, value]) => [key, resolveValue(value, aliases)]));
+}
+
+function validateSeedReferences(value: unknown, aliases: Set<string>): void {
+  if (typeof value === "string" && value.startsWith("$")) {
+    const alias = value.slice(1);
+    if (!aliases.has(alias)) {
+      throw new Error(`seed reference ${value} has not been inserted yet`);
+    }
+  } else if (Array.isArray(value)) {
+    for (const item of value) {
+      validateSeedReferences(item, aliases);
+    }
+  } else if (value && typeof value === "object") {
+    for (const item of Object.values(value)) {
+      validateSeedReferences(item, aliases);
+    }
+  }
 }
 
 function resolveValue(value: unknown, aliases: Map<string, unknown>): unknown {

@@ -36,6 +36,7 @@ node dist/cli.js project-query-sql orderPayments
 node dist/cli.js project-query-sql accountOrderSummary
 node dist/cli.js project-tx-sql capturePayment
 node dist/cli.js project-tx-sql creditAccount
+node dist/cli.js project-seed-check pilot/seeds/smoke.json
 node dist/cli.js project-seed-run pilot/seeds/smoke.json
 node dist/cli.js project-seed-delete pilot/seeds/smoke.json
 ```
@@ -85,6 +86,7 @@ $env:REUX_CONFIG='pilot/dl.json'
 node dist/cli.js project-doctor
 node dist/cli.js project-query-sql accountOrders
 node dist/cli.js project-tx-sql creditAccount
+node dist/cli.js project-seed-check pilot/seeds/smoke.json
 ```
 
 `test:pilot:postgres` creates a temporary PostgreSQL schema, applies the pilot migrations, seeds accounts/orders/payments data, runs the join and aggregation queries, runs `capturePayment` and `creditAccount`, then drops the temporary schema. This verifies the pilot without requiring Docker Desktop and without colliding with the root commerce fixtures.
@@ -99,6 +101,8 @@ node dist/cli.js project-tx-sql creditAccount
 - one payment aliased as `adaPayment`.
 
 The seed uses stable UUIDs and `mode: "upsert"` with `by: ["id"]`, so it can be run repeatedly during local development. The order references `$ada`, and the payment references `$adaOrder`, so the seed can also run on a fresh database without manually copying UUIDs.
+
+Use `project-seed-check pilot/seeds/smoke.json` before applying the seed when editing fixtures. It validates the fixture against the pilot schema without opening a database connection, including entity names, fields, conflict keys, and alias order.
 
 Use `project-seed-delete pilot/seeds/smoke.json` to remove the fixture rows. Deletes run in reverse seed order, so `Payment` is removed before `Order`, and `Order` before `Account`.
 
