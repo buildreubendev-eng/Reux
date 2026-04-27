@@ -24,7 +24,7 @@ Status: mostly implemented for the MVP subset.
 
 Status: implemented for a narrow query subset.
 
-- Supports one scanned entity with explicit joins, optional `where`, optional `group by`, optional `order by`, entity or record projection, enum literal predicates, and narrow `count()`/`sum(field)` aggregations.
+- Supports one scanned entity with explicit joins, optional `where`, optional `group by`, optional `order by`, entity or record projection, enum literal predicates, and narrow `count()`/`sum(field)`/`avg(field)`/`min(field)`/`max(field)` aggregations.
 - Emits Query IR and PostgreSQL SQL.
 - Validates referenced fields, parameter references, enum literal values, and record projection shape against declared `Query<{ ... }>` result types.
 - Provides `explain`, `query-ir`, `query-sql`, and project-scoped variants.
@@ -81,4 +81,4 @@ Phase 6 coverage:
 - Transaction conflict behavior represented by `creditAccount`, which lowers to `SELECT ... FOR UPDATE`, a balance update, retry metadata, and an outbox event.
 - Production-like verification path documented for WSL PostgreSQL through `npm run test:postgres`.
 
-The remaining gaps are beyond Phase 6 rather than blockers for it: richer query composition, broader aggregation semantics, runtime enforcement for status transition rules, broader fixture/seed workflows, a full always-on worker service for after-commit hooks and outbox dispatch, and eventually switching `dl.json` from commerce fixtures to the pilot source when the project is ready to treat the pilot as the active application.
+The remaining gaps are beyond Phase 6 rather than blockers for it: richer query composition, deeper aggregation semantics, runtime enforcement for status transition rules, broader fixture/seed workflows, a full always-on worker service for after-commit hooks and outbox dispatch, and eventually switching `dl.json` from commerce fixtures to the pilot source when the project is ready to treat the pilot as the active application.

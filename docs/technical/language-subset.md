@@ -114,7 +114,7 @@ query accountOrderSummary(minTotal: Decimal): Query<{ email: String, orderCount:
   select { email: account.email, orderCount: count(), totalSpend: sum(order.total) }
 ```
 
-Supported aggregate expressions are `count()` and `sum(alias.field)`. Grouped record projections must either be grouped expressions or supported aggregate expressions. `count()` is typed as `Int64`; `sum(alias.field)` has the same declared type as the referenced field in the current subset.
+Supported aggregate expressions are `count()`, `sum(alias.field)`, `avg(alias.field)`, `min(alias.field)`, and `max(alias.field)`. Grouped record projections must either be grouped expressions or supported aggregate expressions. `count()` is typed as `Int64`; field-based aggregates have the same declared type as the referenced field in the current subset.
 
 ## Transaction Function Subset
 

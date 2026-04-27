@@ -125,6 +125,37 @@ describe("compiler prototype", () => {
     expect(sql).toContain('ORDER BY sum("order".total) DESC');
   });
 
+  it("lowers broader grouped aggregate functions to PostgreSQL", () => {
+    const sql = emitQuerySql(
+      `module commerce
+
+entity Account {
+  id: Id<Account> primary generated
+  email: String
+}
+
+entity Order {
+  id: Id<Order> primary generated
+  account: Account required
+  total: Decimal
+}
+
+query accountOrderStats(): Query<{ email: String, averageTotal: Decimal, smallestTotal: Decimal, largestTotal: Decimal }> =
+  from order in Order
+  join account in Account on order.account == account
+  group by account.email
+  order by max(order.total) desc
+  select { email: account.email, averageTotal: avg(order.total), smallestTotal: min(order.total), largestTotal: max(order.total) }
+`,
+      "accountOrderStats",
+    );
+
+    expect(sql).toContain('avg("order".total) AS averageTotal');
+    expect(sql).toContain('min("order".total) AS smallestTotal');
+    expect(sql).toContain('max("order".total) AS largestTotal');
+    expect(sql).toContain('ORDER BY max("order".total) DESC');
+  });
+
   it("lowers the Reux pilot conflict transaction to PostgreSQL", () => {
     const sql = emitTransactionSql(readFileSync("examples/pilot_reux.dl", "utf8"), "creditAccount");
 

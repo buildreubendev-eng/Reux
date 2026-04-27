@@ -341,13 +341,13 @@ function validateQueryResultType(query: QueryDeclaration, aliases: Map<string, E
       continue;
     }
 
-    const sumMatch = projection.expression.match(/^sum\(([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)\)$/);
-    if (sumMatch) {
-      const entity = aliases.get(sumMatch[1]);
-      const entityField = entity?.fields.find((field) => field.name === sumMatch[2]);
+    const aggregate = aggregateExpression(projection.expression);
+    if (aggregate) {
+      const entity = aliases.get(aggregate.alias);
+      const entityField = entity?.fields.find((field) => field.name === aggregate.field);
       if (entity && entityField && declared !== entityField.type.raw) {
         diagnostics.push(
-          `query ${query.name} declares ${projection.name}: ${declared} but sum(${entity.name}.${entityField.name}) is ${entityField.type.raw}`,
+          `query ${query.name} declares ${projection.name}: ${declared} but ${aggregate.fn}(${entity.name}.${entityField.name}) is ${entityField.type.raw}`,
         );
       }
       continue;
@@ -377,6 +377,16 @@ function validateQueryResultType(query: QueryDeclaration, aliases: Map<string, E
 
 function isCountExpression(expression: string): boolean {
   return /^count\(\s*\)$/.test(expression);
+}
+
+function aggregateExpression(expression: string): { fn: "sum" | "avg" | "min" | "max"; alias: string; field: string } | undefined {
+  const match = expression.match(/^(sum|avg|min|max)\(([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)\)$/);
+  if (!match) return undefined;
+  return {
+    fn: match[1] as "sum" | "avg" | "min" | "max",
+    alias: match[2],
+    field: match[3],
+  };
 }
 
 function validateTransitions(
