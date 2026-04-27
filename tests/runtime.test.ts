@@ -6,7 +6,7 @@ import { databaseUrl, loadConfig } from "../src/config.js";
 import { emitInsertStatement, emitQuerySql } from "../src/compiler.js";
 import { mapDatabaseError } from "../src/db-errors.js";
 import { parseJsonObject } from "../src/data.js";
-import { parseSeedSpec, runSeed } from "../src/seed.js";
+import { deleteSeed, parseSeedSpec, runSeed } from "../src/seed.js";
 import {
   applyMigrations,
   claimOutboxEvents,
@@ -269,6 +269,52 @@ entity User {
       sql: 'INSERT INTO users ("email", "balance") VALUES ($1, $2) ON CONFLICT ("email") DO UPDATE SET "balance" = EXCLUDED."balance" RETURNING *;',
       params: ["ada@example.com", "100"],
     });
+  });
+
+  it("deletes seed records in reverse dependency order", async () => {
+    const db = new FakeDb();
+    const source = `module commerce
+
+entity User {
+  id: Id<User> primary generated
+  email: String unique
+}
+
+entity Order {
+  id: Id<Order> primary generated
+  user: User required
+  total: Decimal
+}
+`;
+
+    const result = await deleteSeed(
+      db,
+      source,
+      parseSeedSpec(
+        JSON.stringify({
+          mode: "upsert",
+          records: [
+            { entity: "User", as: "ada", by: ["id"], data: { id: "user-1", email: "ada@example.com" } },
+            { entity: "Order", as: "order1", by: ["id"], data: { id: "order-1", user: "$ada", total: "100" } },
+          ],
+        }),
+      ),
+    );
+
+    expect(result.deleted).toEqual([
+      { entity: "Order", as: "order1", rowCount: 1 },
+      { entity: "User", as: "ada", rowCount: 1 },
+    ]);
+    expect(db.queryCalls).toEqual([
+      {
+        sql: 'DELETE FROM orders WHERE "id" = $1 RETURNING id;',
+        params: ["order-1"],
+      },
+      {
+        sql: 'DELETE FROM users WHERE "id" = $1 RETURNING id;',
+        params: ["user-1"],
+      },
+    ]);
   });
 
   it("rejects seed references before their alias is inserted", async () => {
@@ -607,6 +653,12 @@ class FakeDb implements Database {
     if (sql.startsWith("INSERT INTO users") || sql.startsWith("INSERT INTO orders")) {
       return {
         rows: [{ id: `row-${this.queryCalls.filter((call) => call.sql.startsWith("INSERT INTO users") || call.sql.startsWith("INSERT INTO orders")).length}` }] as T[],
+        rowCount: 1,
+      };
+    }
+    if (sql.startsWith("DELETE FROM users") || sql.startsWith("DELETE FROM orders")) {
+      return {
+        rows: [{ id: params?.[0] }] as T[],
         rowCount: 1,
       };
     }

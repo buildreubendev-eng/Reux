@@ -22,10 +22,20 @@ export interface SeedRunResult {
   inserted: SeedInsertedRecord[];
 }
 
+export interface SeedDeleteResult {
+  deleted: SeedDeletedRecord[];
+}
+
 export interface SeedInsertedRecord {
   entity: string;
   as?: string;
   id?: unknown;
+}
+
+export interface SeedDeletedRecord {
+  entity: string;
+  as?: string;
+  rowCount: number | null;
 }
 
 export function parseSeedSpec(source: string): SeedSpec {
@@ -77,6 +87,31 @@ export async function runSeed(db: Database, source: string, spec: SeedSpec): Pro
   return { inserted };
 }
 
+export async function deleteSeed(db: Database, source: string, spec: SeedSpec): Promise<SeedDeleteResult> {
+  const schema = compileSource(source).schema;
+  const aliases = new Map<string, unknown>();
+  const resolved = spec.records.map((record) => {
+    const data = resolveRecord(record.data, aliases);
+    if (record.as && Object.prototype.hasOwnProperty.call(data, "id")) {
+      aliases.set(record.as, data.id);
+    }
+    return { record, data };
+  });
+  const deleted: SeedDeletedRecord[] = [];
+
+  for (const { record, data } of [...resolved].reverse()) {
+    const statement = seedDeleteStatement(findRequiredEntity(schema.entities, record.entity), data, record.by);
+    const result = await runSqlQuery(db, statement.sql, statement.params);
+    deleted.push({
+      entity: record.entity,
+      as: record.as,
+      rowCount: result.rowCount,
+    });
+  }
+
+  return { deleted };
+}
+
 function parseSeedRecord(record: unknown, index: number, aliases: Set<string>): SeedRecord {
   if (!record || typeof record !== "object" || Array.isArray(record)) {
     throw new Error(`seed record ${index + 1} must be an object`);
@@ -105,6 +140,26 @@ function parseSeedRecord(record: unknown, index: number, aliases: Set<string>): 
     mode,
     by: parseConflictFields(candidate.by, index),
     data: candidate.data as Record<string, unknown>,
+  };
+}
+
+function seedDeleteStatement(entity: EntityIr, record: Record<string, unknown>, conflictFields?: string[]): { sql: string; params: unknown[] } {
+  const fields = conflictFields ?? defaultConflictFields(entity);
+  if (fields.length === 0) {
+    throw new Error(`seed delete for ${entity.name} needs a by field because the entity has no unique non-generated field`);
+  }
+  const params = fields.map((fieldName) => {
+    if (!Object.prototype.hasOwnProperty.call(record, fieldName)) {
+      throw new Error(`seed delete for ${entity.name} is missing by field ${fieldName}`);
+    }
+    return record[fieldName];
+  });
+  const predicate = fields
+    .map((fieldName, index) => `${quoteIdentifier(fieldColumn(entity, fieldName).columnName)} = $${index + 1}`)
+    .join(" AND ");
+  return {
+    sql: `DELETE FROM ${entity.tableName} WHERE ${predicate} RETURNING id;`,
+    params,
   };
 }
 

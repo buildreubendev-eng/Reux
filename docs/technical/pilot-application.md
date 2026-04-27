@@ -37,6 +37,7 @@ node dist/cli.js project-query-sql accountOrderSummary
 node dist/cli.js project-tx-sql capturePayment
 node dist/cli.js project-tx-sql creditAccount
 node dist/cli.js project-seed-run pilot/seeds/smoke.json
+node dist/cli.js project-seed-delete pilot/seeds/smoke.json
 ```
 
 The pilot is activated through `pilot/dl.json`, `pilot/.dl/schema-manifest.json`, and `pilot/migrations/`. Keeping those separate lets the root `dl.json` and root `migrations/` continue to drive the commerce fixtures while the completed Phase 6 pilot remains available as an independent application slice.
@@ -99,10 +100,12 @@ node dist/cli.js project-tx-sql creditAccount
 
 The seed uses stable UUIDs and `mode: "upsert"` with `by: ["id"]`, so it can be run repeatedly during local development. The order references `$ada`, and the payment references `$adaOrder`, so the seed can also run on a fresh database without manually copying UUIDs.
 
+Use `project-seed-delete pilot/seeds/smoke.json` to remove the fixture rows. Deletes run in reverse seed order, so `Payment` is removed before `Order`, and `Order` before `Account`.
+
 Likely next language/runtime needs exposed by this pilot:
 
 - typed money/currency conventions;
 - transaction-local generated IDs;
 - richer insert result binding;
 - status transition validation;
-- seed delete/reset modes for clearing local fixture data.
+- richer seed reset modes for truncating or refreshing whole fixture groups.
