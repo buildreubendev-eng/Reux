@@ -133,13 +133,14 @@ node dist/cli.js seed-run examples/pilot_reux.dl pilot/seeds/smoke.json
 node dist/cli.js project-seed-run pilot/seeds/smoke.json
 ```
 
-Seed files contain ordered records. `as` creates an alias for the inserted row id; later records can use `$alias` in their data:
+Seed files contain ordered records. `as` creates an alias for the inserted row id; later records can use `$alias` in their data. Use `mode: "upsert"` with `by` to make a seed rerunnable:
 
 ```json
 {
+  "mode": "upsert",
   "records": [
-    { "entity": "Account", "as": "ada", "data": { "email": "ada@example.com", "balance": "50" } },
-    { "entity": "Order", "as": "order1", "data": { "account": "$ada", "total": "250" } }
+    { "entity": "Account", "as": "ada", "by": ["id"], "data": { "id": "00000000-0000-4000-8000-000000000001", "email": "ada@example.com", "balance": "50" } },
+    { "entity": "Order", "as": "order1", "by": ["id"], "data": { "id": "00000000-0000-4000-8000-000000000002", "account": "$ada", "total": "250" } }
   ]
 }
 ```

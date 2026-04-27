@@ -1,9 +1,12 @@
 {
+  "mode": "upsert",
   "records": [
     {
       "entity": "Account",
       "as": "ada",
+      "by": ["id"],
       "data": {
+        "id": "00000000-0000-4000-8000-000000000001",
         "email": "ada.pilot@example.com",
         "displayName": "Ada Pilot",
         "balance": "50"
@@ -12,7 +15,9 @@
     {
       "entity": "Product",
       "as": "starterKit",
+      "by": ["id"],
       "data": {
+        "id": "00000000-0000-4000-8000-000000000002",
         "sku": "PILOT-STARTER-KIT",
         "name": "Pilot Starter Kit",
         "price": "250"
@@ -21,7 +26,9 @@
     {
       "entity": "Order",
       "as": "adaOrder",
+      "by": ["id"],
       "data": {
+        "id": "00000000-0000-4000-8000-000000000003",
         "account": "$ada",
         "total": "250",
         "status": "Pending"
@@ -30,7 +37,9 @@
     {
       "entity": "Payment",
       "as": "adaPayment",
+      "by": ["id"],
       "data": {
+        "id": "00000000-0000-4000-8000-000000000004",
         "order": "$adaOrder",
         "amount": "125",
         "status": "Authorized"

@@ -97,7 +97,7 @@ node dist/cli.js project-tx-sql creditAccount
 - one order aliased as `adaOrder`;
 - one payment aliased as `adaPayment`.
 
-The order references `$ada`, and the payment references `$adaOrder`, so the seed can be run on a fresh database without manually copying UUIDs.
+The seed uses stable UUIDs and `mode: "upsert"` with `by: ["id"]`, so it can be run repeatedly during local development. The order references `$ada`, and the payment references `$adaOrder`, so the seed can also run on a fresh database without manually copying UUIDs.
 
 Likely next language/runtime needs exposed by this pilot:
 
@@ -105,4 +105,4 @@ Likely next language/runtime needs exposed by this pilot:
 - transaction-local generated IDs;
 - richer insert result binding;
 - status transition validation;
-- idempotent seed/upsert modes for repeated local development runs.
+- seed delete/reset modes for clearing local fixture data.

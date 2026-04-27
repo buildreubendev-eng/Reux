@@ -235,6 +235,42 @@ entity Order {
     });
   });
 
+  it("runs upsert seed records with explicit conflict fields", async () => {
+    const db = new FakeDb();
+    const source = `module commerce
+
+entity User {
+  id: Id<User> primary generated
+  email: String unique
+  balance: Decimal default 0
+}
+`;
+
+    const result = await runSeed(
+      db,
+      source,
+      parseSeedSpec(
+        JSON.stringify({
+          mode: "upsert",
+          records: [
+            {
+              entity: "User",
+              as: "ada",
+              by: ["email"],
+              data: { email: "ada@example.com", balance: "100" },
+            },
+          ],
+        }),
+      ),
+    );
+
+    expect(result.inserted).toEqual([{ entity: "User", as: "ada", id: "row-1" }]);
+    expect(db.queryCalls[0]).toEqual({
+      sql: 'INSERT INTO users ("email", "balance") VALUES ($1, $2) ON CONFLICT ("email") DO UPDATE SET "balance" = EXCLUDED."balance" RETURNING *;',
+      params: ["ada@example.com", "100"],
+    });
+  });
+
   it("rejects seed references before their alias is inserted", async () => {
     await expect(
       runSeed(

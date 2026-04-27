@@ -47,56 +47,16 @@ describeIntegration("pilot postgres smoke", () => {
       expect(status.pending).toEqual([]);
 
       const source = readFileSync("examples/pilot_reux.dl", "utf8");
-      const seed = parseSeedSpec(
-        JSON.stringify({
-          records: [
-            {
-              entity: "Account",
-              as: "account",
-              data: {
-                email: `pilot-${schemaName}@example.com`,
-                displayName: "Pilot Account",
-                balance: "50",
-              },
-            },
-            {
-              entity: "Product",
-              as: "product",
-              data: {
-                sku: `SKU-${schemaName}`,
-                name: "Pilot Product",
-                price: "250",
-              },
-            },
-            {
-              entity: "Order",
-              as: "order",
-              data: {
-                account: "$account",
-                total: "250",
-                status: "Pending",
-              },
-            },
-            {
-              entity: "Payment",
-              as: "payment",
-              data: {
-                order: "$order",
-                amount: "125",
-                status: "Authorized",
-              },
-            },
-          ],
-        }),
-      );
+      const seed = parseSeedSpec("@pilot/seeds/smoke.json");
       const seedResult = await runSeed(pilotDb, source, seed);
-      const account = seeded(seedResult, "account");
-      const order = seeded(seedResult, "order");
+      await runSeed(pilotDb, source, seed);
+      const account = seeded(seedResult, "ada");
+      const order = seeded(seedResult, "adaOrder");
 
       const accountOrders = await runSqlQuery(pilotDb, emitQuerySql(source, "accountOrders"), ["100"]);
       expect(accountOrders.rows).toEqual([
         expect.objectContaining({
-          email: `pilot-${schemaName}@example.com`,
+          email: "ada.pilot@example.com",
           status: "Pending",
         }),
       ]);
@@ -111,7 +71,7 @@ describeIntegration("pilot postgres smoke", () => {
       const accountSummary = await runSqlQuery(pilotDb, emitQuerySql(source, "accountOrderSummary"), ["100"]);
       expect(accountSummary.rows).toEqual([
         expect.objectContaining({
-          email: `pilot-${schemaName}@example.com`,
+          email: "ada.pilot@example.com",
           ordercount: "1",
         }),
       ]);
@@ -145,7 +105,7 @@ describeIntegration("pilot postgres smoke", () => {
       const balances = await runSqlQuery(pilotDb, emitQuerySql(source, "accountBalances"), ["70"]);
       expect(balances.rows).toEqual([
         expect.objectContaining({
-          email: `pilot-${schemaName}@example.com`,
+          email: "ada.pilot@example.com",
         }),
       ]);
     } finally {

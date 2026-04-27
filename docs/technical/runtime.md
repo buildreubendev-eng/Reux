@@ -166,7 +166,7 @@ $env:REUX_CONFIG="pilot/dl.json"
 node dist/cli.js project-seed-run pilot/seeds/smoke.json
 ```
 
-Seed files insert records in order:
+Seed files insert records in order. The default mode is `insert`:
 
 ```json
 {
@@ -186,6 +186,26 @@ Seed files insert records in order:
 ```
 
 `as` stores the inserted row id under an alias. A later string value of `$alias` is replaced with that id before insertion. This is enough for simple relationship fixtures such as account-owned orders and order-owned payments.
+
+Use `mode: "upsert"` for rerunnable local fixtures. Each upsert record uses `by` as its conflict key; if `by` is omitted, Reux uses the first unique non-generated field if one exists:
+
+```json
+{
+  "mode": "upsert",
+  "records": [
+    {
+      "entity": "Account",
+      "as": "ada",
+      "by": ["id"],
+      "data": {
+        "id": "00000000-0000-4000-8000-000000000001",
+        "email": "ada@example.com",
+        "balance": "50"
+      }
+    }
+  ]
+}
+```
 
 ## Error Mapping
 
