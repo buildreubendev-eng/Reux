@@ -155,12 +155,19 @@ export async function deleteSeed(db: Database, source: string, spec: SeedSpec): 
 }
 
 export async function resetSeed(db: Database, source: string, spec: SeedSpec): Promise<SeedResetResult> {
-  const deleted = await deleteSeed(db, source, spec);
-  const inserted = await runSeed(db, source, spec);
-  return {
-    deleted: deleted.deleted,
-    inserted: inserted.inserted,
-  };
+  await db.query("BEGIN;");
+  try {
+    const deleted = await deleteSeed(db, source, spec);
+    const inserted = await runSeed(db, source, spec);
+    await db.query("COMMIT;");
+    return {
+      deleted: deleted.deleted,
+      inserted: inserted.inserted,
+    };
+  } catch (error) {
+    await db.query("ROLLBACK;");
+    throw error;
+  }
 }
 
 function parseSeedRecord(record: unknown, index: number, aliases: Set<string>): SeedRecord {

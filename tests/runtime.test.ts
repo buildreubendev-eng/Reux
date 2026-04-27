@@ -432,6 +432,10 @@ entity Order {
     });
     expect(db.queryCalls).toEqual([
       {
+        sql: "BEGIN;",
+        params: undefined,
+      },
+      {
         sql: 'DELETE FROM orders WHERE "id" = $1 RETURNING id;',
         params: ["order-1"],
       },
@@ -446,6 +450,10 @@ entity Order {
       {
         sql: "INSERT INTO orders (id, user_id, total) VALUES ($1, $2, $3) RETURNING *;",
         params: ["order-1", "row-1", "100"],
+      },
+      {
+        sql: "COMMIT;",
+        params: undefined,
       },
     ]);
   });

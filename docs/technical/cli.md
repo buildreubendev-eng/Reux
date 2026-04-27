@@ -143,7 +143,7 @@ node dist/cli.js project-seed-reset pilot/seeds/smoke.json
 
 `seed-check` and `project-seed-check` compile the Reux source and validate the seed file without opening a database connection. The check verifies entity names, data field names, `by` fields, required conflict keys for upsert records, and `$alias` references in declaration order.
 
-`seed-reset` and `project-seed-reset` first delete the seed records in reverse order, then run the seed again. Use reset when changing a fixture and wanting the local database to match the file in one command.
+`seed-reset` and `project-seed-reset` first delete the seed records in reverse order, then run the seed again inside one database transaction. Use reset when changing a fixture and wanting the local database to match the file in one command.
 
 Seed files contain ordered records. `as` creates an alias for the inserted row id; later records can use `$alias` in their data. Use `mode: "upsert"` with `by` to make a seed rerunnable:
 

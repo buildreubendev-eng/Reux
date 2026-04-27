@@ -105,7 +105,7 @@ The seed uses stable UUIDs and `mode: "upsert"` with `by: ["id"]`, so it can be 
 
 Use `project-seed-check pilot/seeds/smoke.json` before applying the seed when editing fixtures. It validates the fixture against the pilot schema without opening a database connection, including entity names, fields, conflict keys, and alias order.
 
-Use `project-seed-delete pilot/seeds/smoke.json` to remove the fixture rows. Deletes run in reverse seed order, so `Payment` is removed before `Order`, and `Order` before `Account`. Use `project-seed-reset pilot/seeds/smoke.json` to delete and reapply the fixture in one local development step.
+Use `project-seed-delete pilot/seeds/smoke.json` to remove the fixture rows. Deletes run in reverse seed order, so `Payment` is removed before `Order`, and `Order` before `Account`. Use `project-seed-reset pilot/seeds/smoke.json` to delete and reapply the fixture in one local development transaction.
 
 Likely next language/runtime needs exposed by this pilot:
 
