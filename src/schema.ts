@@ -164,7 +164,7 @@ export function buildSchema(program: Program): SchemaIr {
     if (transaction.retry && transaction.retry.attempts < 1) {
       diagnostics.push(`transaction ${transaction.name} retry attempts must be greater than zero`);
     }
-    validateTransactionEffects(transaction, entityDecls, enumDecls, diagnostics);
+    validateTransactionEffects(transaction, entityDecls, enumDecls, transitionDecls, diagnostics);
   }
 
   validateTransitions(transitionDecls, entityDecls, enumDecls, diagnostics);
@@ -457,6 +457,7 @@ function validateTransactionEffects(
   transaction: Extract<Program["declarations"][number], { kind: "transaction" }>,
   entities: EntityDeclaration[],
   enumerations: Extract<Program["declarations"][number], { kind: "enum" }>[],
+  transitions: TransitionDeclaration[],
   diagnostics: string[],
 ): void {
   const entityNames = new Set(entities.map((entity) => entity.name));
@@ -483,7 +484,7 @@ function validateTransactionEffects(
       if (entity && !writes.has(entity)) {
         diagnostics.push(`transaction ${transaction.name} mutates ${entity} through ${mutation[1]} but does not declare writes ${entity}`);
       }
-      validateEnumMutation(transaction.name, line, entity, entities, enumByName, diagnostics);
+      validateEnumMutation(transaction.name, line, entity, entities, enumByName, transitions, diagnostics);
       continue;
     }
 
@@ -543,6 +544,7 @@ function validateEnumMutation(
   entityName: string | undefined,
   entities: EntityDeclaration[],
   enumByName: Map<string, Extract<Program["declarations"][number], { kind: "enum" }>>,
+  transitions: TransitionDeclaration[],
   diagnostics: string[],
 ): void {
   if (!entityName) return;
@@ -555,6 +557,24 @@ function validateEnumMutation(
     return;
   }
   validateEnumLiteral(transactionName, `${entityName}.${field.name}`, field, match[3], enumByName, diagnostics);
+  validateTransitionAssignment(transactionName, entityName, field.name, match[3], transitions, diagnostics);
+}
+
+function validateTransitionAssignment(
+  transactionName: string,
+  entityName: string,
+  fieldName: string,
+  expression: string,
+  transitions: TransitionDeclaration[],
+  diagnostics: string[],
+): void {
+  const transition = transitions.find((candidate) => candidate.entity === entityName && candidate.field === fieldName);
+  if (!transition) return;
+  const literal = sourceLiteralValue(expression);
+  if (!literal) return;
+  if (!transition.rules.some((rule) => rule.to === literal)) {
+    diagnostics.push(`transaction ${transactionName} assigns ${entityName}.${fieldName} to ${literal}, but no transition rule targets ${literal}`);
+  }
 }
 
 function validateEnumLiteral(

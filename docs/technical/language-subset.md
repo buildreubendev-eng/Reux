@@ -74,6 +74,8 @@ The compiler validates that the target entity and field exist, that the field is
 
 For the current runtime subset, literal enum assignments inside loaded-entity transactions are guarded when transition rules exist. For example, `order.status = Paid` only updates rows whose current status is one of the declared predecessors of `Paid`; otherwise the transaction fails and rolls back.
 
+If a transaction assigns a literal enum value to a field with transition rules, the target value must appear as a `to` value in at least one rule. This prevents transition-managed fields from silently compiling to unguarded updates.
+
 Inspect transition rules with:
 
 ```bash

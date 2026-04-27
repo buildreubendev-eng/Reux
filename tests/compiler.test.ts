@@ -582,6 +582,33 @@ transaction function markPaid(orderRef: Order) writes Order {
     ).toThrow(DlAggregateError);
   });
 
+  it("rejects enum assignments with no matching transition target", () => {
+    expect(() =>
+      compileSource(`module commerce
+
+entity Order {
+  id: Id<Order> primary generated
+  status: OrderStatus
+}
+
+enum OrderStatus {
+  Pending
+  Paid
+}
+
+transition Order.status {
+  Pending -> Paid
+}
+
+transaction function reopen(orderRef: Order) writes Order {
+  let order = load orderRef for update
+  order.status = Pending
+  save order
+}
+`),
+    ).toThrow(DlAggregateError);
+  });
+
   it("creates a diff migration artifact from a manifest", () => {
     const previousManifest = emitSchemaManifest(commerce);
     const migration = emitDiffMigration(previousManifest, commerceV2, "Commerce V2");

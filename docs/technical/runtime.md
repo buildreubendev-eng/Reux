@@ -286,6 +286,7 @@ Retry behavior:
 Transition behavior:
 
 - If a transition rule exists for an enum field, assigning a literal enum value through a loaded entity state lowers to a guarded `UPDATE`.
+- Literal targets must appear as a `to` value in at least one transition rule for that field.
 - The guard requires the row's current enum value to be one of the declared predecessors for the target value.
 - If the guarded update changes zero rows, `tx-run` fails the transaction and rolls it back.
 
