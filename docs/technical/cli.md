@@ -38,6 +38,8 @@ Project commands read `dl.json` by default. Set `REUX_CONFIG` to use a different
 ```powershell
 $env:REUX_CONFIG='pilot/dl.json'
 node dist/cli.js project-check
+node dist/cli.js project-transition-rules
+node dist/cli.js project-transition-rules Order.status
 node dist/cli.js project-query-sql accountOrderSummary
 Remove-Item Env:REUX_CONFIG
 ```
@@ -86,6 +88,13 @@ Emit a schema manifest:
 
 ```bash
 node dist/cli.js manifest examples/commerce.dl
+```
+
+Inspect transition rules:
+
+```bash
+node dist/cli.js transition-rules examples/pilot_reux.dl
+node dist/cli.js transition-rules examples/pilot_reux.dl Order.status
 ```
 
 Write a schema manifest to the configured `schemaManifest` path:

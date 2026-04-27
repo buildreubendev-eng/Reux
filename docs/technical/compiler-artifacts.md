@@ -22,6 +22,13 @@ Before Schema IR is emitted, the compiler rejects duplicate durable names, field
 
 Transition rules validate entity/field references and enum values before they appear in Schema IR. They are currently compiler artifacts rather than generated database constraints.
 
+Inspect transition-rule artifacts:
+
+```bash
+node dist/cli.js transition-rules examples/pilot_reux.dl
+node dist/cli.js project-transition-rules Order.status
+```
+
 The CLI emits Schema IR as a manifest:
 
 ```bash

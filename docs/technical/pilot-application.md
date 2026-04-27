@@ -29,6 +29,8 @@ Useful commands:
 $env:REUX_CONFIG='pilot/dl.json'
 node dist/cli.js project-check
 node dist/cli.js project-doctor
+node dist/cli.js project-transition-rules
+node dist/cli.js project-transition-rules Payment.status
 node dist/cli.js project-sql
 node dist/cli.js project-query-sql openOrders
 node dist/cli.js project-query-sql accountBalances

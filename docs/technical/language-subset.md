@@ -72,6 +72,13 @@ transition Order.status {
 
 The compiler validates that the target entity and field exist, that the field is enum-typed, and that each `from`/`to` value is declared by the enum. Transition rules are emitted into Schema IR and manifests as compiler-visible domain rules. Runtime enforcement is intentionally deferred until transaction-state validation grows beyond the current MVP subset.
 
+Inspect transition rules with:
+
+```bash
+node dist/cli.js transition-rules examples/pilot_reux.dl
+node dist/cli.js transition-rules examples/pilot_reux.dl Order.status
+```
+
 ## Query Subset
 
 The current query subset supports one scanned entity, optional joins, optional `where`, optional `group by`, optional `order by`, and `select` projections:

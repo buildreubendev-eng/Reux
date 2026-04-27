@@ -9,6 +9,7 @@ import {
   emitQueryIr,
   emitQuerySql,
   emitSchemaManifest,
+  emitTransitionRules,
   emitTransactionIr,
   emitTransactionSql,
   explainQuery,
@@ -200,6 +201,37 @@ transition Order.status {
 `);
 
     expect(schema.transitions).toEqual([
+      { entity: "Order", field: "status", enumName: "OrderStatus", from: "Pending", to: "Paid" },
+      { entity: "Order", field: "status", enumName: "OrderStatus", from: "Pending", to: "Cancelled" },
+    ]);
+  });
+
+  it("emits transition rules as inspectable JSON", () => {
+    const rules = JSON.parse(
+      emitTransitionRules(
+        `module commerce
+
+entity Order {
+  id: Id<Order> primary generated
+  status: OrderStatus
+}
+
+enum OrderStatus {
+  Pending
+  Paid
+  Cancelled
+}
+
+transition Order.status {
+  Pending -> Paid
+  Pending -> Cancelled
+}
+`,
+        "Order.status",
+      ),
+    );
+
+    expect(rules.transitions).toEqual([
       { entity: "Order", field: "status", enumName: "OrderStatus", from: "Pending", to: "Paid" },
       { entity: "Order", field: "status", enumName: "OrderStatus", from: "Pending", to: "Cancelled" },
     ]);

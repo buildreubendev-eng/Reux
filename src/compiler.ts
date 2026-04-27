@@ -12,7 +12,7 @@ import {
 import { parseProgram } from "./parser.js";
 import { queryToPostgres, schemaToPostgres, transactionToPostgres } from "./postgres.js";
 import { buildQueryIr } from "./query-ir.js";
-import { buildSchema, SchemaIr } from "./schema.js";
+import { buildSchema, SchemaIr, TransitionIr } from "./schema.js";
 import { buildTransactionIr } from "./transaction-ir.js";
 
 export interface CompileResult {
@@ -34,6 +34,12 @@ export function emitPostgresSchema(source: string): string {
 export function emitSchemaManifest(source: string): string {
   const { schema } = compileSource(source);
   return schemaManifestJson(schema);
+}
+
+export function emitTransitionRules(source: string, target?: string): string {
+  const { schema } = compileSource(source);
+  const transitions = filterTransitions(schema.transitions, target);
+  return `${JSON.stringify({ transitions }, null, 2)}\n`;
 }
 
 export function emitQueryIr(source: string, queryName: string): string {
@@ -119,6 +125,19 @@ function findTransaction(program: Program, transactionName: string): Transaction
     throw new Error(`transaction '${transactionName}' was not found`);
   }
   return transaction;
+}
+
+function filterTransitions(transitions: TransitionIr[], target?: string): TransitionIr[] {
+  if (!target) return transitions;
+  const [entity, field] = target.split(".");
+  if (!entity || !field || target.split(".").length !== 2) {
+    throw new Error("transition target must be Entity.field");
+  }
+  const filtered = transitions.filter((transition) => transition.entity === entity && transition.field === field);
+  if (filtered.length === 0) {
+    throw new Error(`transition '${target}' was not found`);
+  }
+  return filtered;
 }
 
 function indent(value: string): string {

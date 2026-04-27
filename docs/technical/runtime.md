@@ -61,6 +61,8 @@ Emit active project artifacts when `sources` resolves to exactly one file:
 node dist/cli.js project-sql
 node dist/cli.js project-manifest
 node dist/cli.js project-manifest-write
+node dist/cli.js project-transition-rules
+node dist/cli.js project-transition-rules Order.status
 node dist/cli.js project-migrate-plan
 node dist/cli.js project-migrate-diff-create commerce_next
 node dist/cli.js project-query-sql highValueUsers
