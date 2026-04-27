@@ -26,6 +26,11 @@ export interface SeedDeleteResult {
   deleted: SeedDeletedRecord[];
 }
 
+export interface SeedResetResult {
+  deleted: SeedDeletedRecord[];
+  inserted: SeedInsertedRecord[];
+}
+
 export interface SeedCheckResult {
   records: SeedCheckedRecord[];
 }
@@ -147,6 +152,15 @@ export async function deleteSeed(db: Database, source: string, spec: SeedSpec): 
   }
 
   return { deleted };
+}
+
+export async function resetSeed(db: Database, source: string, spec: SeedSpec): Promise<SeedResetResult> {
+  const deleted = await deleteSeed(db, source, spec);
+  const inserted = await runSeed(db, source, spec);
+  return {
+    deleted: deleted.deleted,
+    inserted: inserted.inserted,
+  };
 }
 
 function parseSeedRecord(record: unknown, index: number, aliases: Set<string>): SeedRecord {

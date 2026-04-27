@@ -68,6 +68,7 @@ node dist/cli.js project-data-insert-sql User '{"name":"Ada","email":"ada@exampl
 node dist/cli.js project-seed-check pilot/seeds/smoke.json
 node dist/cli.js project-seed-run pilot/seeds/smoke.json
 node dist/cli.js project-seed-delete pilot/seeds/smoke.json
+node dist/cli.js project-seed-reset pilot/seeds/smoke.json
 ```
 
 The initial source discovery supports exact paths plus `*` and `**` glob patterns, deduplicates overlapping matches, and reports each compiled file in stable path order. `project-summary` also reports duplicate declaration names across configured files by module and declaration kind.
@@ -161,6 +162,7 @@ Run a seed file against an explicit source:
 node dist/cli.js seed-check examples/pilot_reux.dl pilot/seeds/smoke.json
 node dist/cli.js seed-run examples/pilot_reux.dl pilot/seeds/smoke.json
 node dist/cli.js seed-delete examples/pilot_reux.dl pilot/seeds/smoke.json
+node dist/cli.js seed-reset examples/pilot_reux.dl pilot/seeds/smoke.json
 ```
 
 Run a seed file against the configured project source:
@@ -170,6 +172,7 @@ $env:REUX_CONFIG="pilot/dl.json"
 node dist/cli.js project-seed-check pilot/seeds/smoke.json
 node dist/cli.js project-seed-run pilot/seeds/smoke.json
 node dist/cli.js project-seed-delete pilot/seeds/smoke.json
+node dist/cli.js project-seed-reset pilot/seeds/smoke.json
 ```
 
 `seed-check` and `project-seed-check` validate a seed file without connecting to PostgreSQL. They compile the source, verify that every record targets a known entity, reject unknown data fields, verify each `by` field exists and is present in the record data, and ensure `$alias` values only reference earlier seed records.
@@ -196,6 +199,8 @@ Seed files insert records in order. The default mode is `insert`:
 `as` stores the inserted row id under an alias. A later string value of `$alias` is replaced with that id before insertion. This is enough for simple relationship fixtures such as account-owned orders and order-owned payments.
 
 `seed-delete` and `project-seed-delete` delete the same records in reverse order. This lets a fixture remove dependent rows first, such as payments before orders and orders before accounts. Deletion uses each record's `by` fields, or the default unique field when `by` is omitted.
+
+`seed-reset` and `project-seed-reset` compose delete and run in one command. They are useful for keeping a local development database aligned with a fixture file after editing seed values.
 
 Use `mode: "upsert"` for rerunnable local fixtures. Each upsert record uses `by` as its conflict key; if `by` is omitted, Reux uses the first unique non-generated field if one exists:
 

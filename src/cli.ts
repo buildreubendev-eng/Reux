@@ -21,7 +21,7 @@ import { mapDatabaseError } from "./db-errors.js";
 import { parseJsonObject } from "./data.js";
 import { DlAggregateError } from "./errors.js";
 import { discoverSourceFiles, ProjectSummary, summarizeProject } from "./project.js";
-import { checkSeed, deleteSeed, parseSeedSpec, runSeed } from "./seed.js";
+import { checkSeed, deleteSeed, parseSeedSpec, resetSeed, runSeed } from "./seed.js";
 import {
   applyMigrations,
   claimOutboxEvents,
@@ -256,6 +256,15 @@ try {
     await withDatabase(async (db) => {
       console.log(JSON.stringify(await deleteSeed(db, source, spec), null, 2));
     });
+  } else if (command === "project-seed-reset") {
+    if (!file) {
+      throw new Error("project-seed-reset requires a seed JSON file");
+    }
+    const source = readSingleProjectSource(loadConfig(), command);
+    const spec = parseSeedSpec(`@${file}`);
+    await withDatabase(async (db) => {
+      console.log(JSON.stringify(await resetSeed(db, source, spec), null, 2));
+    });
   } else if (command === "migrate-plan" || command === "migrate-diff-create") {
     if (!file) {
       throw new Error(`${command} requires <old-manifest.json> <current-file.dl>`);
@@ -352,6 +361,14 @@ try {
       await withDatabase(async (db) => {
         console.log(JSON.stringify(await deleteSeed(db, source, spec), null, 2));
       });
+    } else if (command === "seed-reset") {
+      if (!extra) {
+        throw new Error("seed-reset requires a seed JSON file");
+      }
+      const spec = parseSeedSpec(`@${extra}`);
+      await withDatabase(async (db) => {
+        console.log(JSON.stringify(await resetSeed(db, source, spec), null, 2));
+      });
     } else if (command === "tx-ir") {
       if (!extra) {
         throw new Error("tx-ir requires a transaction function name");
@@ -408,7 +425,7 @@ try {
 }
 
 function usage(): void {
-  console.error("usage: dl <check|project-check|project-summary|project-doctor|project-sql|project-manifest|project-manifest-write|project-migrate-plan|project-migrate-diff-create|project-query-ir|project-query-sql|project-query-run|project-explain|project-tx-ir|project-tx-sql|project-tx-run|project-data-insert|project-data-insert-sql|project-seed-run|project-seed-check|project-seed-delete|sql|manifest|manifest-write|query-ir|query-sql|query-run|data-insert|data-insert-sql|seed-run|seed-check|seed-delete|tx-ir|tx-sql|tx-run|explain|migrate-create|migrate-plan|migrate-diff-create|migrate-status|migrate-apply|outbox-list|outbox-claim|outbox-mark-processed|outbox-mark-failed|outbox-requeue> [args]");
+  console.error("usage: dl <check|project-check|project-summary|project-doctor|project-sql|project-manifest|project-manifest-write|project-migrate-plan|project-migrate-diff-create|project-query-ir|project-query-sql|project-query-run|project-explain|project-tx-ir|project-tx-sql|project-tx-run|project-data-insert|project-data-insert-sql|project-seed-run|project-seed-check|project-seed-delete|project-seed-reset|sql|manifest|manifest-write|query-ir|query-sql|query-run|data-insert|data-insert-sql|seed-run|seed-check|seed-delete|seed-reset|tx-ir|tx-sql|tx-run|explain|migrate-create|migrate-plan|migrate-diff-create|migrate-status|migrate-apply|outbox-list|outbox-claim|outbox-mark-processed|outbox-mark-failed|outbox-requeue> [args]");
 }
 
 async function withDatabase<T>(callback: (db: ReturnType<typeof createPostgresDatabase>, config: ReturnType<typeof loadConfig>) => Promise<T>): Promise<T> {

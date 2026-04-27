@@ -6,7 +6,7 @@ import { databaseUrl, loadConfig } from "../src/config.js";
 import { emitInsertStatement, emitQuerySql } from "../src/compiler.js";
 import { mapDatabaseError } from "../src/db-errors.js";
 import { parseJsonObject } from "../src/data.js";
-import { checkSeed, deleteSeed, parseSeedSpec, runSeed } from "../src/seed.js";
+import { checkSeed, deleteSeed, parseSeedSpec, resetSeed, runSeed } from "../src/seed.js";
 import {
   applyMigrations,
   claimOutboxEvents,
@@ -383,6 +383,65 @@ entity Order {
       {
         sql: 'DELETE FROM users WHERE "id" = $1 RETURNING id;',
         params: ["user-1"],
+      },
+    ]);
+  });
+
+  it("resets seed records by deleting then running", async () => {
+    const db = new FakeDb();
+    const source = `module commerce
+
+entity User {
+  id: Id<User> primary generated
+  email: String unique
+}
+
+entity Order {
+  id: Id<Order> primary generated
+  user: User required
+  total: Decimal
+}
+`;
+
+    const result = await resetSeed(
+      db,
+      source,
+      parseSeedSpec(
+        JSON.stringify({
+          records: [
+            { entity: "User", as: "ada", by: ["id"], data: { id: "user-1", email: "ada@example.com" } },
+            { entity: "Order", as: "order1", by: ["id"], data: { id: "order-1", user: "$ada", total: "100" } },
+          ],
+        }),
+      ),
+    );
+
+    expect(result).toEqual({
+      deleted: [
+        { entity: "Order", as: "order1", rowCount: 1 },
+        { entity: "User", as: "ada", rowCount: 1 },
+      ],
+      inserted: [
+        { entity: "User", as: "ada", id: "row-1" },
+        { entity: "Order", as: "order1", id: "row-2" },
+      ],
+    });
+    expect(db.queryCalls).toEqual([
+      {
+        sql: 'DELETE FROM orders WHERE "id" = $1 RETURNING id;',
+        params: ["order-1"],
+      },
+      {
+        sql: 'DELETE FROM users WHERE "id" = $1 RETURNING id;',
+        params: ["user-1"],
+      },
+      {
+        sql: "INSERT INTO users (id, email) VALUES ($1, $2) RETURNING *;",
+        params: ["user-1", "ada@example.com"],
+      },
+      {
+        sql: "INSERT INTO orders (id, user_id, total) VALUES ($1, $2, $3) RETURNING *;",
+        params: ["order-1", "row-1", "100"],
       },
     ]);
   });
