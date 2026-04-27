@@ -110,6 +110,8 @@ node dist/cli.js project-tx-sql rewardUser
 
 The SQL lowering currently supports `load <entity-param> for update`, simple field assignment/update statements over loaded state, `insert Entity { ... }`, and `enqueue Event { ... }`. `save` and `after commit` appear as comments because mutation statements are explicit and external hooks are not executed by the runtime yet.
 
+When a loaded entity assignment targets an enum field with transition rules and the new value is a literal, SQL lowering adds a transition guard. The guarded `UPDATE` includes the allowed previous enum values in its `WHERE` clause and emits a marker comment that the runtime uses to fail the transaction if the update touches no rows.
+
 Run the supported SQL subset:
 
 ```bash

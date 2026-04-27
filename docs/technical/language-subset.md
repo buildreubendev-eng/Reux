@@ -72,6 +72,8 @@ transition Order.status {
 
 The compiler validates that the target entity and field exist, that the field is enum-typed, and that each `from`/`to` value is declared by the enum. Transition rules are emitted into Schema IR and manifests as compiler-visible domain rules. Runtime enforcement is intentionally deferred until transaction-state validation grows beyond the current MVP subset.
 
+For the current runtime subset, literal enum assignments inside loaded-entity transactions are guarded when transition rules exist. For example, `order.status = Paid` only updates rows whose current status is one of the declared predecessors of `Paid`; otherwise the transaction fails and rolls back.
+
 Inspect transition rules with:
 
 ```bash

@@ -404,6 +404,9 @@ export async function runTransactionSql(
       const outboxEvents: unknown[] = [];
       for (const statement of plan.statements) {
         const result = await db.query(statement.sql, params.slice(0, statement.paramCount));
+        if (statement.transitionGuard && result.rowCount === 0) {
+          throw new Error(`transition guard failed for ${statement.transitionGuard}`);
+        }
         rowCounts.push(result.rowCount);
         returnedRows.push(...result.rows);
         if (statement.outbox) {
@@ -461,10 +464,15 @@ export function parseTransactionSql(sql: string): { statements: TransactionState
   const statements: TransactionStatement[] = [];
   const afterCommit: string[] = [];
   let usesOutbox = false;
+  let transitionGuard: string | undefined;
 
   for (const rawLine of sql.split("\n")) {
     const line = rawLine.trim();
     if (!line) continue;
+    if (line.startsWith("-- transition guard:")) {
+      transitionGuard = line.replace("-- transition guard:", "").trim();
+      continue;
+    }
     if (line.startsWith("-- after commit:")) {
       afterCommit.push(line.replace("-- after commit:", "").trim());
       continue;
@@ -477,7 +485,9 @@ export function parseTransactionSql(sql: string): { statements: TransactionState
       sql: line,
       paramCount: maxPlaceholder(line),
       outbox,
+      transitionGuard,
     });
+    transitionGuard = undefined;
   }
 
   return { statements, afterCommit, usesOutbox };
@@ -545,6 +555,7 @@ interface TransactionStatement {
   sql: string;
   paramCount: number;
   outbox: boolean;
+  transitionGuard?: string;
 }
 
 interface OutboxEventRow {

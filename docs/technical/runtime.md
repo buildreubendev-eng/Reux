@@ -265,6 +265,7 @@ Currently executable:
 - `load <entity-param> for update`
 - simple field mutation over loaded state, such as `user.balance += amount`
 - `insert Entity { ... }`
+- transition-guarded enum assignments over loaded state, such as `order.status = Paid`
 
 Currently reported but not executed:
 
@@ -281,6 +282,12 @@ Retry behavior:
 - PostgreSQL serialization conflicts and deadlocks are retried.
 - Direct external-looking calls are rejected at compile time inside retryable transactions.
 - `after commit ...` hooks are returned in the `afterCommit` array and can be dispatched by application code with `processAfterCommitHooks`.
+
+Transition behavior:
+
+- If a transition rule exists for an enum field, assigning a literal enum value through a loaded entity state lowers to a guarded `UPDATE`.
+- The guard requires the row's current enum value to be one of the declared predecessors for the target value.
+- If the guarded update changes zero rows, `tx-run` fails the transaction and rolls it back.
 
 ## After-Commit Processing API
 

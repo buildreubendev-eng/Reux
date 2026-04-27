@@ -607,6 +607,22 @@ COMMIT;`);
     });
   });
 
+  it("parses transition-guarded transaction SQL", () => {
+    const parsed = parseTransactionSql(`BEGIN;
+-- transition guard: Order.status -> Paid
+UPDATE orders SET status = 'Paid' WHERE id = $1 AND status IN ('Pending');
+COMMIT;`);
+
+    expect(parsed.statements).toEqual([
+      {
+        sql: "UPDATE orders SET status = 'Paid' WHERE id = $1 AND status IN ('Pending');",
+        paramCount: 1,
+        outbox: false,
+        transitionGuard: "Order.status -> Paid",
+      },
+    ]);
+  });
+
   it("runs transaction SQL inside a managed transaction", async () => {
     const db = new FakeDb();
 
@@ -634,6 +650,28 @@ COMMIT;`,
       { sql: "SELECT * FROM users WHERE id = $1 FOR UPDATE;", params: ["user-id"] },
       { sql: "UPDATE users SET balance = balance + $2 WHERE id = $1;", params: ["user-id", "100"] },
       { sql: "COMMIT;", params: undefined },
+    ]);
+  });
+
+  it("fails transition-guarded transaction updates when no row changes", async () => {
+    const db = new FakeDb();
+
+    await expect(
+      runTransactionSql(
+        db,
+        `BEGIN;
+-- transition guard: Order.status -> Paid
+UPDATE orders SET status = 'Paid' WHERE id = $1 AND status IN ('Pending');
+COMMIT;`,
+        ["order-id"],
+        1,
+      ),
+    ).rejects.toThrow("transition guard failed for Order.status -> Paid");
+
+    expect(db.queries).toEqual([
+      "BEGIN;",
+      "UPDATE orders SET status = 'Paid' WHERE id = $1 AND status IN ('Pending');",
+      "ROLLBACK;",
     ]);
   });
 

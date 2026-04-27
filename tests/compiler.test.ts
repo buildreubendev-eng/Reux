@@ -462,6 +462,39 @@ enum OrderStatus {
     expect(sql).toContain("COMMIT;");
   });
 
+  it("lowers transition rules to guarded transaction updates", () => {
+    const sql = emitTransactionSql(
+      `module commerce
+
+entity Order {
+  id: Id<Order> primary generated
+  status: OrderStatus
+}
+
+enum OrderStatus {
+  Pending
+  Paid
+  Cancelled
+}
+
+transition Order.status {
+  Pending -> Paid
+  Pending -> Cancelled
+}
+
+transaction function markPaid(orderRef: Order) writes Order {
+  let order = load orderRef for update
+  order.status = Paid
+  save order
+}
+`,
+      "markPaid",
+    );
+
+    expect(sql).toContain("-- transition guard: Order.status -> Paid");
+    expect(sql).toContain("UPDATE orders SET status = 'Paid' WHERE id = $1 AND status IN ('Pending');");
+  });
+
   it("lowers transaction inserts to PostgreSQL insert statements", () => {
     const sql = emitTransactionSql(
       `module banking

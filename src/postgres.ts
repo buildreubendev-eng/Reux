@@ -256,7 +256,29 @@ class TransactionLowering {
       operator === "="
         ? `${field.columnName} = ${valueSql}`
         : `${field.columnName} = ${field.columnName} ${operator[0]} ${valueSql}`;
-    return `UPDATE ${loaded.entity.tableName} SET ${assignment} WHERE id = $${loaded.sourceParameter};`;
+    const transitionGuard = this.transitionGuard(loaded.entity, field, operator, expression);
+    if (!transitionGuard) {
+      return `UPDATE ${loaded.entity.tableName} SET ${assignment} WHERE id = $${loaded.sourceParameter};`;
+    }
+    return [
+      `-- transition guard: ${loaded.entity.name}.${field.name} -> ${transitionGuard.to}`,
+      `UPDATE ${loaded.entity.tableName} SET ${assignment} WHERE id = $${loaded.sourceParameter} AND ${field.columnName} IN (${transitionGuard.from.map(quoteLiteral).join(", ")});`,
+    ].join("\n");
+  }
+
+  private transitionGuard(
+    entity: EntityIr,
+    field: FieldIr,
+    operator: "+=" | "-=" | "=",
+    expression: string,
+  ): { to: string; from: string[] } | undefined {
+    if (operator !== "=") return undefined;
+    const to = sourceLiteralValue(expression);
+    if (!to) return undefined;
+    const from = this.schema.transitions
+      .filter((transition) => transition.entity === entity.name && transition.field === field.name && transition.to === to)
+      .map((transition) => transition.from);
+    return from.length > 0 ? { to, from } : undefined;
   }
 
   private expressionSql(expression: string): string {
@@ -359,6 +381,15 @@ class TransactionLowering {
 
 function quoteLiteral(value: string): string {
   return `'${value.replaceAll("'", "''")}'`;
+}
+
+function sourceLiteralValue(expression: string): string | undefined {
+  const value = expression.trim();
+  if ((value.startsWith("\"") && value.endsWith("\"")) || (value.startsWith("'") && value.endsWith("'"))) {
+    return value.slice(1, -1);
+  }
+  if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(value)) return value;
+  return undefined;
 }
 
 function quoteIdentifier(value: string): string {

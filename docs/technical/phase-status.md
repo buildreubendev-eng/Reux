@@ -37,7 +37,7 @@ Status: implemented for the supported SQL subset.
 - Runs compiled queries.
 - Runs supported transaction SQL inside managed `BEGIN`/`COMMIT`/`ROLLBACK`.
 - Retries retryable PostgreSQL conflicts and deadlocks according to `retry N`.
-- Supports `load ... for update`, simple loaded-entity mutations, `insert Entity { ... }`, enum-valued transaction writes, and durable `enqueue Event { ... }`.
+- Supports `load ... for update`, simple loaded-entity mutations, transition-guarded enum assignments, `insert Entity { ... }`, enum-valued transaction writes, and durable `enqueue Event { ... }`.
 - Records outbox events in `_dl_outbox` and exposes list, claim, mark processed, mark failed, requeue, and stale-claim recovery commands.
 - Provides an embeddable `processOutboxEvents` helper for dispatching claimed events to application handlers.
 - Provides an embeddable `processAfterCommitHooks` helper for dispatching returned after-commit hooks to application handlers.
@@ -81,4 +81,4 @@ Phase 6 coverage:
 - Transaction conflict behavior represented by `creditAccount`, which lowers to `SELECT ... FOR UPDATE`, a balance update, retry metadata, and an outbox event.
 - Production-like verification path documented for WSL PostgreSQL through `npm run test:postgres`.
 
-The remaining gaps are beyond Phase 6 rather than blockers for it: richer query composition, deeper aggregation semantics, runtime enforcement for status transition rules, broader fixture/seed workflows, a full always-on worker service for after-commit hooks and outbox dispatch, and eventually switching `dl.json` from commerce fixtures to the pilot source when the project is ready to treat the pilot as the active application.
+The remaining gaps are beyond Phase 6 rather than blockers for it: richer query composition, deeper aggregation semantics, broader transition checking for parameterized assignments, broader fixture/seed workflows, a full always-on worker service for after-commit hooks and outbox dispatch, and eventually switching `dl.json` from commerce fixtures to the pilot source when the project is ready to treat the pilot as the active application.
