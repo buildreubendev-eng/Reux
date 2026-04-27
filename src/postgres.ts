@@ -260,6 +260,12 @@ class TransactionLowering {
     if (!transitionGuard) {
       return `UPDATE ${loaded.entity.tableName} SET ${assignment} WHERE id = $${loaded.sourceParameter};`;
     }
+    if (transitionGuard.kind === "parameter") {
+      return [
+        `-- transition guard: ${loaded.entity.name}.${field.name} -> ${transitionGuard.to}`,
+        `UPDATE ${loaded.entity.tableName} SET ${assignment} WHERE id = $${loaded.sourceParameter} AND EXISTS (SELECT 1 FROM (VALUES ${transitionGuard.values}) AS _dl_transition(from_value, to_value) WHERE _dl_transition.from_value = ${loaded.entity.tableName}.${field.columnName} AND _dl_transition.to_value = ${valueSql});`,
+      ].join("\n");
+    }
     return [
       `-- transition guard: ${loaded.entity.name}.${field.name} -> ${transitionGuard.to}`,
       `UPDATE ${loaded.entity.tableName} SET ${assignment} WHERE id = $${loaded.sourceParameter} AND ${field.columnName} IN (${transitionGuard.from.map(quoteLiteral).join(", ")});`,
@@ -271,14 +277,29 @@ class TransactionLowering {
     field: FieldIr,
     operator: "+=" | "-=" | "=",
     expression: string,
-  ): { to: string; from: string[] } | undefined {
+  ): TransitionGuard | undefined {
     if (operator !== "=") return undefined;
+    const transitions = this.schema.transitions.filter((transition) => transition.entity === entity.name && transition.field === field.name);
+    if (transitions.length === 0) return undefined;
+
+    const parameter = this.parameterOrUndefined(expression.trim());
+    if (parameter && parameter.type === field.type.raw) {
+      const enumSqlType = sqlType(this.schema, field);
+      return {
+        kind: "parameter",
+        to: parameter.name,
+        values: transitions
+          .map((transition) => `(${quoteLiteral(transition.from)}::${enumSqlType}, ${quoteLiteral(transition.to)}::${enumSqlType})`)
+          .join(", "),
+      };
+    }
+
     const to = sourceLiteralValue(expression);
-    if (!to) return undefined;
-    const from = this.schema.transitions
-      .filter((transition) => transition.entity === entity.name && transition.field === field.name && transition.to === to)
-      .map((transition) => transition.from);
-    return from.length > 0 ? { to, from } : undefined;
+    if (to) {
+      const from = transitions.filter((transition) => transition.to === to).map((transition) => transition.from);
+      return from.length > 0 ? { kind: "literal", to, from } : undefined;
+    }
+    return undefined;
   }
 
   private expressionSql(expression: string): string {
@@ -335,13 +356,18 @@ class TransactionLowering {
   }
 
   private parameter(name: string): { name: string; type: string; position: number } {
-    const index = this.transaction.parameters.findIndex((parameter) => parameter.name === name);
-    if (index < 0) {
+    const parameter = this.parameterOrUndefined(name);
+    if (!parameter) {
       throw new DlError(`unknown transaction parameter ${name}`);
     }
-    const parameter = this.transaction.parameters[index];
+    return parameter;
+  }
+
+  private parameterOrUndefined(name: string): { name: string; type: string; position: number } | undefined {
+    const index = this.transaction.parameters.findIndex((parameter) => parameter.name === name);
+    if (index < 0) return undefined;
     return {
-      ...parameter,
+      ...this.transaction.parameters[index],
       position: index + 1,
     };
   }
@@ -383,6 +409,18 @@ class TransactionLowering {
 function quoteLiteral(value: string): string {
   return `'${value.replaceAll("'", "''")}'`;
 }
+
+type TransitionGuard =
+  | {
+      kind: "literal";
+      to: string;
+      from: string[];
+    }
+  | {
+      kind: "parameter";
+      to: string;
+      values: string;
+    };
 
 function sourceLiteralValue(expression: string): string | undefined {
   const value = expression.trim();

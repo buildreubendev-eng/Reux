@@ -113,7 +113,7 @@ The SQL lowering currently supports `load <entity-param> for update`, simple fie
 
 Bound inserts emit a marker comment before the generated `INSERT ... RETURNING *`; the runtime uses that marker to return the inserted row under `bindings.<name>`.
 
-When a loaded entity assignment targets an enum field with transition rules and the new value is a literal, SQL lowering adds a transition guard. The guarded `UPDATE` includes the allowed previous enum values in its `WHERE` clause and emits a marker comment that the runtime uses to fail the transaction if the update touches no rows.
+When a loaded entity assignment targets an enum field with transition rules, SQL lowering adds a transition guard for literal targets and enum-typed parameter targets. Literal guards include the allowed previous enum values in the `WHERE` clause. Parameterized guards check the current value and requested next value against the declared transition table. Both forms emit a marker comment that the runtime uses to fail the transaction if the update touches no rows.
 
 Run the supported SQL subset:
 

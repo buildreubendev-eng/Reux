@@ -538,6 +538,41 @@ transaction function markPaid(orderRef: Order) writes Order {
     expect(sql).toContain("UPDATE orders SET status = 'Paid' WHERE id = $1 AND status IN ('Pending');");
   });
 
+  it("lowers parameterized transition assignments to guarded transaction updates", () => {
+    const sql = emitTransactionSql(
+      `module commerce
+
+entity Order {
+  id: Id<Order> primary generated
+  status: OrderStatus
+}
+
+enum OrderStatus {
+  Pending
+  Paid
+  Cancelled
+}
+
+transition Order.status {
+  Pending -> Paid
+  Pending -> Cancelled
+}
+
+transaction function moveOrder(orderRef: Order, nextStatus: OrderStatus) writes Order {
+  let order = load orderRef for update
+  order.status = nextStatus
+  save order
+}
+`,
+      "moveOrder",
+    );
+
+    expect(sql).toContain("-- transition guard: Order.status -> nextStatus");
+    expect(sql).toContain(
+      "UPDATE orders SET status = $2 WHERE id = $1 AND EXISTS (SELECT 1 FROM (VALUES ('Pending'::order_status, 'Paid'::order_status), ('Pending'::order_status, 'Cancelled'::order_status)) AS _dl_transition(from_value, to_value) WHERE _dl_transition.from_value = orders.status AND _dl_transition.to_value = $2);",
+    );
+  });
+
   it("lowers transaction inserts to PostgreSQL insert statements", () => {
     const sql = emitTransactionSql(
       `module banking
