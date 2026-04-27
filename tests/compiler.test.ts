@@ -377,6 +377,58 @@ transaction function recordReward(userRef: User, amount: Decimal) writes LedgerE
     expect(sql).toContain("INSERT INTO ledger_entries (user_id, amount, kind) VALUES ($1, $2, 'Reward') RETURNING *;");
   });
 
+  it("lowers bare enum literals in transaction inserts", () => {
+    const sql = emitTransactionSql(
+      `module commerce
+
+entity Order {
+  id: Id<Order> primary generated
+}
+
+entity Payment {
+  id: Id<Payment> primary generated
+  order: Order required
+  status: PaymentStatus
+}
+
+enum PaymentStatus {
+  Authorized
+  Captured
+}
+
+transaction function capture(orderRef: Order) writes Payment retry 3 {
+  insert Payment { order: orderRef, status: Captured }
+}
+`,
+      "capture",
+    );
+
+    expect(sql).toContain("INSERT INTO payments (order_id, status) VALUES ($1, 'Captured') RETURNING *;");
+  });
+
+  it("rejects invalid enum literals in transaction writes", () => {
+    expect(() =>
+      compileSource(`module commerce
+
+entity Order {
+  id: Id<Order> primary generated
+  status: OrderStatus
+}
+
+enum OrderStatus {
+  Pending
+  Paid
+}
+
+transaction function markPaid(orderRef: Order) writes Order {
+  let order = load orderRef for update
+  order.status = Refunded
+  save order
+}
+`),
+    ).toThrow(DlAggregateError);
+  });
+
   it("creates a diff migration artifact from a manifest", () => {
     const previousManifest = emitSchemaManifest(commerce);
     const migration = emitDiffMigration(previousManifest, commerceV2, "Commerce V2");

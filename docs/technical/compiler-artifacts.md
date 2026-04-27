@@ -89,7 +89,7 @@ node dist/cli.js tx-ir examples/commerce_v2.dl rewardUser
 node dist/cli.js project-tx-ir rewardUser
 ```
 
-The current compiler validates that declared `writes` entities exist, that simple `insert`, mutation, and `save` steps are covered by the declared write set, and that retryable transactions do not directly call external-looking functions.
+The current compiler validates that declared `writes` entities exist, that simple `insert`, mutation, and `save` steps are covered by the declared write set, that enum-valued transaction writes use declared enum values, and that retryable transactions do not directly call external-looking functions.
 
 Emit the current PostgreSQL transaction lowering:
 

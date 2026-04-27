@@ -1,5 +1,6 @@
 import { EntityDeclaration, FieldDeclaration, Program, QueryDeclaration, QueryProjection, TypeRef } from "./ast.js";
 import { DlAggregateError } from "./errors.js";
+import { parseObjectLiteral } from "./object-literal.js";
 
 export interface SchemaIr {
   moduleName: string;
@@ -150,7 +151,7 @@ export function buildSchema(program: Program): SchemaIr {
     if (transaction.retry && transaction.retry.attempts < 1) {
       diagnostics.push(`transaction ${transaction.name} retry attempts must be greater than zero`);
     }
-    validateTransactionEffects(transaction, entityNames, diagnostics);
+    validateTransactionEffects(transaction, entityDecls, enumDecls, diagnostics);
   }
 
   if (diagnostics.length > 0) {
@@ -364,9 +365,12 @@ function isCountExpression(expression: string): boolean {
 
 function validateTransactionEffects(
   transaction: Extract<Program["declarations"][number], { kind: "transaction" }>,
-  entityNames: Set<string>,
+  entities: EntityDeclaration[],
+  enumerations: Extract<Program["declarations"][number], { kind: "enum" }>[],
   diagnostics: string[],
 ): void {
+  const entityNames = new Set(entities.map((entity) => entity.name));
+  const enumByName = new Map(enumerations.map((enumeration) => [enumeration.name, enumeration]));
   const writes = new Set(transaction.writes);
   const parameterEntities = new Map(
     transaction.parameters
@@ -389,6 +393,7 @@ function validateTransactionEffects(
       if (entity && !writes.has(entity)) {
         diagnostics.push(`transaction ${transaction.name} mutates ${entity} through ${mutation[1]} but does not declare writes ${entity}`);
       }
+      validateEnumMutation(transaction.name, line, entity, entities, enumByName, diagnostics);
       continue;
     }
 
@@ -408,6 +413,7 @@ function validateTransactionEffects(
       } else if (!writes.has(insert[1])) {
         diagnostics.push(`transaction ${transaction.name} inserts ${insert[1]} but does not declare writes ${insert[1]}`);
       }
+      validateInsertFields(transaction.name, line, entities, enumByName, diagnostics);
       continue;
     }
 
@@ -417,6 +423,76 @@ function validateTransactionEffects(
       );
     }
   }
+}
+
+function validateInsertFields(
+  transactionName: string,
+  line: string,
+  entities: EntityDeclaration[],
+  enumByName: Map<string, Extract<Program["declarations"][number], { kind: "enum" }>>,
+  diagnostics: string[],
+): void {
+  const match = line.match(/^insert\s+([A-Za-z_][A-Za-z0-9_]*)\s+(.+)$/);
+  if (!match) return;
+  const entity = entities.find((candidate) => candidate.name === match[1]);
+  if (!entity) return;
+
+  for (const objectField of parseObjectLiteral(match[2])) {
+    const field = entity.fields.find((candidate) => candidate.name === objectField.name);
+    if (!field) {
+      diagnostics.push(`transaction ${transactionName} inserts unknown field ${entity.name}.${objectField.name}`);
+      continue;
+    }
+    validateEnumLiteral(transactionName, `${entity.name}.${field.name}`, field, objectField.value, enumByName, diagnostics);
+  }
+}
+
+function validateEnumMutation(
+  transactionName: string,
+  line: string,
+  entityName: string | undefined,
+  entities: EntityDeclaration[],
+  enumByName: Map<string, Extract<Program["declarations"][number], { kind: "enum" }>>,
+  diagnostics: string[],
+): void {
+  if (!entityName) return;
+  const match = line.match(/^([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)\s*(?:\+=|-=|=)\s*(.+)$/);
+  if (!match) return;
+  const entity = entities.find((candidate) => candidate.name === entityName);
+  const field = entity?.fields.find((candidate) => candidate.name === match[2]);
+  if (!field) {
+    diagnostics.push(`transaction ${transactionName} mutates unknown field ${entityName}.${match[2]}`);
+    return;
+  }
+  validateEnumLiteral(transactionName, `${entityName}.${field.name}`, field, match[3], enumByName, diagnostics);
+}
+
+function validateEnumLiteral(
+  transactionName: string,
+  target: string,
+  field: FieldDeclaration,
+  expression: string,
+  enumByName: Map<string, Extract<Program["declarations"][number], { kind: "enum" }>>,
+  diagnostics: string[],
+): void {
+  const enumeration = enumByName.get(field.type.name);
+  if (!enumeration) return;
+  const literal = sourceLiteralValue(expression);
+  if (!literal) return;
+  if (!enumeration.values.includes(literal)) {
+    diagnostics.push(`transaction ${transactionName} assigns invalid ${enumeration.name} value ${literal} to ${target}`);
+  }
+}
+
+function sourceLiteralValue(expression: string): string | undefined {
+  const value = expression.trim();
+  if ((value.startsWith("\"") && value.endsWith("\"")) || (value.startsWith("'") && value.endsWith("'"))) {
+    return value.slice(1, -1);
+  }
+  if (/^[A-Z][A-Za-z0-9_]*$/.test(value)) {
+    return value;
+  }
+  return undefined;
 }
 
 function isRetryUnsafeExternalCall(line: string): boolean {
