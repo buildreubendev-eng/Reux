@@ -148,6 +148,7 @@ Supported Transaction IR step recognition:
 - `target.field = expr`
 - `save name`
 - `insert Entity { ... }`
+- `let name = insert Entity { ... }`
 - `enqueue Event { ... }`
 - `after commit callName(args)`
 - `abort ErrorName`

@@ -260,13 +260,14 @@ node dist/cli.js tx-run examples/commerce_v2.dl rewardUser '["user-id","100"]'
 
 Transaction parameters can also be passed as `@params.json`.
 
-`tx-run` compiles the transaction function to PostgreSQL statements and executes the supported subset inside a managed transaction.
+`tx-run` compiles the transaction function to PostgreSQL statements and executes the supported subset inside a managed transaction. Bound inserts such as `let payment = insert Payment { ... }` are returned in the JSON result under `bindings.payment`, which gives callers access to generated IDs and other returned columns.
 
 Currently executable:
 
 - `load <entity-param> for update`
 - simple field mutation over loaded state, such as `user.balance += amount`
 - `insert Entity { ... }`
+- `let name = insert Entity { ... }`, returned from `tx-run` in `bindings.name`
 - transition-guarded enum assignments over loaded state, such as `order.status = Paid`
 
 Currently reported but not executed:

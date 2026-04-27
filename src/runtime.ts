@@ -85,6 +85,7 @@ export interface TransactionRunResult {
   returnedRows: unknown[];
   outboxEvents: unknown[];
   afterCommit: string[];
+  bindings?: Record<string, unknown>;
 }
 
 export function createPostgresDatabase(config: DlConfig): Database {
@@ -402,6 +403,7 @@ export async function runTransactionSql(
       const rowCounts: (number | null)[] = [];
       const returnedRows: unknown[] = [];
       const outboxEvents: unknown[] = [];
+      const bindings: Record<string, unknown> = {};
       for (const statement of plan.statements) {
         const result = await db.query(statement.sql, params.slice(0, statement.paramCount));
         if (statement.transitionGuard && result.rowCount === 0) {
@@ -409,10 +411,14 @@ export async function runTransactionSql(
         }
         rowCounts.push(result.rowCount);
         returnedRows.push(...result.rows);
+        if (statement.resultBinding) {
+          bindings[statement.resultBinding] = result.rows.length === 1 ? result.rows[0] : result.rows;
+        }
         if (statement.outbox) {
           outboxEvents.push(...result.rows);
         }
       }
+      const bound = Object.keys(bindings).length > 0 ? { bindings } : {};
       await db.query("COMMIT;");
       return {
         attempts: attempt,
@@ -421,6 +427,7 @@ export async function runTransactionSql(
         returnedRows,
         outboxEvents,
         afterCommit: plan.afterCommit,
+        ...bound,
       };
     } catch (error) {
       await db.query("ROLLBACK;");
@@ -465,12 +472,17 @@ export function parseTransactionSql(sql: string): { statements: TransactionState
   const afterCommit: string[] = [];
   let usesOutbox = false;
   let transitionGuard: string | undefined;
+  let resultBinding: string | undefined;
 
   for (const rawLine of sql.split("\n")) {
     const line = rawLine.trim();
     if (!line) continue;
     if (line.startsWith("-- transition guard:")) {
       transitionGuard = line.replace("-- transition guard:", "").trim();
+      continue;
+    }
+    if (line.startsWith("-- bind result:")) {
+      resultBinding = line.replace("-- bind result:", "").trim();
       continue;
     }
     if (line.startsWith("-- after commit:")) {
@@ -486,8 +498,10 @@ export function parseTransactionSql(sql: string): { statements: TransactionState
       paramCount: maxPlaceholder(line),
       outbox,
       transitionGuard,
+      resultBinding,
     });
     transitionGuard = undefined;
+    resultBinding = undefined;
   }
 
   return { statements, afterCommit, usesOutbox };
@@ -556,6 +570,7 @@ interface TransactionStatement {
   paramCount: number;
   outbox: boolean;
   transitionGuard?: string;
+  resultBinding?: string;
 }
 
 interface OutboxEventRow {

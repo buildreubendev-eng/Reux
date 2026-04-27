@@ -497,7 +497,7 @@ function validateTransactionEffects(
       continue;
     }
 
-    const insert = line.match(/^insert\s+([A-Za-z_][A-Za-z0-9_]*)\s+/);
+    const insert = line.match(/^(?:let\s+[A-Za-z_][A-Za-z0-9_]*\s*=\s*)?insert\s+([A-Za-z_][A-Za-z0-9_]*)\s+/);
     if (insert) {
       if (!entityNames.has(insert[1])) {
         diagnostics.push(`transaction ${transaction.name} inserts unknown entity ${insert[1]}`);
@@ -523,7 +523,7 @@ function validateInsertFields(
   enumByName: Map<string, Extract<Program["declarations"][number], { kind: "enum" }>>,
   diagnostics: string[],
 ): void {
-  const match = line.match(/^insert\s+([A-Za-z_][A-Za-z0-9_]*)\s+(.+)$/);
+  const match = line.match(/^(?:let\s+[A-Za-z_][A-Za-z0-9_]*\s*=\s*)?insert\s+([A-Za-z_][A-Za-z0-9_]*)\s+(.+)$/);
   if (!match) return;
   const entity = entities.find((candidate) => candidate.name === match[1]);
   if (!entity) return;

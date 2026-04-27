@@ -623,6 +623,23 @@ COMMIT;`);
     ]);
   });
 
+  it("parses result-bound transaction SQL", () => {
+    const parsed = parseTransactionSql(`BEGIN;
+-- bind result: entry
+INSERT INTO users (name) VALUES ($1) RETURNING *;
+COMMIT;`);
+
+    expect(parsed.statements).toEqual([
+      {
+        sql: "INSERT INTO users (name) VALUES ($1) RETURNING *;",
+        paramCount: 1,
+        outbox: false,
+        resultBinding: "entry",
+        transitionGuard: undefined,
+      },
+    ]);
+  });
+
   it("runs transaction SQL inside a managed transaction", async () => {
     const db = new FakeDb();
 
@@ -673,6 +690,25 @@ COMMIT;`,
       "UPDATE orders SET status = 'Paid' WHERE id = $1 AND status IN ('Pending');",
       "ROLLBACK;",
     ]);
+  });
+
+  it("returns named bindings for bound transaction statements", async () => {
+    const db = new FakeDb();
+
+    const result = await runTransactionSql(
+      db,
+      `BEGIN;
+-- bind result: user
+INSERT INTO users (name) VALUES ($1) RETURNING *;
+COMMIT;`,
+      ["Ada"],
+      1,
+    );
+
+    expect(result.bindings).toEqual({
+      user: { id: "row-1" },
+    });
+    expect(result.returnedRows).toEqual([{ id: "row-1" }]);
   });
 
   it("parses and processes after commit hooks", async () => {

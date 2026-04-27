@@ -18,7 +18,7 @@ The pilot intentionally stays inside the currently supported compiler/runtime su
 - generated UUID identities;
 - entity references;
 - indexes;
-- transaction insert;
+- transaction insert with a bound result for generated IDs;
 - transaction row locks and retryable conflict handling;
 - durable outbox enqueue;
 - after-commit hook reporting.
@@ -152,6 +152,6 @@ Likely next language/runtime needs exposed by this pilot:
 
 - typed money/currency conventions;
 - transaction-local generated IDs;
-- richer insert result binding;
+- using bound insert results inside later transaction statements;
 - broader transition checking for parameterized assignments;
 - richer seed reset modes for truncating or refreshing whole fixture groups.

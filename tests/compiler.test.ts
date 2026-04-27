@@ -546,6 +546,43 @@ transaction function recordReward(userRef: User, amount: Decimal) writes LedgerE
     expect(sql).toContain("INSERT INTO ledger_entries (user_id, amount, kind) VALUES ($1, $2, 'Reward') RETURNING *;");
   });
 
+  it("lowers bound transaction inserts to named runtime results", () => {
+    const txIr = JSON.parse(
+      emitTransactionIr(
+        `module banking
+
+entity LedgerEntry {
+  id: Id<LedgerEntry> primary generated
+  amount: Decimal
+}
+
+transaction function recordReward(amount: Decimal) writes LedgerEntry retry 3 {
+  let entry = insert LedgerEntry { amount: amount }
+}
+`,
+        "recordReward",
+      ),
+    );
+    const sql = emitTransactionSql(
+      `module banking
+
+entity LedgerEntry {
+  id: Id<LedgerEntry> primary generated
+  amount: Decimal
+}
+
+transaction function recordReward(amount: Decimal) writes LedgerEntry retry 3 {
+  let entry = insert LedgerEntry { amount: amount }
+}
+`,
+      "recordReward",
+    );
+
+    expect(txIr.steps[0]).toEqual({ kind: "Insert", target: "entry", entity: "LedgerEntry", source: "{ amount: amount }" });
+    expect(sql).toContain("-- bind result: entry");
+    expect(sql).toContain("INSERT INTO ledger_entries (amount) VALUES ($1) RETURNING *;");
+  });
+
   it("lowers bare enum literals in transaction inserts", () => {
     const sql = emitTransactionSql(
       `module commerce

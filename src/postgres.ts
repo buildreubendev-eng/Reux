@@ -211,7 +211,7 @@ class TransactionLowering {
       } else if (step.kind === "Save") {
         lines.push(`-- save ${step.target}: staged by explicit mutation statements`);
       } else if (step.kind === "Insert") {
-        lines.push(this.lowerInsert(step.entity, step.source));
+        lines.push(this.lowerInsert(step.entity, step.source, step.target));
       } else if (step.kind === "Enqueue") {
         lines.push(this.lowerEnqueue(step.event, step.source));
       } else if (step.kind === "AfterCommit") {
@@ -294,7 +294,7 @@ class TransactionLowering {
     return expression;
   }
 
-  private lowerInsert(entityName: string, source: string): string {
+  private lowerInsert(entityName: string, source: string, target?: string): string {
     const entity = findEntity(this.schema, entityName);
     if (!entity) {
       throw new DlError(`cannot lower insert for unknown entity ${entityName}`);
@@ -310,10 +310,11 @@ class TransactionLowering {
       columns.push(field.columnName);
       values.push(this.expressionSql(objectField.value));
     }
-    if (columns.length === 0) {
-      return `INSERT INTO ${entity.tableName} DEFAULT VALUES RETURNING *;`;
-    }
-    return `INSERT INTO ${entity.tableName} (${columns.join(", ")}) VALUES (${values.join(", ")}) RETURNING *;`;
+    const sql =
+      columns.length === 0
+        ? `INSERT INTO ${entity.tableName} DEFAULT VALUES RETURNING *;`
+        : `INSERT INTO ${entity.tableName} (${columns.join(", ")}) VALUES (${values.join(", ")}) RETURNING *;`;
+    return target ? `-- bind result: ${target}\n${sql}` : sql;
   }
 
   private lowerEnqueue(event: string, source: string): string {

@@ -40,6 +40,7 @@ export interface InsertStepIr {
   kind: "Insert";
   entity: string;
   source: string;
+  target?: string;
 }
 
 export interface EnqueueStepIr {
@@ -111,6 +112,16 @@ function parseStep(line: string): TransactionStepIr {
     return {
       kind: "Save",
       target: save[1],
+    };
+  }
+
+  const boundInsert = line.match(/^let\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*insert\s+([A-Za-z_][A-Za-z0-9_]*)\s+(.+)$/);
+  if (boundInsert) {
+    return {
+      kind: "Insert",
+      target: boundInsert[1],
+      entity: boundInsert[2],
+      source: boundInsert[3],
     };
   }
 
