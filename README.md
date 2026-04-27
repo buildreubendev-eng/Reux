@@ -96,3 +96,5 @@ Technical documentation:
 - [Local PostgreSQL](docs/technical/local-postgres.md)
 - [Phase status](docs/technical/phase-status.md)
 - [Pilot application](docs/technical/pilot-application.md)
+
+GitHub Actions runs `npm run verify` on pushes and pull requests to `main`.

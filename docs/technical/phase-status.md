@@ -61,6 +61,7 @@ Status: implemented for the MVP workflow.
 - `project-summary` inventories configured sources and reports duplicate cross-file declarations.
 - `project-doctor` checks source discovery, manifest freshness, migration directory visibility, and database URL environment status.
 - Seed tooling supports schema-only checks, PostgreSQL dry runs, rerunnable upserts, deletes, and transactional resets.
+- GitHub Actions runs the core verification script on pushes and pull requests to `main`.
 - Technical documentation is maintained alongside implementation.
 
 ## Phase 6: Pilot Application
