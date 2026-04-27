@@ -35,6 +35,7 @@
     "postgres:preflight": "node ./scripts/postgres-preflight.mjs",
     "verify:postgres": "npm run postgres:preflight && npm run test:postgres && npm run test:pilot:postgres",
     "verify:postgres:full": "npm run verify:postgres && npm run build && node ./dist/cli.js project-doctor --db --json",
+    "demo:pilot": "node ./scripts/demo-pilot.mjs",
     "reux": "node ./dist/cli.js",
     "dl": "node ./dist/cli.js"
   },

@@ -22,6 +22,7 @@ npm install
 npm run verify
 npm run verify:cli
 npm run verify:package
+npm run demo:pilot
 node dist/cli.js version
 $env:DATABASE_URL='postgres://datalang:datalang@127.0.0.1:5432/datalang_dev'
 npm run verify:postgres
@@ -103,5 +104,6 @@ Technical documentation:
 - [Local PostgreSQL](docs/technical/local-postgres.md)
 - [Phase status](docs/technical/phase-status.md)
 - [Pilot application](docs/technical/pilot-application.md)
+- [Pilot demo walkthrough](docs/tutorial/demo-walkthrough.md)
 
 GitHub Actions runs `npm run verify` and PostgreSQL-backed `npm run verify:postgres` on pushes and pull requests to `main`.

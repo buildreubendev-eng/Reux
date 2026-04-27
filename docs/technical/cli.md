@@ -6,6 +6,12 @@ Build before running the CLI:
 npm run build
 ```
 
+Run the no-database pilot demo:
+
+```bash
+npm run demo:pilot
+```
+
 ## Commands
 
 Check a Reux source file:

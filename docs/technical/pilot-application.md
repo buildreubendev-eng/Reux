@@ -28,6 +28,7 @@ The pilot intentionally stays inside the currently supported compiler/runtime su
 Useful commands:
 
 ```powershell
+npm run demo:pilot
 $env:REUX_CONFIG='pilot/dl.json'
 node dist/cli.js project-check
 node dist/cli.js project-doctor
