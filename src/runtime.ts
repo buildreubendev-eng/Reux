@@ -60,6 +60,24 @@ export interface OutboxFailure {
   error: string;
 }
 
+export interface AfterCommitHook {
+  call: string;
+  name: string;
+  args: string[];
+}
+
+export type AfterCommitHandler = (hook: AfterCommitHook) => Promise<void> | void;
+
+export interface AfterCommitProcessResult {
+  processed: AfterCommitHook[];
+  failed: AfterCommitFailure[];
+}
+
+export interface AfterCommitFailure {
+  hook: AfterCommitHook;
+  error: string;
+}
+
 export interface TransactionRunResult {
   attempts: number;
   statements: number;
@@ -269,6 +287,44 @@ export async function processOutboxEvents(
   return { processed, failed };
 }
 
+export function parseAfterCommitHook(call: string): AfterCommitHook {
+  const match = call.match(/^([A-Za-z_][A-Za-z0-9_]*)\((.*)\)$/);
+  if (!match) {
+    throw new Error(`invalid after commit hook ${call}`);
+  }
+  const argsSource = match[2].trim();
+  return {
+    call,
+    name: match[1],
+    args: argsSource ? splitHookArgs(argsSource) : [],
+  };
+}
+
+export async function processAfterCommitHooks(
+  calls: string[],
+  handlers: Record<string, AfterCommitHandler>,
+): Promise<AfterCommitProcessResult> {
+  const processed: AfterCommitHook[] = [];
+  const failed: AfterCommitFailure[] = [];
+
+  for (const call of calls) {
+    const hook = parseAfterCommitHook(call);
+    const handler = handlers[hook.name];
+    if (!handler) {
+      failed.push({ hook, error: `no handler registered for after commit hook ${hook.name}` });
+      continue;
+    }
+    try {
+      await handler(hook);
+      processed.push(hook);
+    } catch (error) {
+      failed.push({ hook, error: errorMessage(error) });
+    }
+  }
+
+  return { processed, failed };
+}
+
 export async function migrationStatus(db: Database, migrationsDir: string): Promise<MigrationStatus> {
   await ensureMigrationTable(db);
   const files = readMigrationFiles(migrationsDir);
@@ -433,6 +489,42 @@ function maxPlaceholder(sql: string): number {
     max = Math.max(max, Number.parseInt(match[1], 10));
   }
   return max;
+}
+
+function splitHookArgs(source: string): string[] {
+  const args: string[] = [];
+  let current = "";
+  let depth = 0;
+  let quote: string | undefined;
+
+  for (let index = 0; index < source.length; index += 1) {
+    const char = source[index];
+    if (quote) {
+      current += char;
+      if (char === quote && source[index - 1] !== "\\") {
+        quote = undefined;
+      }
+      continue;
+    }
+    if (char === "'" || char === '"') {
+      quote = char;
+      current += char;
+      continue;
+    }
+    if (char === "(" || char === "{" || char === "[") depth += 1;
+    if (char === ")" || char === "}" || char === "]") depth -= 1;
+    if (char === "," && depth === 0) {
+      args.push(current.trim());
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+
+  if (current.trim()) {
+    args.push(current.trim());
+  }
+  return args;
 }
 
 function errorMessage(error: unknown): string {

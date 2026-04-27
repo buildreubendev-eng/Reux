@@ -15,8 +15,10 @@ import {
   markOutboxFailed,
   markOutboxProcessed,
   migrationStatus,
+  parseAfterCommitHook,
   parseJsonParams,
   parseTransactionSql,
+  processAfterCommitHooks,
   processOutboxEvents,
   readMigrationFiles,
   requeueOutboxEvent,
@@ -522,6 +524,32 @@ COMMIT;`,
       { sql: "UPDATE users SET balance = balance + $2 WHERE id = $1;", params: ["user-id", "100"] },
       { sql: "COMMIT;", params: undefined },
     ]);
+  });
+
+  it("parses and processes after commit hooks", async () => {
+    expect(parseAfterCommitHook('sendRewardEmail(userRef, "welcome, ada")')).toEqual({
+      call: 'sendRewardEmail(userRef, "welcome, ada")',
+      name: "sendRewardEmail",
+      args: ["userRef", '"welcome, ada"'],
+    });
+    const handled: string[] = [];
+
+    const result = await processAfterCommitHooks(["sendRewardEmail(userRef)", "missingHook(userRef)"], {
+      sendRewardEmail: (hook) => {
+        handled.push(hook.args[0]);
+      },
+    });
+
+    expect(handled).toEqual(["userRef"]);
+    expect(result).toEqual({
+      processed: [{ call: "sendRewardEmail(userRef)", name: "sendRewardEmail", args: ["userRef"] }],
+      failed: [
+        {
+          hook: { call: "missingHook(userRef)", name: "missingHook", args: ["userRef"] },
+          error: "no handler registered for after commit hook missingHook",
+        },
+      ],
+    });
   });
 
   it("retries transaction SQL on retryable database errors", async () => {

@@ -264,7 +264,24 @@ Retry behavior:
 - `retry N` in the transaction function header sets the maximum attempts.
 - PostgreSQL serialization conflicts and deadlocks are retried.
 - Direct external-looking calls are rejected at compile time inside retryable transactions.
-- `after commit ...` hooks are not executed yet; they are returned in the `afterCommit` array.
+- `after commit ...` hooks are returned in the `afterCommit` array and can be dispatched by application code with `processAfterCommitHooks`.
+
+## After-Commit Processing API
+
+Applications can process returned after-commit hooks with a small handler registry:
+
+```ts
+import { processAfterCommitHooks } from "./dist/runtime.js";
+
+const txResult = await runTransactionSql(db, sql, params, attempts);
+const hooks = await processAfterCommitHooks(txResult.afterCommit, {
+  notifyAccountCredited: async (hook) => {
+    await notifyAccount(hook.args[0]);
+  },
+});
+```
+
+`processAfterCommitHooks` parses calls such as `notifyAccountCredited(accountRef)`, dispatches by function name, and returns `{ processed, failed }`. Arguments are returned as source-level strings because the prototype runtime does not yet bind transaction parameter names to application values.
 
 ## Outbox
 
