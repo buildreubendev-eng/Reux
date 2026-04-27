@@ -55,6 +55,21 @@ export interface OutboxProcessResult {
   failed: OutboxFailure[];
 }
 
+export interface OutboxWorkerOptions {
+  limit?: number;
+  intervalMs?: number;
+  maxIterations?: number;
+  signal?: AbortSignal;
+  onIteration?(result: OutboxProcessResult): void | Promise<void>;
+}
+
+export interface OutboxWorkerResult {
+  iterations: number;
+  processed: number;
+  failed: number;
+  stopped: "maxIterations" | "aborted";
+}
+
 export interface OutboxFailure {
   event: OutboxEvent;
   error: string;
@@ -286,6 +301,34 @@ export async function processOutboxEvents(
   }
 
   return { processed, failed };
+}
+
+export async function runOutboxWorker(
+  db: Database,
+  handlers: Record<string, OutboxHandler>,
+  options: OutboxWorkerOptions = {},
+): Promise<OutboxWorkerResult> {
+  const limit = options.limit ?? 10;
+  const intervalMs = options.intervalMs ?? 1000;
+  let iterations = 0;
+  let processed = 0;
+  let failed = 0;
+
+  while (!options.signal?.aborted) {
+    const result = await processOutboxEvents(db, handlers, limit);
+    iterations += 1;
+    processed += result.processed.length;
+    failed += result.failed.length;
+    await options.onIteration?.(result);
+
+    if (options.maxIterations !== undefined && iterations >= options.maxIterations) {
+      return { iterations, processed, failed, stopped: "maxIterations" };
+    }
+    if (options.signal?.aborted) break;
+    await delay(intervalMs, options.signal);
+  }
+
+  return { iterations, processed, failed, stopped: "aborted" };
 }
 
 export function parseAfterCommitHook(call: string): AfterCommitHook {
@@ -553,6 +596,17 @@ function splitHookArgs(source: string): string[] {
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function delay(ms: number, signal: AbortSignal | undefined): Promise<void> {
+  if (ms <= 0 || signal?.aborted) return Promise.resolve();
+  return new Promise((resolve) => {
+    const timeout = setTimeout(resolve, ms);
+    signal?.addEventListener("abort", () => {
+      clearTimeout(timeout);
+      resolve();
+    }, { once: true });
+  });
 }
 
 function sha256(value: string): string {

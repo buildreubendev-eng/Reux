@@ -411,4 +411,29 @@ const result = await processOutboxEvents(db, {
 
 `processOutboxEvents` claims pending events, dispatches by `eventType`, marks successful events processed, and marks missing or throwing handlers failed with `last_error` populated. It returns `{ processed, failed }` so a caller can log or retry according to its own worker policy.
 
-These commands are intentionally small. They provide enough operational visibility for the prototype while leaving full dispatcher/worker semantics for a later runtime layer.
+For a long-running application worker, use `runOutboxWorker`:
+
+```ts
+import { createPostgresDatabase, runOutboxWorker } from "./dist/runtime.js";
+
+const db = createPostgresDatabase(config);
+const controller = new AbortController();
+
+await runOutboxWorker(
+  db,
+  {
+    RewardGranted: async (event) => {
+      await sendRewardEmail(event.payload);
+    },
+  },
+  {
+    limit: 10,
+    intervalMs: 1000,
+    signal: controller.signal,
+  },
+);
+```
+
+`runOutboxWorker` repeatedly calls `processOutboxEvents`, supports abort signals for shutdown, and supports `maxIterations` for tests or demos.
+
+These commands are intentionally small. They provide enough operational visibility for the prototype while leaving hosted worker deployment and handler discovery to the application layer.

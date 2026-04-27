@@ -39,7 +39,7 @@ Status: implemented for the supported SQL subset.
 - Retries retryable PostgreSQL conflicts and deadlocks according to `retry N`.
 - Supports `load ... for update`, simple loaded-entity mutations, transition-guarded enum assignments, `insert Entity { ... }`, bound insert results, enum-valued transaction writes, and durable `enqueue Event { ... }`.
 - Records outbox events in `_dl_outbox` and exposes list, claim, mark processed, mark failed, requeue, and stale-claim recovery commands.
-- Provides an embeddable `processOutboxEvents` helper for dispatching claimed events to application handlers.
+- Provides embeddable `processOutboxEvents` and `runOutboxWorker` helpers for dispatching claimed events to application handlers.
 - Provides an embeddable `processAfterCommitHooks` helper for dispatching returned after-commit hooks to application handlers.
 
 ## Phase 4: Migrations

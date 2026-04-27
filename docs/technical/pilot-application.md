@@ -21,7 +21,8 @@ The pilot intentionally stays inside the currently supported compiler/runtime su
 - transaction insert with a bound result for generated IDs;
 - transaction row locks and retryable conflict handling;
 - durable outbox enqueue;
-- after-commit hook reporting.
+- after-commit hook reporting;
+- embeddable outbox worker loop.
 
 Useful commands:
 
