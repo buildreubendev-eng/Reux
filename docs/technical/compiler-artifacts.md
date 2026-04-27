@@ -45,6 +45,8 @@ node dist/cli.js query-ir examples/commerce.dl highValueUsers
 node dist/cli.js project-query-ir highValueUsers
 ```
 
+Expression IR records field, parameter, alias, and enum-literal references. This lets `where order.status == Paid` lower to a PostgreSQL enum literal while still rejecting values that are not declared by the field's enum type.
+
 `explain` includes both the Query IR and the generated PostgreSQL SQL:
 
 ```bash

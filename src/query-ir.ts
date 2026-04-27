@@ -1,6 +1,6 @@
 import { QueryDeclaration, QueryProjection } from "./ast.js";
 import { DlError } from "./errors.js";
-import { EntityIr, findEntity, SchemaIr } from "./schema.js";
+import { EntityIr, FieldIr, findEntity, SchemaIr } from "./schema.js";
 
 export type QueryIr = MapIr;
 
@@ -86,6 +86,7 @@ export interface ExpressionIr {
   fields: FieldRefIr[];
   aliases: AliasRefIr[];
   parameters: ParameterRefIr[];
+  enumLiterals: EnumLiteralRefIr[];
 }
 
 export interface FieldRefIr {
@@ -105,6 +106,12 @@ export interface AliasRefIr {
 export interface ParameterRefIr {
   name: string;
   position: number;
+}
+
+export interface EnumLiteralRefIr {
+  source: string;
+  enumName: string;
+  value: string;
 }
 
 export function buildQueryIr(schema: SchemaIr, query: QueryDeclaration): QueryPlanIr {
@@ -133,7 +140,7 @@ export function buildQueryIr(schema: SchemaIr, query: QueryDeclaration): QueryPl
       entity: joinEntity.name,
       table: joinEntity.tableName,
       alias: join.rangeName,
-      on: expressionIr(query, aliases, join.on),
+      on: expressionIr(schema, query, aliases, join.on),
     };
   }
 
@@ -141,7 +148,7 @@ export function buildQueryIr(schema: SchemaIr, query: QueryDeclaration): QueryPl
     input = {
       kind: "Filter",
       input,
-      predicate: expressionIr(query, aliases, query.body.where),
+      predicate: expressionIr(schema, query, aliases, query.body.where),
     };
   }
 
@@ -149,7 +156,7 @@ export function buildQueryIr(schema: SchemaIr, query: QueryDeclaration): QueryPl
     input = {
       kind: "Group",
       input,
-      keys: query.body.groupBy.map((expression) => expressionIr(query, aliases, expression)),
+      keys: query.body.groupBy.map((expression) => expressionIr(schema, query, aliases, expression)),
     };
   }
 
@@ -159,7 +166,7 @@ export function buildQueryIr(schema: SchemaIr, query: QueryDeclaration): QueryPl
       input,
       keys: [
         {
-          expression: expressionIr(query, aliases, query.body.orderBy.expression),
+          expression: expressionIr(schema, query, aliases, query.body.orderBy.expression),
           direction: query.body.orderBy.direction,
         },
       ],
@@ -177,12 +184,13 @@ export function buildQueryIr(schema: SchemaIr, query: QueryDeclaration): QueryPl
     root: {
       kind: "Map",
       input,
-      projection: projectionIr(query, aliases, query.body.select),
+      projection: projectionIr(schema, query, aliases, query.body.select),
     },
   };
 }
 
 function projectionIr(
+  schema: SchemaIr,
   query: QueryDeclaration,
   aliases: Map<string, EntityIr>,
   projection: QueryProjection,
@@ -201,12 +209,12 @@ function projectionIr(
     kind: "Record",
     fields: projection.fields.map((field) => ({
       name: field.name,
-      expression: expressionIr(query, aliases, field.expression),
+      expression: expressionIr(schema, query, aliases, field.expression),
     })),
   };
 }
 
-function expressionIr(query: QueryDeclaration, aliases: Map<string, EntityIr>, source: string): ExpressionIr {
+function expressionIr(schema: SchemaIr, query: QueryDeclaration, aliases: Map<string, EntityIr>, source: string): ExpressionIr {
   const fields: FieldRefIr[] = [];
   for (const match of source.matchAll(/\b([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)\b/g)) {
     const entity = aliases.get(match[1]);
@@ -241,10 +249,65 @@ function expressionIr(query: QueryDeclaration, aliases: Map<string, EntityIr>, s
     }))
     .filter((parameter) => new RegExp(`\\b${parameter.name}\\b`).test(source));
 
+  const enumLiterals = collectEnumLiterals(schema, query, source, fields, aliases, parameters);
+
   return {
     source,
     fields,
     aliases: aliasRefs,
     parameters,
+    enumLiterals,
   };
+}
+
+function collectEnumLiterals(
+  schema: SchemaIr,
+  query: QueryDeclaration,
+  source: string,
+  fields: FieldRefIr[],
+  aliases: Map<string, EntityIr>,
+  parameters: ParameterRefIr[],
+): EnumLiteralRefIr[] {
+  const literals: EnumLiteralRefIr[] = [];
+  const seen = new Set<string>();
+  const parameterNames = new Set(parameters.map((parameter) => parameter.name));
+
+  for (const fieldRef of fields) {
+    const field = fieldForRef(aliases, fieldRef);
+    const enumeration = schema.enums.find((candidate) => candidate.name === field?.type.name);
+    if (!field || !enumeration) continue;
+
+    for (const token of comparedBareTokens(source, fieldRef.source)) {
+      if (parameterNames.has(token) || aliases.has(token)) continue;
+      if (!enumeration.values.includes(token)) {
+        throw new DlError(`query ${query.name} compares ${fieldRef.entity}.${fieldRef.field} to invalid ${enumeration.name} value ${token}`);
+      }
+      const key = `${enumeration.name}:${token}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      literals.push({
+        source: token,
+        enumName: enumeration.name,
+        value: token,
+      });
+    }
+  }
+
+  return literals;
+}
+
+function fieldForRef(aliases: Map<string, EntityIr>, fieldRef: FieldRefIr): FieldIr | undefined {
+  return aliases.get(fieldRef.alias)?.fields.find((field) => field.name === fieldRef.field);
+}
+
+function comparedBareTokens(source: string, fieldSource: string): string[] {
+  const escaped = escapeRegExp(fieldSource);
+  const token = "([A-Za-z_][A-Za-z0-9_]*)";
+  const after = new RegExp(`\\b${escaped}\\b\\s*(?:==|!=)\\s*\\b${token}\\b(?!\\s*\\.)`, "g");
+  const before = new RegExp(`(?<!\\.)\\b${token}\\b(?!\\s*\\.)\\s*(?:==|!=)\\s*\\b${escaped}\\b`, "g");
+  return [...source.matchAll(after), ...source.matchAll(before)].map((match) => match[1]);
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

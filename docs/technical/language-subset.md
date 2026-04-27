@@ -72,6 +72,8 @@ query highValueUsers(min: Decimal): Query<{ email: String?, balance: Decimal }> 
 
 Query parameters lower to positional PostgreSQL parameters such as `$1`. Entity field references are validated against Schema IR before SQL is emitted.
 
+Enum fields can be compared with bare enum literals in query predicates. For example, `order.status == Paid` lowers to a PostgreSQL enum literal comparison, and invalid values are rejected during query lowering.
+
 Record projections must match the declared `Query<{ ... }>` result shape: projected fields must be declared, declared fields must be projected, duplicate projected field names are rejected, and simple field optionality must match.
 
 Join support is intentionally narrow and explicit:

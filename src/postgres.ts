@@ -179,6 +179,10 @@ function expressionSql(expression: ExpressionIr): string {
     sql = sql.replace(new RegExp(`\\b${parameter.name}\\b`, "g"), `$${parameter.position}`);
   }
 
+  for (const literal of expression.enumLiterals) {
+    sql = sql.replace(new RegExp(`\\b${literal.source}\\b`, "g"), quoteLiteral(literal.value));
+  }
+
   sql = sql.replace(/\bcount\(\s*\)/g, "count(*)");
 
   return sql.replaceAll("==", "=");

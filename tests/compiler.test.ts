@@ -174,6 +174,56 @@ describe("compiler prototype", () => {
     expect(explanation).toContain('ORDER BY "user".balance DESC');
   });
 
+  it("lowers enum literals in query predicates", () => {
+    const sql = emitQuerySql(
+      `module commerce
+
+entity Order {
+  id: Id<Order> primary generated
+  status: OrderStatus default Pending
+}
+
+enum OrderStatus {
+  Pending
+  Paid
+}
+
+query paidOrders(): Query<Order> =
+  from order in Order
+  where order.status == Paid
+  select order
+`,
+      "paidOrders",
+    );
+
+    expect(sql).toBe('SELECT "order".*\nFROM orders AS "order"\nWHERE "order".status = \'Paid\';');
+  });
+
+  it("rejects invalid enum literals in query predicates", () => {
+    expect(() =>
+      emitQuerySql(
+        `module commerce
+
+entity Order {
+  id: Id<Order> primary generated
+  status: OrderStatus
+}
+
+enum OrderStatus {
+  Pending
+  Paid
+}
+
+query refundedOrders(): Query<Order> =
+  from order in Order
+  where order.status == Refunded
+  select order
+`,
+        "refundedOrders",
+      ),
+    ).toThrow("query refundedOrders compares Order.status to invalid OrderStatus value Refunded");
+  });
+
   it("emits explicit Query IR", () => {
     const queryIr = JSON.parse(emitQueryIr(commerce, "highValueUsers"));
 
