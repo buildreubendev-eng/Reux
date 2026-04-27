@@ -95,12 +95,15 @@ CREATE TABLE IF NOT EXISTS _dl_outbox (
   attempts integer NOT NULL DEFAULT 0,
   last_error text NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
+  claimed_at timestamptz NULL,
   processed_at timestamptz NULL
 );
 `);
   await db.query("ALTER TABLE _dl_outbox ADD COLUMN IF NOT EXISTS attempts integer NOT NULL DEFAULT 0;");
   await db.query("ALTER TABLE _dl_outbox ADD COLUMN IF NOT EXISTS last_error text NULL;");
+  await db.query("ALTER TABLE _dl_outbox ADD COLUMN IF NOT EXISTS claimed_at timestamptz NULL;");
   await db.query("CREATE INDEX IF NOT EXISTS _dl_outbox_status_created_at_idx ON _dl_outbox (status, created_at);");
+  await db.query("CREATE INDEX IF NOT EXISTS _dl_outbox_status_claimed_at_idx ON _dl_outbox (status, claimed_at);");
 }
 
 export async function listOutboxEvents(
@@ -160,7 +163,8 @@ WITH claimed AS (
 UPDATE _dl_outbox o
 SET status = 'processing',
     attempts = attempts + 1,
-    last_error = NULL
+    last_error = NULL,
+    claimed_at = now()
 FROM claimed
 WHERE o.id = claimed.id
 RETURNING o.id, o.event_type, o.payload, o.status, o.attempts, o.last_error, o.created_at, o.processed_at;
@@ -193,6 +197,7 @@ export async function requeueOutboxEvent(db: Database, id: string): Promise<Outb
 UPDATE _dl_outbox
 SET status = 'pending',
     last_error = NULL,
+    claimed_at = NULL,
     processed_at = NULL
 WHERE id = $1
   AND status IN ('processing', 'failed')
@@ -202,6 +207,34 @@ RETURNING id, event_type, payload, status, attempts, last_error, created_at, pro
   );
   const row = result.rows[0];
   return row ? outboxRow(row) : undefined;
+}
+
+export async function requeueStaleOutboxEvents(db: Database, olderThanSeconds: number, limit = 50): Promise<OutboxEvent[]> {
+  await ensureOutboxTable(db);
+  const result = await db.query<OutboxEventRow>(
+    `
+WITH stale AS (
+  SELECT id
+  FROM _dl_outbox
+  WHERE status = 'processing'
+    AND claimed_at IS NOT NULL
+    AND claimed_at < now() - ($1 * interval '1 second')
+  ORDER BY claimed_at ASC
+  LIMIT $2
+  FOR UPDATE SKIP LOCKED
+)
+UPDATE _dl_outbox o
+SET status = 'pending',
+    last_error = NULL,
+    claimed_at = NULL,
+    processed_at = NULL
+FROM stale
+WHERE o.id = stale.id
+RETURNING o.id, o.event_type, o.payload, o.status, o.attempts, o.last_error, o.created_at, o.processed_at;
+`,
+    [olderThanSeconds, limit],
+  );
+  return result.rows.map(outboxRow);
 }
 
 export async function processOutboxEvents(

@@ -20,6 +20,7 @@ import {
   processOutboxEvents,
   readMigrationFiles,
   requeueOutboxEvent,
+  requeueStaleOutboxEvents,
   runTransactionSql,
 } from "../src/runtime.js";
 
@@ -565,6 +566,7 @@ COMMIT;`,
         last_error: null,
         status: "pending",
         created_at: "2026-04-25T00:00:00.000Z",
+        claimed_at: null,
         processed_at: null,
       },
     ]);
@@ -625,6 +627,7 @@ COMMIT;`,
         attempts: 0,
         last_error: null,
         created_at: "2026-04-25T00:00:00.000Z",
+        claimed_at: null,
         processed_at: null,
       },
       {
@@ -722,6 +725,48 @@ COMMIT;`,
       sql: expect.stringContaining("FOR UPDATE SKIP LOCKED"),
       params: [5],
     });
+    expect(db.outbox[0].claimed_at).toBe("2026-04-25T00:10:00.000Z");
+  });
+
+  it("requeues stale processing outbox events", async () => {
+    const db = new FakeDb();
+    db.outbox.push(
+      {
+        id: "outbox-1",
+        event_type: "RewardGranted",
+        payload: { user: "user-id" },
+        status: "processing",
+        attempts: 1,
+        last_error: null,
+        created_at: "2026-04-25T00:00:00.000Z",
+        claimed_at: "2026-04-25T00:00:00.000Z",
+        processed_at: null,
+      },
+      {
+        id: "outbox-2",
+        event_type: "RewardGranted",
+        payload: { user: "fresh-user-id" },
+        status: "processing",
+        attempts: 1,
+        last_error: null,
+        created_at: "2026-04-25T00:09:30.000Z",
+        claimed_at: "2026-04-25T00:09:30.000Z",
+        processed_at: null,
+      },
+    );
+
+    const events = await requeueStaleOutboxEvents(db, 300, 10);
+
+    expect(events).toEqual([
+      expect.objectContaining({
+        id: "outbox-1",
+        status: "pending",
+        attempts: 1,
+        lastError: null,
+      }),
+    ]);
+    expect(db.outbox[0]).toMatchObject({ status: "pending", claimed_at: null });
+    expect(db.outbox[1]).toMatchObject({ status: "processing", claimed_at: "2026-04-25T00:09:30.000Z" });
   });
 
   it("marks outbox events failed", async () => {
@@ -810,6 +855,8 @@ COMMIT;`,
 });
 
 class FakeDb implements Database {
+  static readonly now = new Date("2026-04-25T00:10:00.000Z");
+
   readonly queries: string[] = [];
   readonly queryCalls: { sql: string; params?: unknown[] }[] = [];
   readonly applied: { filename: string; hash: string }[] = [];
@@ -862,6 +909,7 @@ class FakeDb implements Database {
         attempts: 0,
         last_error: null,
         created_at: "2026-04-25T00:00:00.000Z",
+        claimed_at: null,
         processed_at: null,
       };
       this.outbox.push(row);
@@ -871,6 +919,21 @@ class FakeDb implements Database {
       };
     }
     if (sql.includes("UPDATE _dl_outbox")) {
+      if (sql.includes("FROM stale")) {
+        const olderThanSeconds = params?.[0] as number;
+        const limit = params?.[1] as number;
+        const cutoff = new Date(FakeDb.now.getTime() - olderThanSeconds * 1000);
+        const rows = this.outbox
+          .filter((candidate) => candidate.status === "processing" && candidate.claimed_at && new Date(candidate.claimed_at) < cutoff)
+          .slice(0, limit);
+        for (const row of rows) {
+          row.status = "pending";
+          row.last_error = null;
+          row.claimed_at = null;
+          row.processed_at = null;
+        }
+        return { rows: rows as T[], rowCount: rows.length };
+      }
       const row = sql.includes("FROM claimed")
         ? this.outbox.find((candidate) => candidate.status === "pending")
         : this.outbox.find((candidate) => candidate.id === params?.[0]);
@@ -879,12 +942,14 @@ class FakeDb implements Database {
         row.status = "processing";
         row.attempts += 1;
         row.last_error = null;
+        row.claimed_at = FakeDb.now.toISOString();
       } else if (sql.includes("status = 'failed'")) {
         row.status = "failed";
         row.last_error = params?.[1] as string;
       } else if (sql.includes("status = 'pending'")) {
         row.status = "pending";
         row.last_error = null;
+        row.claimed_at = null;
         row.processed_at = null;
       } else {
         row.status = "processed";
@@ -912,6 +977,7 @@ interface FakeOutboxRow {
   attempts: number;
   last_error: string | null;
   created_at: string;
+  claimed_at?: string | null;
   processed_at: string | null;
 }
 

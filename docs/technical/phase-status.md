@@ -37,7 +37,7 @@ Status: implemented for the supported SQL subset.
 - Runs supported transaction SQL inside managed `BEGIN`/`COMMIT`/`ROLLBACK`.
 - Retries retryable PostgreSQL conflicts and deadlocks according to `retry N`.
 - Supports `load ... for update`, simple loaded-entity mutations, `insert Entity { ... }`, and durable `enqueue Event { ... }`.
-- Records outbox events in `_dl_outbox` and exposes list, claim, mark processed, mark failed, and requeue commands.
+- Records outbox events in `_dl_outbox` and exposes list, claim, mark processed, mark failed, requeue, and stale-claim recovery commands.
 - Provides an embeddable `processOutboxEvents` helper for dispatching claimed events to application handlers.
 
 ## Phase 4: Migrations

@@ -279,11 +279,12 @@ CREATE TABLE IF NOT EXISTS _dl_outbox (
   attempts integer NOT NULL DEFAULT 0,
   last_error text NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
+  claimed_at timestamptz NULL,
   processed_at timestamptz NULL
 );
 ```
 
-The runtime also creates `_dl_outbox_status_created_at_idx` on `(status, created_at)` for listing and worker claims.
+The runtime also creates `_dl_outbox_status_created_at_idx` on `(status, created_at)` for listing and `_dl_outbox_status_claimed_at_idx` on `(status, claimed_at)` for stale claim recovery.
 
 Example:
 
@@ -340,6 +341,14 @@ node dist/cli.js outbox-requeue 00000000-0000-0000-0000-000000000000
 ```
 
 Requeueing changes status back to `pending`, clears `last_error`, leaves `attempts` intact, and only applies to events currently in `failed` or `processing`.
+
+Requeue abandoned processing claims:
+
+```bash
+node dist/cli.js outbox-requeue-stale 300 50
+```
+
+`outbox-requeue-stale` moves events from `processing` back to `pending` when their `claimed_at` timestamp is older than the supplied age in seconds. The optional second argument limits the number of events requeued. This is intended for worker recovery when a process dies after claiming events but before marking them processed or failed.
 
 ## Outbox Processing API
 

@@ -253,6 +253,14 @@ Requeue a failed or processing event:
 node dist/cli.js outbox-requeue <event-id>
 ```
 
+Requeue processing events abandoned by a worker:
+
+```bash
+node dist/cli.js outbox-requeue-stale 300 50
+```
+
+The first argument is the minimum claimed age in seconds. The optional second argument is the maximum number of events to requeue.
+
 ## Exit Behavior
 
 Diagnostics are printed to stderr and the process exits non-zero when parsing, validation, or artifact generation fails.

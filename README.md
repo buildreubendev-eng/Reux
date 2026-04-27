@@ -72,6 +72,7 @@ node dist/cli.js outbox-claim 10
 node dist/cli.js outbox-mark-processed '<event-id>'
 node dist/cli.js outbox-mark-failed '<event-id>' 'smtp unavailable'
 node dist/cli.js outbox-requeue '<event-id>'
+node dist/cli.js outbox-requeue-stale 300 50
 node dist/cli.js explain examples/commerce.dl highValueUsers
 node dist/cli.js migrate-create examples/commerce.dl initial_schema
 node dist/cli.js manifest examples/commerce.dl > old-manifest.json
