@@ -1,0 +1,232 @@
+{
+  "format": "dl.schema.v1",
+  "schemaHash": "a6348be9d0b5e895b012c99cdac19b602181b805d03c6bbc33d9ad1533939ad3",
+  "schema": {
+    "moduleName": "commerce",
+    "enums": [
+      {
+        "name": "OrderStatus",
+        "values": [
+          "Pending",
+          "Paid",
+          "Cancelled",
+          "Refunded"
+        ]
+      }
+    ],
+    "entities": [
+      {
+        "name": "Order",
+        "tableName": "orders",
+        "fields": [
+          {
+            "name": "id",
+            "columnName": "id",
+            "type": {
+              "name": "Id",
+              "optional": false,
+              "args": [
+                {
+                  "name": "Order",
+                  "optional": false,
+                  "args": [],
+                  "raw": "Order"
+                }
+              ],
+              "raw": "Id<Order>"
+            },
+            "nullable": false,
+            "primary": true,
+            "generated": true,
+            "unique": false
+          },
+          {
+            "name": "placedAt",
+            "columnName": "placed_at",
+            "type": {
+              "name": "Instant",
+              "optional": false,
+              "args": [],
+              "raw": "Instant"
+            },
+            "nullable": false,
+            "primary": false,
+            "generated": false,
+            "unique": false,
+            "defaultValue": "now()"
+          },
+          {
+            "name": "status",
+            "columnName": "status",
+            "type": {
+              "name": "OrderStatus",
+              "optional": false,
+              "args": [],
+              "raw": "OrderStatus"
+            },
+            "nullable": false,
+            "primary": false,
+            "generated": false,
+            "unique": false,
+            "defaultValue": "Pending"
+          },
+          {
+            "name": "total",
+            "columnName": "total",
+            "type": {
+              "name": "Decimal",
+              "optional": false,
+              "args": [],
+              "raw": "Decimal"
+            },
+            "nullable": false,
+            "primary": false,
+            "generated": false,
+            "unique": false,
+            "check": "total >= 0"
+          },
+          {
+            "name": "user",
+            "columnName": "user_id",
+            "type": {
+              "name": "User",
+              "optional": false,
+              "args": [],
+              "raw": "User"
+            },
+            "nullable": false,
+            "primary": false,
+            "generated": false,
+            "unique": false,
+            "reference": {
+              "entity": "User",
+              "columnName": "user_id"
+            }
+          }
+        ],
+        "indexes": []
+      },
+      {
+        "name": "User",
+        "tableName": "users",
+        "fields": [
+          {
+            "name": "balance",
+            "columnName": "balance",
+            "type": {
+              "name": "Decimal",
+              "optional": false,
+              "args": [],
+              "raw": "Decimal"
+            },
+            "nullable": false,
+            "primary": false,
+            "generated": false,
+            "unique": false,
+            "defaultValue": "0"
+          },
+          {
+            "name": "createdAt",
+            "columnName": "created_at",
+            "type": {
+              "name": "Instant",
+              "optional": false,
+              "args": [],
+              "raw": "Instant"
+            },
+            "nullable": false,
+            "primary": false,
+            "generated": false,
+            "unique": false,
+            "defaultValue": "now()"
+          },
+          {
+            "name": "displayName",
+            "columnName": "display_name",
+            "type": {
+              "name": "String",
+              "optional": true,
+              "args": [],
+              "raw": "String?"
+            },
+            "nullable": true,
+            "primary": false,
+            "generated": false,
+            "unique": false
+          },
+          {
+            "name": "email",
+            "columnName": "email",
+            "type": {
+              "name": "String",
+              "optional": true,
+              "args": [],
+              "raw": "String?"
+            },
+            "nullable": true,
+            "primary": false,
+            "generated": false,
+            "unique": true
+          },
+          {
+            "name": "id",
+            "columnName": "id",
+            "type": {
+              "name": "Id",
+              "optional": false,
+              "args": [
+                {
+                  "name": "User",
+                  "optional": false,
+                  "args": [],
+                  "raw": "User"
+                }
+              ],
+              "raw": "Id<User>"
+            },
+            "nullable": false,
+            "primary": true,
+            "generated": true,
+            "unique": false
+          },
+          {
+            "name": "name",
+            "columnName": "name",
+            "type": {
+              "name": "String",
+              "optional": false,
+              "args": [],
+              "raw": "String"
+            },
+            "nullable": false,
+            "primary": false,
+            "generated": false,
+            "unique": false
+          }
+        ],
+        "indexes": [
+          {
+            "name": "byBalance",
+            "fields": [
+              {
+                "name": "balance",
+                "direction": "desc",
+                "columnName": "balance"
+              }
+            ]
+          },
+          {
+            "name": "byEmail",
+            "fields": [
+              {
+                "name": "email",
+                "direction": "asc",
+                "columnName": "email"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

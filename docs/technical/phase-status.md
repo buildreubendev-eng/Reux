@@ -1,0 +1,79 @@
+# Phase Status
+
+Reux has completed the Phase 6 prototype pilot slice from the architecture roadmap while continuing to harden earlier phases.
+
+## Phase 0: Specification And Prototype Front End
+
+Status: mostly implemented for the MVP subset.
+
+- Parses `module`, `entity`, `enum`, `query`, and `transaction function`.
+- Builds a declaration-oriented AST.
+- Reports parser and aggregate validation diagnostics.
+- Maintains a basic type environment through Schema IR validation.
+
+## Phase 1: Schema And Type Checker
+
+Status: mostly implemented for the MVP subset.
+
+- Supports scalar fields, entity references, generated IDs, enums, indexes, defaults, checks, uniqueness, and nullability.
+- Emits backend-neutral Schema IR and stable schema manifests.
+- Rejects duplicate declarations, invalid references, unsupported types, duplicate fields/indexes/enum values, and invalid query/transaction parameters.
+
+## Phase 2: Query Compiler
+
+Status: implemented for a narrow query subset.
+
+- Supports one scanned entity with explicit joins, optional `where`, optional `group by`, optional `order by`, entity or record projection, and narrow `count()`/`sum(field)` aggregations.
+- Emits Query IR and PostgreSQL SQL.
+- Validates referenced fields, parameter references, and record projection shape against declared `Query<{ ... }>` result types.
+- Provides `explain`, `query-ir`, `query-sql`, and project-scoped variants.
+
+## Phase 3: Runtime And Transactions
+
+Status: implemented for the supported SQL subset.
+
+- Uses PostgreSQL through `pg`.
+- Runs compiled queries.
+- Runs supported transaction SQL inside managed `BEGIN`/`COMMIT`/`ROLLBACK`.
+- Retries retryable PostgreSQL conflicts and deadlocks according to `retry N`.
+- Supports `load ... for update`, simple loaded-entity mutations, `insert Entity { ... }`, and durable `enqueue Event { ... }`.
+- Records outbox events in `_dl_outbox` and exposes list, claim, mark processed, mark failed, and requeue commands.
+
+## Phase 4: Migrations
+
+Status: implemented for conservative schema diffs.
+
+- Emits schema manifests with stable hashes.
+- Creates initial migrations.
+- Plans diffs from previous manifest to current source.
+- Emits SQL for safe operations and comments/diagnostics for unsafe or destructive operations.
+- Applies migrations with hash recording and hash mismatch refusal.
+- Provides project-scoped migration planning and diff creation.
+
+## Phase 5: Tooling
+
+Status: implemented for the MVP workflow.
+
+- CLI includes file-scoped commands and project-scoped commands driven by `dl.json`.
+- `project-check` compiles configured sources.
+- `project-summary` inventories configured sources and reports duplicate cross-file declarations.
+- `project-doctor` checks source discovery, manifest freshness, migration directory visibility, and database URL environment status.
+- Technical documentation is maintained alongside implementation.
+
+## Phase 6: Pilot Application
+
+Status: complete for the current prototype scope.
+
+The current commerce examples remain compiler/runtime fixtures. The first pilot source now lives at `examples/pilot_reux.dl` and models a realistic accounts/orders/payments slice with several relationships, nontrivial join queries, a payment-capture transaction, a retryable account-credit transaction, and durable outbox coordination.
+
+Phase 6 coverage:
+
+- Accounts/orders/payments domain modeled in Reux source.
+- Several relationships represented through `Order.account` and `Payment.order`.
+- Nontrivial queries represented by `accountOrders` and `orderPayments`, both with explicit joins.
+- Pilot summary reporting represented by `accountOrderSummary`, which uses `group by`, `count()`, and `sum(order.total)`.
+- Migration evolution documented through pilot manifest comparison while the active commerce migrations remain hash-stable.
+- Transaction conflict behavior represented by `creditAccount`, which lowers to `SELECT ... FOR UPDATE`, a balance update, retry metadata, and an outbox event.
+- Production-like verification path documented for WSL PostgreSQL through `npm run test:postgres`.
+
+The remaining gaps are beyond Phase 6 rather than blockers for it: richer query composition, broader aggregation semantics, status transition rules, fixture/seed tooling, dispatcher execution for after-commit hooks, and eventually switching `dl.json` from commerce fixtures to the pilot source when the project is ready to treat the pilot as the active application.

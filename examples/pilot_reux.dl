@@ -1,0 +1,100 @@
+module pilot
+
+entity Account {
+  id: Id<Account> primary generated
+  email: String unique
+  displayName: String?
+  balance: Decimal default 0
+  createdAt: Instant default now()
+
+  index byEmail(email asc)
+}
+
+entity Product {
+  id: Id<Product> primary generated
+  sku: String unique
+  name: String
+  price: Decimal check price >= 0
+}
+
+entity Order {
+  id: Id<Order> primary generated
+  account: Account required
+  total: Decimal check total >= 0
+  status: OrderStatus default Pending
+  placedAt: Instant default now()
+
+  index byAccount(account asc)
+}
+
+entity Payment {
+  id: Id<Payment> primary generated
+  order: Order required
+  amount: Decimal check amount >= 0
+  status: PaymentStatus default Authorized
+  capturedAt: Instant?
+
+  index byOrder(order asc)
+}
+
+enum OrderStatus {
+  Pending
+  Paid
+  Cancelled
+  Refunded
+}
+
+enum PaymentStatus {
+  Authorized
+  Captured
+  Failed
+  Refunded
+}
+
+query openOrders(minTotal: Decimal): Query<{ total: Decimal, status: OrderStatus }> =
+  from order in Order
+  where order.total > minTotal
+  order by order.total desc
+  select { total: order.total, status: order.status }
+
+query accountBalances(min: Decimal): Query<{ email: String, balance: Decimal }> =
+  from account in Account
+  where account.balance > min
+  order by account.balance desc
+  select { email: account.email, balance: account.balance }
+
+query accountOrders(minTotal: Decimal): Query<{ email: String, total: Decimal, status: OrderStatus }> =
+  from order in Order
+  join account in Account on order.account == account
+  where order.total > minTotal
+  order by order.total desc
+  select { email: account.email, total: order.total, status: order.status }
+
+query orderPayments(minAmount: Decimal): Query<{ total: Decimal, paymentAmount: Decimal, paymentStatus: PaymentStatus }> =
+  from payment in Payment
+  join order in Order on payment.order == order
+  where payment.amount > minAmount
+  order by payment.amount desc
+  select { total: order.total, paymentAmount: payment.amount, paymentStatus: payment.status }
+
+query accountOrderSummary(minTotal: Decimal): Query<{ email: String, orderCount: Int64, totalSpend: Decimal }> =
+  from order in Order
+  join account in Account on order.account == account
+  where order.total > minTotal
+  group by account.email
+  order by sum(order.total) desc
+  select { email: account.email, orderCount: count(), totalSpend: sum(order.total) }
+
+transaction function capturePayment(orderRef: Order, amount: Decimal) writes Payment retry 3 {
+  insert Payment { order: orderRef, amount: amount, status: "Captured" }
+  enqueue PaymentCaptured { order: orderRef, amount: amount }
+  after commit sendReceipt(orderRef)
+}
+
+transaction function creditAccount(accountRef: Account, amount: Decimal) writes Account retry 3 {
+  let account = load accountRef for update
+  account.balance += amount
+  save account
+  enqueue AccountCredited { account: accountRef, amount: amount }
+  after commit notifyAccountCredited(accountRef)
+}

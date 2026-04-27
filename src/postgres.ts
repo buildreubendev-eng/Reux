@@ -1,0 +1,364 @@
+import { EntityIr, FieldIr, findEntity, SchemaIr, snakeCase } from "./schema.js";
+import { DlError } from "./errors.js";
+import { buildQueryIr, ExpressionIr, ProjectionIr, QueryInputIr, QueryPlanIr } from "./query-ir.js";
+import { QueryDeclaration, TransactionDeclaration } from "./ast.js";
+import { buildTransactionIr, TransactionIr } from "./transaction-ir.js";
+import { parseObjectLiteral } from "./object-literal.js";
+
+export function schemaToPostgres(schema: SchemaIr): string {
+  const extensionSql = ["CREATE EXTENSION IF NOT EXISTS pgcrypto;"];
+  const enumSql = schema.enums.map((enumeration) => {
+    const values = enumeration.values.map((value) => quoteLiteral(value)).join(", ");
+    return `CREATE TYPE ${snakeCase(enumeration.name)} AS ENUM (${values});`;
+  });
+
+  const tableSql = schema.entities.map((entity) => {
+    const columns = entity.fields.map((field) => `  ${columnSql(schema, field)}`);
+    const tableConstraints = entity.fields.flatMap((field) => {
+      if (!field.reference) return [];
+      const referenced = findEntity(schema, field.reference.entity);
+      if (!referenced) return [];
+      return [
+        `  CONSTRAINT ${entity.tableName}_${field.columnName}_fkey FOREIGN KEY (${field.columnName}) REFERENCES ${referenced.tableName}(id)`,
+      ];
+    });
+    return `CREATE TABLE ${entity.tableName} (\n${[...columns, ...tableConstraints].join(",\n")}\n);`;
+  });
+
+  const indexSql = schema.entities.flatMap((entity) =>
+    entity.indexes.map((index) => {
+      const columns = index.fields
+        .map((field) => `${field.columnName}${field.direction ? ` ${field.direction.toUpperCase()}` : ""}`)
+        .join(", ");
+      return `CREATE INDEX ${entity.tableName}_${snakeCase(index.name)} ON ${entity.tableName} (${columns});`;
+    }),
+  );
+
+  return [...extensionSql, ...enumSql, ...tableSql, ...indexSql].join("\n\n");
+}
+
+export function queryToPostgres(schema: SchemaIr, query: QueryDeclaration): string {
+  return queryIrToPostgres(buildQueryIr(schema, query));
+}
+
+export function transactionToPostgres(schema: SchemaIr, transaction: TransactionDeclaration): string {
+  return transactionIrToPostgres(schema, buildTransactionIr(schema, transaction));
+}
+
+export function queryIrToPostgres(plan: QueryPlanIr): string {
+  const clauses = collectClauses(plan.root.input);
+  return [`SELECT ${projectionSql(plan.root.projection)}`, clauses.from, ...clauses.joins, clauses.where, clauses.groupBy, clauses.orderBy]
+    .filter(Boolean)
+    .join("\n")
+    .concat(";");
+}
+
+export function columnSql(schema: SchemaIr, field: FieldIr): string {
+  const parts = [field.columnName, sqlType(schema, field), field.nullable ? "NULL" : "NOT NULL"];
+  if (field.primary) parts.push("PRIMARY KEY");
+  if (field.generated && field.type.name === "Id") parts.push("DEFAULT gen_random_uuid()");
+  if (field.defaultValue && !field.generated) parts.push(`DEFAULT ${defaultSql(field.defaultValue)}`);
+  if (field.unique) parts.push("UNIQUE");
+  if (field.check) parts.push(`CHECK (${checkSql(field)})`);
+  return parts.join(" ");
+}
+
+export function sqlType(schema: SchemaIr, field: FieldIr): string {
+  if (field.reference || field.type.name === "Id") return "uuid";
+  switch (field.type.name) {
+    case "Bool":
+      return "boolean";
+    case "Int":
+      return "integer";
+    case "Int64":
+      return "bigint";
+    case "Float":
+      return "double precision";
+    case "Decimal":
+      return "numeric";
+    case "String":
+      return "text";
+    case "Bytes":
+      return "bytea";
+    case "Date":
+      return "date";
+    case "Time":
+      return "time";
+    case "Instant":
+      return "timestamptz";
+    case "Duration":
+      return "interval";
+    case "Uuid":
+      return "uuid";
+    case "Json":
+      return "jsonb";
+    default:
+      if (schema.enums.some((enumeration) => enumeration.name === field.type.name)) {
+        return snakeCase(field.type.name);
+      }
+      throw new DlError(`no PostgreSQL type mapping for ${field.type.raw}`);
+  }
+}
+
+function defaultSql(value: string): string {
+  if (/^[A-Za-z_][A-Za-z0-9_]*\(\)$/.test(value)) {
+    if (value === "now()") return "now()";
+    return value;
+  }
+  if (/^-?\d+(\.\d+)?$/.test(value)) return value;
+  if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(value)) return quoteLiteral(value);
+  return value;
+}
+
+function checkSql(field: FieldIr): string {
+  return field.check?.replaceAll(field.name, field.columnName) ?? "";
+}
+
+function collectClauses(input: QueryInputIr): { from: string; joins: string[]; where?: string; groupBy?: string; orderBy?: string } {
+  if (input.kind === "Scan") {
+    return {
+      from: `FROM ${input.table} AS ${quoteIdentifier(input.alias)}`,
+      joins: [],
+    };
+  }
+
+  const clauses = collectClauses(input.input);
+  if (input.kind === "Join") {
+    return {
+      ...clauses,
+      joins: [...clauses.joins, `JOIN ${input.table} AS ${quoteIdentifier(input.alias)} ON ${expressionSql(input.on)}`],
+    };
+  }
+
+  if (input.kind === "Filter") {
+    return {
+      ...clauses,
+      where: `WHERE ${expressionSql(input.predicate)}`,
+    };
+  }
+
+  if (input.kind === "Group") {
+    return {
+      ...clauses,
+      groupBy: `GROUP BY ${input.keys.map(expressionSql).join(", ")}`,
+    };
+  }
+
+  if (input.kind === "Order") {
+    return {
+      ...clauses,
+      orderBy: `ORDER BY ${input.keys
+        .map((key) => `${expressionSql(key.expression)} ${key.direction.toUpperCase()}`)
+        .join(", ")}`,
+    };
+  }
+
+  return clauses;
+}
+
+function projectionSql(projection: ProjectionIr): string {
+  if (projection.kind === "Entity") {
+    return `${quoteIdentifier(projection.alias)}.*`;
+  }
+
+  return projection.fields.map((field) => `${expressionSql(field.expression)} AS ${field.name}`).join(", ");
+}
+
+function expressionSql(expression: ExpressionIr): string {
+  let sql = expression.source;
+
+  for (const field of expression.fields) {
+    sql = sql.replaceAll(field.source, `${quoteIdentifier(field.alias)}.${field.column}`);
+  }
+
+  for (const alias of expression.aliases) {
+    sql = sql.replace(new RegExp(`\\b${alias.name}\\b`, "g"), `${quoteIdentifier(alias.alias)}.id`);
+  }
+
+  for (const parameter of expression.parameters) {
+    sql = sql.replace(new RegExp(`\\b${parameter.name}\\b`, "g"), `$${parameter.position}`);
+  }
+
+  sql = sql.replace(/\bcount\(\s*\)/g, "count(*)");
+
+  return sql.replaceAll("==", "=");
+}
+
+export function transactionIrToPostgres(schema: SchemaIr, transaction: TransactionIr): string {
+  const lowered = new TransactionLowering(schema, transaction);
+  return lowered.lower();
+}
+
+class TransactionLowering {
+  private readonly loaded = new Map<string, { entity: EntityIr; sourceParameter: number }>();
+
+  constructor(
+    private readonly schema: SchemaIr,
+    private readonly transaction: TransactionIr,
+  ) {}
+
+  lower(): string {
+    const lines = ["BEGIN;"];
+    for (const step of this.transaction.steps) {
+      if (step.kind === "LoadForUpdate") {
+        lines.push(this.lowerLoadForUpdate(step.target, step.source));
+      } else if (step.kind === "Mutation") {
+        lines.push(this.lowerMutation(step.target, step.operator, step.expression));
+      } else if (step.kind === "Save") {
+        lines.push(`-- save ${step.target}: staged by explicit mutation statements`);
+      } else if (step.kind === "Insert") {
+        lines.push(this.lowerInsert(step.entity, step.source));
+      } else if (step.kind === "Enqueue") {
+        lines.push(this.lowerEnqueue(step.event, step.source));
+      } else if (step.kind === "AfterCommit") {
+        lines.push(`-- after commit: ${step.call}`);
+      } else if (step.kind === "ExternalCall") {
+        lines.push(`-- external call: ${step.call}`);
+      } else if (step.kind === "Abort") {
+        lines.push(`-- abort ${step.error}`);
+      } else {
+        lines.push(`-- raw: ${step.source}`);
+      }
+    }
+    lines.push("COMMIT;");
+    return lines.join("\n");
+  }
+
+  private lowerLoadForUpdate(target: string, source: string): string {
+    const parameter = this.parameter(source);
+    const entity = findEntity(this.schema, parameter.type);
+    if (!entity) {
+      throw new DlError(`cannot lower load for non-entity parameter ${source}`);
+    }
+    this.loaded.set(target, {
+      entity,
+      sourceParameter: parameter.position,
+    });
+    return `SELECT * FROM ${entity.tableName} WHERE id = $${parameter.position} FOR UPDATE;`;
+  }
+
+  private lowerMutation(target: string, operator: "+=" | "-=" | "=", expression: string): string {
+    const [localName, fieldName] = target.split(".");
+    const loaded = this.loaded.get(localName);
+    if (!loaded) {
+      throw new DlError(`cannot lower mutation for unloaded entity state ${localName}`);
+    }
+    const field = loaded.entity.fields.find((candidate) => candidate.name === fieldName);
+    if (!field) {
+      throw new DlError(`cannot lower mutation for unknown field ${loaded.entity.name}.${fieldName}`);
+    }
+    const valueSql = this.expressionSql(expression);
+    const assignment =
+      operator === "="
+        ? `${field.columnName} = ${valueSql}`
+        : `${field.columnName} = ${field.columnName} ${operator[0]} ${valueSql}`;
+    return `UPDATE ${loaded.entity.tableName} SET ${assignment} WHERE id = $${loaded.sourceParameter};`;
+  }
+
+  private expressionSql(expression: string): string {
+    const parameter = this.transaction.parameters.find((candidate) => candidate.name === expression);
+    if (parameter) return `$${this.transaction.parameters.indexOf(parameter) + 1}`;
+    const loaded = this.loaded.get(expression);
+    if (loaded) return `$${loaded.sourceParameter}`;
+    if (/^-?\d+(\.\d+)?$/.test(expression)) return expression;
+    if ((expression.startsWith("\"") && expression.endsWith("\"")) || (expression.startsWith("'") && expression.endsWith("'"))) {
+      return quoteLiteral(expression.slice(1, -1));
+    }
+    if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(expression)) return quoteLiteral(expression);
+    return expression;
+  }
+
+  private lowerInsert(entityName: string, source: string): string {
+    const entity = findEntity(this.schema, entityName);
+    if (!entity) {
+      throw new DlError(`cannot lower insert for unknown entity ${entityName}`);
+    }
+    const fields = parseObjectLiteral(source);
+    const columns: string[] = [];
+    const values: string[] = [];
+    for (const objectField of fields) {
+      const field = entity.fields.find((candidate) => candidate.name === objectField.name);
+      if (!field) {
+        throw new DlError(`cannot lower insert for unknown field ${entityName}.${objectField.name}`);
+      }
+      columns.push(field.columnName);
+      values.push(this.expressionSql(objectField.value));
+    }
+    if (columns.length === 0) {
+      return `INSERT INTO ${entity.tableName} DEFAULT VALUES RETURNING *;`;
+    }
+    return `INSERT INTO ${entity.tableName} (${columns.join(", ")}) VALUES (${values.join(", ")}) RETURNING *;`;
+  }
+
+  private lowerEnqueue(event: string, source: string): string {
+    const fields = parseObjectLiteral(source);
+    const payloadParts = fields.flatMap((field) => [quoteLiteral(field.name), this.jsonExpressionSql(field.value)]);
+    const payload = payloadParts.length > 0 ? `jsonb_build_object(${payloadParts.join(", ")})` : "'{}'::jsonb";
+    return `INSERT INTO _dl_outbox (event_type, payload) VALUES (${quoteLiteral(event)}, ${payload}) RETURNING id, event_type, payload;`;
+  }
+
+  private jsonExpressionSql(expression: string): string {
+    const parameter = this.transaction.parameters.find((candidate) => candidate.name === expression);
+    if (parameter) {
+      return `$${this.transaction.parameters.indexOf(parameter) + 1}::${this.parameterSqlType(parameter.type)}`;
+    }
+    const loaded = this.loaded.get(expression);
+    if (loaded) return `$${loaded.sourceParameter}::uuid`;
+    return this.expressionSql(expression);
+  }
+
+  private parameter(name: string): { name: string; type: string; position: number } {
+    const index = this.transaction.parameters.findIndex((parameter) => parameter.name === name);
+    if (index < 0) {
+      throw new DlError(`unknown transaction parameter ${name}`);
+    }
+    const parameter = this.transaction.parameters[index];
+    return {
+      ...parameter,
+      position: index + 1,
+    };
+  }
+
+  private parameterSqlType(type: string): string {
+    if (findEntity(this.schema, type)) return "uuid";
+    switch (type) {
+      case "Bool":
+        return "boolean";
+      case "Int":
+        return "integer";
+      case "Int64":
+        return "bigint";
+      case "Float":
+        return "double precision";
+      case "Decimal":
+        return "numeric";
+      case "String":
+        return "text";
+      case "Date":
+        return "date";
+      case "Time":
+        return "time";
+      case "Instant":
+        return "timestamptz";
+      case "Uuid":
+        return "uuid";
+      case "Json":
+        return "jsonb";
+      default:
+        if (this.schema.enums.some((enumeration) => enumeration.name === type)) {
+          return snakeCase(type);
+        }
+        return "text";
+    }
+  }
+}
+
+function quoteLiteral(value: string): string {
+  return `'${value.replaceAll("'", "''")}'`;
+}
+
+function quoteIdentifier(value: string): string {
+  return `"${value.replaceAll('"', '""')}"`;
+}
+
+export { quoteLiteral };

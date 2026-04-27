@@ -1,0 +1,7 @@
+{
+  "backend": "postgres",
+  "databaseUrlEnv": "DATABASE_URL",
+  "migrationsDir": "pilot/migrations",
+  "schemaManifest": "pilot/.dl/schema-manifest.json",
+  "sources": ["examples/pilot_reux.dl"]
+}

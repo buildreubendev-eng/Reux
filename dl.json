@@ -1,0 +1,7 @@
+{
+  "backend": "postgres",
+  "databaseUrlEnv": "DATABASE_URL",
+  "migrationsDir": "migrations",
+  "schemaManifest": ".dl/schema-manifest.json",
+  "sources": ["examples/commerce_v2.dl"]
+}

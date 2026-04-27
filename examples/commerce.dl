@@ -1,0 +1,30 @@
+module commerce
+
+entity User {
+  id: Id<User> primary generated
+  name: String
+  email: String? unique
+  balance: Decimal default 0
+  createdAt: Instant default now()
+
+  index byBalance(balance desc)
+}
+
+entity Order {
+  id: Id<Order> primary generated
+  user: User required
+  total: Decimal check total >= 0
+  status: OrderStatus default Pending
+}
+
+enum OrderStatus {
+  Pending
+  Paid
+  Cancelled
+}
+
+query highValueUsers(min: Decimal): Query<{ email: String?, balance: Decimal }> =
+  from user in User
+  where user.balance > min
+  order by user.balance desc
+  select { email: user.email, balance: user.balance }

@@ -1,0 +1,96 @@
+# Pilot Application
+
+The first Reux pilot source is `examples/pilot_reux.dl`.
+
+It models a small accounts/orders/payments domain:
+
+- `Account`: customer identity and balance;
+- `Product`: sellable catalog item;
+- `Order`: account-owned order with total and status;
+- `Payment`: order payment lifecycle.
+
+The pilot intentionally stays inside the currently supported compiler/runtime subset:
+
+- one-base-entity queries with explicit joins;
+- explicit joins over entity references;
+- enum-backed status fields;
+- generated UUID identities;
+- entity references;
+- indexes;
+- transaction insert;
+- transaction row locks and retryable conflict handling;
+- durable outbox enqueue;
+- after-commit hook reporting.
+
+Useful commands:
+
+```powershell
+$env:REUX_CONFIG='pilot/dl.json'
+node dist/cli.js project-check
+node dist/cli.js project-doctor
+node dist/cli.js project-sql
+node dist/cli.js project-query-sql openOrders
+node dist/cli.js project-query-sql accountBalances
+node dist/cli.js project-query-sql accountOrders
+node dist/cli.js project-query-sql orderPayments
+node dist/cli.js project-query-sql accountOrderSummary
+node dist/cli.js project-tx-sql capturePayment
+node dist/cli.js project-tx-sql creditAccount
+```
+
+The pilot is activated through `pilot/dl.json`, `pilot/.dl/schema-manifest.json`, and `pilot/migrations/`. Keeping those separate lets the root `dl.json` and root `migrations/` continue to drive the commerce fixtures while the completed Phase 6 pilot remains available as an independent application slice.
+
+## Transaction Conflict Slice
+
+`creditAccount` is the current pilot transaction for retryable write conflicts:
+
+```dl
+transaction function creditAccount(accountRef: Account, amount: Decimal) writes Account retry 3 {
+  let account = load accountRef for update
+  account.balance += amount
+  save account
+  enqueue AccountCredited { account: accountRef, amount: amount }
+  after commit notifyAccountCredited(accountRef)
+}
+```
+
+It lowers to a `SELECT ... FOR UPDATE`, an `UPDATE accounts SET balance = balance + $2`, and an outbox insert inside the same transaction. At runtime, PostgreSQL serialization conflicts and deadlocks are retried up to the declared `retry 3` attempt budget.
+
+## Migration Evolution
+
+Phase 6 migration evolution is exercised by keeping the root commerce source and migrations stable while the pilot source evolves independently. The root `dl.json` still points at `examples/commerce_v2.dl`, so existing applied migration hashes remain valid in the local WSL PostgreSQL database.
+
+For pilot schema evolution planning, generate a manifest from the current pilot source and compare future pilot revisions against it:
+
+```powershell
+$env:REUX_CONFIG='pilot/dl.json'
+node dist/cli.js project-manifest-write
+node dist/cli.js migrate-plan pilot/.dl/schema-manifest.json examples/pilot_reux_next.dl
+```
+
+Do not place pilot migration files into the checked-in root `migrations/` directory until the root `dl.json` is intentionally switched to the pilot source.
+
+## Production-Like Check
+
+The local production-like path for Phase 6 uses PostgreSQL running in WSL and the same CLI/runtime code used by project commands:
+
+```powershell
+$env:DATABASE_URL='postgres://datalang:datalang@localhost:5432/datalang_dev'
+npm run build
+npm run test:postgres
+npm run test:pilot:postgres
+$env:REUX_CONFIG='pilot/dl.json'
+node dist/cli.js project-doctor
+node dist/cli.js project-query-sql accountOrders
+node dist/cli.js project-tx-sql creditAccount
+```
+
+`test:pilot:postgres` creates a temporary PostgreSQL schema, applies the pilot migrations, seeds accounts/orders/payments data, runs the join and aggregation queries, runs `capturePayment` and `creditAccount`, then drops the temporary schema. This verifies the pilot without requiring Docker Desktop and without colliding with the root commerce fixtures.
+
+Likely next language/runtime needs exposed by this pilot:
+
+- typed money/currency conventions;
+- transaction-local generated IDs;
+- richer insert result binding;
+- status transition validation;
+- first-class fixture/seed tooling outside the integration harness.

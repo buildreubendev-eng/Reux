@@ -1,0 +1,400 @@
+{
+  "format": "dl.schema.v1",
+  "schemaHash": "ac206e5c2735aeba965db04014f6f61fce4b6c53fa164ebd2d9c0638be758f35",
+  "schema": {
+    "moduleName": "pilot",
+    "enums": [
+      {
+        "name": "OrderStatus",
+        "values": [
+          "Pending",
+          "Paid",
+          "Cancelled",
+          "Refunded"
+        ]
+      },
+      {
+        "name": "PaymentStatus",
+        "values": [
+          "Authorized",
+          "Captured",
+          "Failed",
+          "Refunded"
+        ]
+      }
+    ],
+    "entities": [
+      {
+        "name": "Account",
+        "tableName": "accounts",
+        "fields": [
+          {
+            "name": "balance",
+            "columnName": "balance",
+            "type": {
+              "name": "Decimal",
+              "optional": false,
+              "args": [],
+              "raw": "Decimal"
+            },
+            "nullable": false,
+            "primary": false,
+            "generated": false,
+            "unique": false,
+            "defaultValue": "0"
+          },
+          {
+            "name": "createdAt",
+            "columnName": "created_at",
+            "type": {
+              "name": "Instant",
+              "optional": false,
+              "args": [],
+              "raw": "Instant"
+            },
+            "nullable": false,
+            "primary": false,
+            "generated": false,
+            "unique": false,
+            "defaultValue": "now()"
+          },
+          {
+            "name": "displayName",
+            "columnName": "display_name",
+            "type": {
+              "name": "String",
+              "optional": true,
+              "args": [],
+              "raw": "String?"
+            },
+            "nullable": true,
+            "primary": false,
+            "generated": false,
+            "unique": false
+          },
+          {
+            "name": "email",
+            "columnName": "email",
+            "type": {
+              "name": "String",
+              "optional": false,
+              "args": [],
+              "raw": "String"
+            },
+            "nullable": false,
+            "primary": false,
+            "generated": false,
+            "unique": true
+          },
+          {
+            "name": "id",
+            "columnName": "id",
+            "type": {
+              "name": "Id",
+              "optional": false,
+              "args": [
+                {
+                  "name": "Account",
+                  "optional": false,
+                  "args": [],
+                  "raw": "Account"
+                }
+              ],
+              "raw": "Id<Account>"
+            },
+            "nullable": false,
+            "primary": true,
+            "generated": true,
+            "unique": false
+          }
+        ],
+        "indexes": [
+          {
+            "name": "byEmail",
+            "fields": [
+              {
+                "name": "email",
+                "direction": "asc",
+                "columnName": "email"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Order",
+        "tableName": "orders",
+        "fields": [
+          {
+            "name": "account",
+            "columnName": "account_id",
+            "type": {
+              "name": "Account",
+              "optional": false,
+              "args": [],
+              "raw": "Account"
+            },
+            "nullable": false,
+            "primary": false,
+            "generated": false,
+            "unique": false,
+            "reference": {
+              "entity": "Account",
+              "columnName": "account_id"
+            }
+          },
+          {
+            "name": "id",
+            "columnName": "id",
+            "type": {
+              "name": "Id",
+              "optional": false,
+              "args": [
+                {
+                  "name": "Order",
+                  "optional": false,
+                  "args": [],
+                  "raw": "Order"
+                }
+              ],
+              "raw": "Id<Order>"
+            },
+            "nullable": false,
+            "primary": true,
+            "generated": true,
+            "unique": false
+          },
+          {
+            "name": "placedAt",
+            "columnName": "placed_at",
+            "type": {
+              "name": "Instant",
+              "optional": false,
+              "args": [],
+              "raw": "Instant"
+            },
+            "nullable": false,
+            "primary": false,
+            "generated": false,
+            "unique": false,
+            "defaultValue": "now()"
+          },
+          {
+            "name": "status",
+            "columnName": "status",
+            "type": {
+              "name": "OrderStatus",
+              "optional": false,
+              "args": [],
+              "raw": "OrderStatus"
+            },
+            "nullable": false,
+            "primary": false,
+            "generated": false,
+            "unique": false,
+            "defaultValue": "Pending"
+          },
+          {
+            "name": "total",
+            "columnName": "total",
+            "type": {
+              "name": "Decimal",
+              "optional": false,
+              "args": [],
+              "raw": "Decimal"
+            },
+            "nullable": false,
+            "primary": false,
+            "generated": false,
+            "unique": false,
+            "check": "total >= 0"
+          }
+        ],
+        "indexes": [
+          {
+            "name": "byAccount",
+            "fields": [
+              {
+                "name": "account",
+                "direction": "asc",
+                "columnName": "account_id"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Payment",
+        "tableName": "payments",
+        "fields": [
+          {
+            "name": "amount",
+            "columnName": "amount",
+            "type": {
+              "name": "Decimal",
+              "optional": false,
+              "args": [],
+              "raw": "Decimal"
+            },
+            "nullable": false,
+            "primary": false,
+            "generated": false,
+            "unique": false,
+            "check": "amount >= 0"
+          },
+          {
+            "name": "capturedAt",
+            "columnName": "captured_at",
+            "type": {
+              "name": "Instant",
+              "optional": true,
+              "args": [],
+              "raw": "Instant?"
+            },
+            "nullable": true,
+            "primary": false,
+            "generated": false,
+            "unique": false
+          },
+          {
+            "name": "id",
+            "columnName": "id",
+            "type": {
+              "name": "Id",
+              "optional": false,
+              "args": [
+                {
+                  "name": "Payment",
+                  "optional": false,
+                  "args": [],
+                  "raw": "Payment"
+                }
+              ],
+              "raw": "Id<Payment>"
+            },
+            "nullable": false,
+            "primary": true,
+            "generated": true,
+            "unique": false
+          },
+          {
+            "name": "order",
+            "columnName": "order_id",
+            "type": {
+              "name": "Order",
+              "optional": false,
+              "args": [],
+              "raw": "Order"
+            },
+            "nullable": false,
+            "primary": false,
+            "generated": false,
+            "unique": false,
+            "reference": {
+              "entity": "Order",
+              "columnName": "order_id"
+            }
+          },
+          {
+            "name": "status",
+            "columnName": "status",
+            "type": {
+              "name": "PaymentStatus",
+              "optional": false,
+              "args": [],
+              "raw": "PaymentStatus"
+            },
+            "nullable": false,
+            "primary": false,
+            "generated": false,
+            "unique": false,
+            "defaultValue": "Authorized"
+          }
+        ],
+        "indexes": [
+          {
+            "name": "byOrder",
+            "fields": [
+              {
+                "name": "order",
+                "direction": "asc",
+                "columnName": "order_id"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Product",
+        "tableName": "products",
+        "fields": [
+          {
+            "name": "id",
+            "columnName": "id",
+            "type": {
+              "name": "Id",
+              "optional": false,
+              "args": [
+                {
+                  "name": "Product",
+                  "optional": false,
+                  "args": [],
+                  "raw": "Product"
+                }
+              ],
+              "raw": "Id<Product>"
+            },
+            "nullable": false,
+            "primary": true,
+            "generated": true,
+            "unique": false
+          },
+          {
+            "name": "name",
+            "columnName": "name",
+            "type": {
+              "name": "String",
+              "optional": false,
+              "args": [],
+              "raw": "String"
+            },
+            "nullable": false,
+            "primary": false,
+            "generated": false,
+            "unique": false
+          },
+          {
+            "name": "price",
+            "columnName": "price",
+            "type": {
+              "name": "Decimal",
+              "optional": false,
+              "args": [],
+              "raw": "Decimal"
+            },
+            "nullable": false,
+            "primary": false,
+            "generated": false,
+            "unique": false,
+            "check": "price >= 0"
+          },
+          {
+            "name": "sku",
+            "columnName": "sku",
+            "type": {
+              "name": "String",
+              "optional": false,
+              "args": [],
+              "raw": "String"
+            },
+            "nullable": false,
+            "primary": false,
+            "generated": false,
+            "unique": true
+          }
+        ],
+        "indexes": []
+      }
+    ]
+  }
+}

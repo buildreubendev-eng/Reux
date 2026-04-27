@@ -1,0 +1,42 @@
+module commerce
+
+entity User {
+  id: Id<User> primary generated
+  name: String
+  email: String? unique
+  balance: Decimal default 0
+  displayName: String?
+  createdAt: Instant default now()
+
+  index byBalance(balance desc)
+  index byEmail(email asc)
+}
+
+entity Order {
+  id: Id<Order> primary generated
+  user: User required
+  total: Decimal check total >= 0
+  status: OrderStatus default Pending
+  placedAt: Instant default now()
+}
+
+enum OrderStatus {
+  Pending
+  Paid
+  Cancelled
+  Refunded
+}
+
+query highValueUsers(min: Decimal): Query<{ email: String?, balance: Decimal }> =
+  from user in User
+  where user.balance > min
+  order by user.balance desc
+  select { email: user.email, balance: user.balance }
+
+transaction function rewardUser(userRef: User, amount: Decimal) writes User retry 3 {
+  let user = load userRef for update
+  user.balance += amount
+  save user
+  enqueue RewardGranted { user: userRef, amount: amount }
+  after commit sendRewardEmail(userRef)
+}

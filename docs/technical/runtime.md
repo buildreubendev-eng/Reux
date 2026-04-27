@@ -1,0 +1,272 @@
+# Runtime
+
+The runtime layer is the first bridge from Reux compiler artifacts to a live PostgreSQL database.
+
+## Configuration
+
+Runtime commands read `dl.json` from the current working directory by default:
+
+```json
+{
+  "backend": "postgres",
+  "databaseUrlEnv": "DATABASE_URL",
+  "migrationsDir": "migrations",
+  "schemaManifest": ".dl/schema-manifest.json",
+  "sources": ["examples/commerce_v2.dl"]
+}
+```
+
+Fields:
+
+- `backend`: currently only `postgres`.
+- `databaseUrlEnv`: environment variable that contains the PostgreSQL connection string.
+- `migrationsDir`: directory containing checked-in `.sql` migrations.
+- `schemaManifest`: location where `manifest-write` stores the compiled schema manifest.
+- `sources`: source globs used by project-level commands such as `project-check`.
+
+Secrets are not stored in `dl.json`; set the configured environment variable before running database commands.
+
+Use `REUX_CONFIG` to point project commands at another config file without replacing the main workspace config:
+
+```powershell
+$env:REUX_CONFIG="pilot/dl.json"
+node dist/cli.js project-check
+node dist/cli.js project-doctor
+```
+
+## Project Commands
+
+Compile all configured source files:
+
+```bash
+node dist/cli.js project-check
+```
+
+Summarize configured source files:
+
+```bash
+node dist/cli.js project-summary
+node dist/cli.js project-summary --json
+node dist/cli.js project-doctor
+```
+
+`project-doctor` checks source discovery, duplicate declaration warnings, schema manifest freshness, migration directory visibility, and whether the configured database URL environment variable is set.
+
+Emit active project artifacts when `sources` resolves to exactly one file:
+
+```bash
+node dist/cli.js project-sql
+node dist/cli.js project-manifest
+node dist/cli.js project-manifest-write
+node dist/cli.js project-migrate-plan
+node dist/cli.js project-migrate-diff-create commerce_next
+node dist/cli.js project-query-sql highValueUsers
+node dist/cli.js project-query-run highValueUsers '[1000]'
+node dist/cli.js project-tx-sql rewardUser
+node dist/cli.js project-tx-run rewardUser '["user-id","100"]'
+node dist/cli.js project-data-insert-sql User '{"name":"Ada","email":"ada@example.com","balance":"1200"}'
+```
+
+The initial source discovery supports exact paths plus `*` and `**` glob patterns, deduplicates overlapping matches, and reports each compiled file in stable path order. `project-summary` also reports duplicate declaration names across configured files by module and declaration kind.
+
+## Schema Manifest
+
+Write the current compiled schema manifest:
+
+```bash
+node dist/cli.js manifest-write examples/commerce.dl
+```
+
+The destination comes from `dl.json` and defaults to `.dl/schema-manifest.json`.
+
+## Migration Table
+
+The runtime creates this bookkeeping table if needed:
+
+```sql
+CREATE TABLE IF NOT EXISTS _dl_schema_migrations (
+  filename text PRIMARY KEY,
+  hash text NOT NULL,
+  applied_at timestamptz NOT NULL DEFAULT now()
+);
+```
+
+Each applied migration is recorded by filename and SHA-256 hash. If a file with the same name has a different hash than the applied record, the runtime refuses to continue.
+
+## Migration Status
+
+```bash
+node dist/cli.js migrate-status
+```
+
+Prints applied and pending migration files.
+
+## Migration Apply
+
+```bash
+node dist/cli.js migrate-apply
+```
+
+Applies pending migration files in filename order. Each file is executed inside a transaction and recorded in `_dl_schema_migrations` after it succeeds.
+
+## Query Run
+
+```bash
+node dist/cli.js query-run examples/commerce.dl highValueUsers '[1000]'
+```
+
+`query-run` compiles the named query to PostgreSQL SQL, parses the optional third argument as a JSON array of parameters, executes the query, and prints JSON:
+
+```json
+{
+  "rowCount": 2,
+  "rows": []
+}
+```
+
+The current query runtime supports the same query subset as the compiler: one base scanned entity, explicit joins, optional `where`, optional `group by`, optional `order by`, simple projections, and narrow `count()`/`sum(field)` aggregations.
+
+Parameter arrays can also be read from files:
+
+```bash
+node dist/cli.js query-run examples/commerce.dl highValueUsers @params.json
+```
+
+## Data Insert
+
+Insert one row for an entity:
+
+```bash
+node dist/cli.js data-insert examples/commerce.dl User '{"name":"Ada","email":"ada@example.com","balance":"1200"}'
+```
+
+Preview the generated insert statement without connecting to PostgreSQL:
+
+```bash
+node dist/cli.js data-insert-sql examples/commerce.dl User '{"name":"Ada","email":"ada@example.com","balance":"1200"}'
+```
+
+For larger fixtures or shells that strip JSON quotes, pass `@path/to/file.json`.
+
+The JSON object keys must match entity fields. Generated primary keys and omitted fields are left to database defaults or nullable columns.
+
+## Error Mapping
+
+PostgreSQL errors are mapped into Reux-style error names where possible:
+
+- `UniqueViolation`
+- `ReferenceViolation`
+- `ConstraintViolation`
+- `RetryableTransactionConflict`
+- `RetryableDeadlock`
+
+## Transaction Run
+
+Run a supported transaction function:
+
+```bash
+node dist/cli.js tx-run examples/commerce_v2.dl rewardUser '["user-id","100"]'
+```
+
+Transaction parameters can also be passed as `@params.json`.
+
+`tx-run` compiles the transaction function to PostgreSQL statements and executes the supported subset inside a managed transaction.
+
+Currently executable:
+
+- `load <entity-param> for update`
+- simple field mutation over loaded state, such as `user.balance += amount`
+- `insert Entity { ... }`
+
+Currently reported but not executed:
+
+- `save`, because mutations are emitted as explicit `UPDATE` statements;
+- `after commit ...`, returned as pending after-commit hooks;
+
+Currently executed for durable side-effect coordination:
+
+- `enqueue Event { ... }`, inserted into `_dl_outbox` inside the same transaction.
+
+Retry behavior:
+
+- `retry N` in the transaction function header sets the maximum attempts.
+- PostgreSQL serialization conflicts and deadlocks are retried.
+- Direct external-looking calls are rejected at compile time inside retryable transactions.
+- `after commit ...` hooks are not executed yet; they are returned in the `afterCommit` array.
+
+## Outbox
+
+The runtime creates `_dl_outbox` when a transaction uses `enqueue`:
+
+```sql
+CREATE TABLE IF NOT EXISTS _dl_outbox (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_type text NOT NULL,
+  payload jsonb NOT NULL,
+  status text NOT NULL DEFAULT 'pending',
+  attempts integer NOT NULL DEFAULT 0,
+  last_error text NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  processed_at timestamptz NULL
+);
+```
+
+The runtime also creates `_dl_outbox_status_created_at_idx` on `(status, created_at)` for listing and worker claims.
+
+Example:
+
+```dl
+enqueue RewardGranted { user: userRef, amount: amount }
+```
+
+This lowers to an outbox insert with `event_type = 'RewardGranted'` and a JSON payload. `tx-run` returns inserted outbox rows in `outboxEvents`.
+
+List pending outbox events:
+
+```bash
+node dist/cli.js outbox-list
+```
+
+Limit the number of events:
+
+```bash
+node dist/cli.js outbox-list 10
+```
+
+List a specific status or all statuses:
+
+```bash
+node dist/cli.js outbox-list failed 10
+node dist/cli.js outbox-list processing 10
+node dist/cli.js outbox-list all 50
+```
+
+Mark an event processed after an external worker has handled it:
+
+```bash
+node dist/cli.js outbox-mark-processed 00000000-0000-0000-0000-000000000000
+```
+
+Claim events for a worker:
+
+```bash
+node dist/cli.js outbox-claim 10
+```
+
+Claiming uses `FOR UPDATE SKIP LOCKED`, changes status from `pending` to `processing`, increments `attempts`, and clears `last_error`.
+
+Mark an event failed:
+
+```bash
+node dist/cli.js outbox-mark-failed 00000000-0000-0000-0000-000000000000 "smtp unavailable"
+```
+
+Requeue a failed or processing event:
+
+```bash
+node dist/cli.js outbox-requeue 00000000-0000-0000-0000-000000000000
+```
+
+Requeueing changes status back to `pending`, clears `last_error`, leaves `attempts` intact, and only applies to events currently in `failed` or `processing`.
+
+These commands are intentionally small. They provide enough operational visibility for the prototype while leaving full dispatcher/worker semantics for a later runtime layer.
