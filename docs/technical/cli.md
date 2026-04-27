@@ -215,6 +215,7 @@ Show migration status against PostgreSQL:
 
 ```bash
 node dist/cli.js migrate-status
+node dist/cli.js migrate-status --json
 ```
 
 Apply pending migrations:

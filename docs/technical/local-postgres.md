@@ -51,6 +51,7 @@ npm run build
 
 ```bash
 node dist/cli.js migrate-status
+node dist/cli.js migrate-status --json
 node dist/cli.js project-doctor --db
 node dist/cli.js migrate-apply
 node dist/cli.js migrate-status

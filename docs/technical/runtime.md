@@ -103,9 +103,10 @@ Each applied migration is recorded by filename and SHA-256 hash. If a file with 
 
 ```bash
 node dist/cli.js migrate-status
+node dist/cli.js migrate-status --json
 ```
 
-Prints applied and pending migration files.
+Prints applied and pending migration files. `--json` returns the same applied/pending structure used by the runtime API.
 
 ## Migration Apply
 

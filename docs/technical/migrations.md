@@ -43,6 +43,15 @@ node dist/cli.js project-migrate-diff-create commerce_next
 
 If there are no migration operations, the command reports that the manifest is already up to date and does not create an empty file.
 
+Show applied and pending migrations for the configured database:
+
+```bash
+node dist/cli.js migrate-status
+node dist/cli.js migrate-status --json
+```
+
+Use `--json` when another script needs to inspect applied and pending migrations without parsing human-readable text.
+
 Create a reviewable diff migration file:
 
 ```bash

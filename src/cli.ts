@@ -48,13 +48,17 @@ try {
   } else if (command === "migrate-status") {
     await withDatabase(async (db, config) => {
       const status = await migrationStatus(db, config.migrationsDir);
-      console.log(`applied: ${status.applied.length}`);
-      for (const record of status.applied) {
-        console.log(`  ${record.filename} ${record.hash.slice(0, 12)} ${record.appliedAt}`);
-      }
-      console.log(`pending: ${status.pending.length}`);
-      for (const pending of status.pending) {
-        console.log(`  ${pending.filename} ${pending.hash.slice(0, 12)}`);
+      if (file === "--json") {
+        console.log(JSON.stringify(status, null, 2));
+      } else {
+        console.log(`applied: ${status.applied.length}`);
+        for (const record of status.applied) {
+          console.log(`  ${record.filename} ${record.hash.slice(0, 12)} ${record.appliedAt}`);
+        }
+        console.log(`pending: ${status.pending.length}`);
+        for (const pending of status.pending) {
+          console.log(`  ${pending.filename} ${pending.hash.slice(0, 12)}`);
+        }
       }
     });
   } else if (command === "migrate-apply") {
