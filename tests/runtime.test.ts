@@ -213,6 +213,12 @@ entity Order {
   id: Id<Order> primary generated
   user: User required
   total: Decimal
+  status: OrderStatus
+}
+
+enum OrderStatus {
+  Pending
+  Paid
 }
 `;
 
@@ -251,6 +257,12 @@ entity Order {
   id: Id<Order> primary generated
   user: User required
   total: Decimal
+  status: OrderStatus
+}
+
+enum OrderStatus {
+  Pending
+  Paid
 }
 `;
 
@@ -261,7 +273,7 @@ entity Order {
           mode: "upsert",
           records: [
             { entity: "User", as: "ada", by: ["email"], data: { email: "ada@example.com" } },
-            { entity: "Order", as: "order1", by: ["id"], data: { id: "order-1", user: "$ada", total: "100" } },
+            { entity: "Order", as: "order1", by: ["id"], data: { id: "order-1", user: "$ada", total: "100", status: "Pending" } },
           ],
         }),
       ),
@@ -270,7 +282,7 @@ entity Order {
     expect(result).toEqual({
       records: [
         { entity: "User", as: "ada", mode: "upsert", by: ["email"], fields: ["email"] },
-        { entity: "Order", as: "order1", mode: "upsert", by: ["id"], fields: ["id", "user", "total"] },
+        { entity: "Order", as: "order1", mode: "upsert", by: ["id"], fields: ["id", "user", "total", "status"] },
       ],
     });
   });
@@ -307,6 +319,32 @@ entity User {
         ),
       ),
     ).toThrow("seed reference $missing has not been inserted yet");
+  });
+
+  it("rejects invalid enum values during seed checks", () => {
+    const source = `module commerce
+
+entity Order {
+  id: Id<Order> primary generated
+  status: OrderStatus
+}
+
+enum OrderStatus {
+  Pending
+  Paid
+}
+`;
+
+    expect(() =>
+      checkSeed(
+        source,
+        parseSeedSpec(
+          JSON.stringify({
+            records: [{ entity: "Order", data: { status: "Refunded" } }],
+          }),
+        ),
+      ),
+    ).toThrow("seed value Refunded is not a valid OrderStatus for Order.status");
   });
 
   it("runs upsert seed records with explicit conflict fields", async () => {

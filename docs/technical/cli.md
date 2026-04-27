@@ -148,7 +148,7 @@ node dist/cli.js project-seed-delete pilot/seeds/smoke.json
 node dist/cli.js project-seed-reset pilot/seeds/smoke.json
 ```
 
-`seed-check` and `project-seed-check` compile the Reux source and validate the seed file without opening a database connection. The check verifies entity names, data field names, `by` fields, required conflict keys for upsert records, and `$alias` references in declaration order.
+`seed-check` and `project-seed-check` compile the Reux source and validate the seed file without opening a database connection. The check verifies entity names, data field names, enum literals, `by` fields, required conflict keys for upsert records, and `$alias` references in declaration order.
 
 `seed-dry-run` and `project-seed-dry-run` run the seed against PostgreSQL inside a transaction that always rolls back. Use dry runs to catch database-level constraint or type errors without keeping inserted fixture rows.
 

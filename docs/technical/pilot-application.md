@@ -104,7 +104,7 @@ node dist/cli.js project-seed-check pilot/seeds/smoke.json
 
 The seed uses stable UUIDs and `mode: "upsert"` with `by: ["id"]`, so it can be run repeatedly during local development. The order references `$ada`, and the payment references `$adaOrder`, so the seed can also run on a fresh database without manually copying UUIDs.
 
-Use `project-seed-check pilot/seeds/smoke.json` before applying the seed when editing fixtures. It validates the fixture against the pilot schema without opening a database connection, including entity names, fields, conflict keys, and alias order.
+Use `project-seed-check pilot/seeds/smoke.json` before applying the seed when editing fixtures. It validates the fixture against the pilot schema without opening a database connection, including entity names, fields, enum values, conflict keys, and alias order.
 
 Use `project-seed-dry-run pilot/seeds/smoke.json` to run the fixture against PostgreSQL and roll it back, which catches database-level constraint issues without leaving rows behind.
 

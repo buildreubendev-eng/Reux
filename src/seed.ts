@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { compileSource, emitInsertStatement } from "./compiler.js";
 import { Database, runSqlQuery } from "./runtime.js";
-import { EntityIr, findEntity } from "./schema.js";
+import { EntityIr, EnumIr, findEntity } from "./schema.js";
 
 export interface SeedSpec {
   mode: SeedMode;
@@ -86,7 +86,7 @@ export function checkSeed(source: string, spec: SeedSpec): SeedCheckResult {
   for (const record of spec.records) {
     const entity = findRequiredEntity(schema.entities, record.entity);
     const mode = record.mode ?? spec.mode;
-    validateSeedRecord(entity, record.data, record.by, mode);
+    validateSeedRecord(entity, record.data, record.by, mode, schema.enums);
     validateSeedReferences(record.data, aliases);
     if (record.as) {
       aliases.add(record.as);
@@ -258,14 +258,35 @@ function seedUpsertStatement(entity: EntityIr, record: Record<string, unknown>, 
   };
 }
 
-function validateSeedRecord(entity: EntityIr, record: Record<string, unknown>, conflictFields: string[] | undefined, mode: SeedMode): void {
+function validateSeedRecord(
+  entity: EntityIr,
+  record: Record<string, unknown>,
+  conflictFields: string[] | undefined,
+  mode: SeedMode,
+  enums: EnumIr[],
+): void {
   validateRecordFields(entity, record);
+  validateEnumFieldValues(entity, record, enums);
   const fields = conflictFields ?? (mode === "upsert" ? defaultConflictFields(entity) : []);
   if (mode === "upsert" && fields.length === 0) {
     throw new Error(`seed upsert for ${entity.name} needs a by field because the entity has no unique non-generated field`);
   }
   if (fields.length > 0) {
     validateConflictFieldValues(entity, record, fields, mode === "upsert" ? "upsert" : "record");
+  }
+}
+
+function validateEnumFieldValues(entity: EntityIr, record: Record<string, unknown>, enums: EnumIr[]): void {
+  const enumsByName = new Map(enums.map((enumeration) => [enumeration.name, enumeration]));
+  for (const field of entity.fields) {
+    const enumeration = enumsByName.get(field.type.name);
+    if (!enumeration || !Object.prototype.hasOwnProperty.call(record, field.name)) continue;
+    const value = record[field.name];
+    if (value === null || value === undefined) continue;
+    if (typeof value !== "string" || value.startsWith("$")) continue;
+    if (!enumeration.values.includes(value)) {
+      throw new Error(`seed value ${value} is not a valid ${enumeration.name} for ${entity.name}.${field.name}`);
+    }
   }
 }
 
