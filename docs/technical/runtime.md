@@ -341,4 +341,21 @@ node dist/cli.js outbox-requeue 00000000-0000-0000-0000-000000000000
 
 Requeueing changes status back to `pending`, clears `last_error`, leaves `attempts` intact, and only applies to events currently in `failed` or `processing`.
 
+## Outbox Processing API
+
+Applications can embed a small dispatcher loop with `processOutboxEvents`:
+
+```ts
+import { createPostgresDatabase, processOutboxEvents } from "./dist/runtime.js";
+
+const db = createPostgresDatabase(config);
+const result = await processOutboxEvents(db, {
+  RewardGranted: async (event) => {
+    await sendRewardEmail(event.payload);
+  },
+});
+```
+
+`processOutboxEvents` claims pending events, dispatches by `eventType`, marks successful events processed, and marks missing or throwing handlers failed with `last_error` populated. It returns `{ processed, failed }` so a caller can log or retry according to its own worker policy.
+
 These commands are intentionally small. They provide enough operational visibility for the prototype while leaving full dispatcher/worker semantics for a later runtime layer.

@@ -48,6 +48,18 @@ export interface OutboxEvent {
 
 export type OutboxListStatus = "pending" | "processing" | "processed" | "failed" | "all";
 
+export type OutboxHandler = (event: OutboxEvent) => Promise<void> | void;
+
+export interface OutboxProcessResult {
+  processed: OutboxEvent[];
+  failed: OutboxFailure[];
+}
+
+export interface OutboxFailure {
+  event: OutboxEvent;
+  error: string;
+}
+
 export interface TransactionRunResult {
   attempts: number;
   statements: number;
@@ -190,6 +202,38 @@ RETURNING id, event_type, payload, status, attempts, last_error, created_at, pro
   );
   const row = result.rows[0];
   return row ? outboxRow(row) : undefined;
+}
+
+export async function processOutboxEvents(
+  db: Database,
+  handlers: Record<string, OutboxHandler>,
+  limit = 10,
+): Promise<OutboxProcessResult> {
+  const events = await claimOutboxEvents(db, limit);
+  const processed: OutboxEvent[] = [];
+  const failed: OutboxFailure[] = [];
+
+  for (const event of events) {
+    const handler = handlers[event.eventType];
+    if (!handler) {
+      const error = `no handler registered for outbox event ${event.eventType}`;
+      await markOutboxFailed(db, event.id, error);
+      failed.push({ event, error });
+      continue;
+    }
+
+    try {
+      await handler(event);
+      const updated = await markOutboxProcessed(db, event.id);
+      processed.push(updated ?? event);
+    } catch (error) {
+      const message = errorMessage(error);
+      await markOutboxFailed(db, event.id, message);
+      failed.push({ event, error: message });
+    }
+  }
+
+  return { processed, failed };
 }
 
 export async function migrationStatus(db: Database, migrationsDir: string): Promise<MigrationStatus> {
@@ -356,6 +400,10 @@ function maxPlaceholder(sql: string): number {
     max = Math.max(max, Number.parseInt(match[1], 10));
   }
   return max;
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function sha256(value: string): string {

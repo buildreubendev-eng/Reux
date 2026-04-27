@@ -17,6 +17,7 @@ import {
   migrationStatus,
   parseJsonParams,
   parseTransactionSql,
+  processOutboxEvents,
   readMigrationFiles,
   requeueOutboxEvent,
   runTransactionSql,
@@ -743,6 +744,67 @@ COMMIT;`,
       status: "failed",
       attempts: 1,
       lastError: "smtp unavailable",
+    });
+  });
+
+  it("processes outbox events with registered handlers", async () => {
+    const db = new FakeDb();
+    db.outbox.push({
+      id: "outbox-1",
+      event_type: "RewardGranted",
+      payload: { user: "user-id" },
+      status: "pending",
+      attempts: 0,
+      last_error: null,
+      created_at: "2026-04-25T00:00:00.000Z",
+      processed_at: null,
+    });
+    const handled: unknown[] = [];
+
+    const result = await processOutboxEvents(db, {
+      RewardGranted: (event) => {
+        handled.push(event.payload);
+      },
+    });
+
+    expect(handled).toEqual([{ user: "user-id" }]);
+    expect(result).toEqual({
+      processed: [
+        expect.objectContaining({
+          id: "outbox-1",
+          status: "processed",
+          attempts: 1,
+        }),
+      ],
+      failed: [],
+    });
+  });
+
+  it("marks outbox events failed when processing has no handler", async () => {
+    const db = new FakeDb();
+    db.outbox.push({
+      id: "outbox-1",
+      event_type: "UnknownEvent",
+      payload: { user: "user-id" },
+      status: "pending",
+      attempts: 0,
+      last_error: null,
+      created_at: "2026-04-25T00:00:00.000Z",
+      processed_at: null,
+    });
+
+    const result = await processOutboxEvents(db, {});
+
+    expect(result.failed).toEqual([
+      {
+        event: expect.objectContaining({ id: "outbox-1", eventType: "UnknownEvent", attempts: 1 }),
+        error: "no handler registered for outbox event UnknownEvent",
+      },
+    ]);
+    expect(db.outbox[0]).toMatchObject({
+      status: "failed",
+      attempts: 1,
+      last_error: "no handler registered for outbox event UnknownEvent",
     });
   });
 });
