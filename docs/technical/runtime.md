@@ -39,6 +39,8 @@ node dist/cli.js project-doctor
 Compile all configured source files:
 
 ```bash
+node dist/cli.js project-diagnose
+node dist/cli.js project-diagnose --json
 node dist/cli.js project-check
 ```
 

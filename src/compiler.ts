@@ -14,16 +14,64 @@ import { queryToPostgres, schemaToPostgres, transactionToPostgres } from "./post
 import { buildQueryIr } from "./query-ir.js";
 import { buildSchema, SchemaIr, TransitionIr } from "./schema.js";
 import { buildTransactionIr } from "./transaction-ir.js";
+import { DlAggregateError } from "./errors.js";
 
 export interface CompileResult {
   program: Program;
   schema: SchemaIr;
 }
 
+export interface DiagnosticReport {
+  ok: boolean;
+  diagnostics: Diagnostic[];
+  summary?: {
+    moduleName: string;
+    entities: number;
+    enums: number;
+    queries: number;
+    transactions: number;
+    transitions: number;
+  };
+}
+
+export interface Diagnostic {
+  severity: "error";
+  message: string;
+}
+
 export function compileSource(source: string): CompileResult {
   const program = parseProgram(source);
   const schema = buildSchema(program);
   return { program, schema };
+}
+
+export function diagnoseSource(source: string): DiagnosticReport {
+  try {
+    const result = compileSource(source);
+    return {
+      ok: true,
+      diagnostics: [],
+      summary: {
+        moduleName: result.program.moduleName,
+        entities: result.schema.entities.length,
+        enums: result.schema.enums.length,
+        queries: result.program.declarations.filter((declaration) => declaration.kind === "query").length,
+        transactions: result.program.declarations.filter((declaration) => declaration.kind === "transaction").length,
+        transitions: result.program.declarations.filter((declaration) => declaration.kind === "transition").length,
+      },
+    };
+  } catch (error) {
+    if (error instanceof DlAggregateError) {
+      return {
+        ok: false,
+        diagnostics: error.diagnostics.map((message) => ({ severity: "error", message })),
+      };
+    }
+    return {
+      ok: false,
+      diagnostics: [{ severity: "error", message: error instanceof Error ? error.message : String(error) }],
+    };
+  }
 }
 
 export function emitPostgresSchema(source: string): string {

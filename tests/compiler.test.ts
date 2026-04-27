@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import {
   compileSource,
+  diagnoseSource,
   emitDiffMigration,
   emitInitialMigration,
   emitMigrationPlan,
@@ -187,6 +188,21 @@ query accountOrderStats(): Query<{ email: String, averageTotal: Decimal, smalles
     expect(schema.entities[1].fields.find((field) => field.name === "user")?.reference).toEqual({
       entity: "User",
       columnName: "user_id",
+    });
+  });
+
+  it("reports compile diagnostics without throwing", () => {
+    const report = diagnoseSource(`module broken
+
+entity User {
+  id: Id<User> primary generated
+  email: MissingType
+}
+`);
+
+    expect(report).toEqual({
+      ok: false,
+      diagnostics: [{ severity: "error", message: "User.email uses unknown type MissingType" }],
     });
   });
 

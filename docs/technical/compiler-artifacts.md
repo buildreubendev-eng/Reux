@@ -32,6 +32,7 @@ node dist/cli.js project-transition-rules Order.status
 The CLI emits Schema IR as a manifest:
 
 ```bash
+node dist/cli.js diagnose examples/commerce.dl
 node dist/cli.js manifest examples/commerce.dl
 ```
 

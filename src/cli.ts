@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 
 import { basename, dirname, join } from "node:path";
 import {
   compileSource,
+  diagnoseSource,
   emitInsertStatement,
   emitDiffMigration,
   emitInitialMigration,
@@ -48,6 +49,23 @@ try {
     process.exitCode = 1;
   } else if (command === "version" || command === "--version" || command === "-v") {
     console.log(packageVersion());
+  } else if (command === "project-diagnose") {
+    const config = loadConfig();
+    const files = discoverSourceFiles(config);
+    if (files.length === 0) {
+      throw new Error(`no Reux source files matched configured sources: ${config.sources.join(", ")}`);
+    }
+    const reports = files.map((sourceFile) => ({
+      path: sourceFile.relativePath,
+      ...diagnoseSource(readFileSync(sourceFile.path, "utf8")),
+    }));
+    const ok = reports.every((report) => report.ok);
+    if (file === "--json") {
+      console.log(JSON.stringify({ ok, files: reports }, null, 2));
+    } else {
+      console.log(formatDiagnosticReports(reports));
+    }
+    if (!ok) process.exitCode = 1;
   } else if (command === "migrate-status") {
     await withDatabase(async (db, config) => {
       const status = await migrationStatus(db, config.migrationsDir);
@@ -330,7 +348,15 @@ try {
       throw new Error("missing file argument");
     }
     const source = readFileSync(file, "utf8");
-    if (command === "check") {
+    if (command === "diagnose") {
+      const report = diagnoseSource(source);
+      if (extra === "--json") {
+        console.log(JSON.stringify(report, null, 2));
+      } else {
+        console.log(formatDiagnosticReport(file, report));
+      }
+      if (!report.ok) process.exitCode = 1;
+    } else if (command === "check") {
       const result = compileSource(source);
       console.log(`ok: ${basename(file)} (${result.schema.entities.length} entities, ${result.schema.enums.length} enums)`);
     } else if (command === "sql") {
@@ -474,7 +500,7 @@ try {
 }
 
 function usage(): void {
-  console.error("usage: dl <version|check|project-check|project-summary|project-doctor|project-sql|project-manifest|project-manifest-write|project-transition-rules|project-migrate-plan|project-migrate-diff-create|project-query-ir|project-query-sql|project-query-run|project-explain|project-tx-ir|project-tx-sql|project-tx-run|project-data-insert|project-data-insert-sql|project-seed-run|project-seed-dry-run|project-seed-check|project-seed-delete|project-seed-reset|sql|manifest|transition-rules|manifest-write|query-ir|query-sql|query-run|data-insert|data-insert-sql|seed-run|seed-dry-run|seed-check|seed-delete|seed-reset|tx-ir|tx-sql|tx-run|explain|migrate-create|migrate-plan|migrate-diff-create|migrate-status|migrate-apply|outbox-list|outbox-claim|outbox-mark-processed|outbox-mark-failed|outbox-requeue|outbox-requeue-stale> [args]");
+  console.error("usage: dl <version|diagnose|check|project-diagnose|project-check|project-summary|project-doctor|project-sql|project-manifest|project-manifest-write|project-transition-rules|project-migrate-plan|project-migrate-diff-create|project-query-ir|project-query-sql|project-query-run|project-explain|project-tx-ir|project-tx-sql|project-tx-run|project-data-insert|project-data-insert-sql|project-seed-run|project-seed-dry-run|project-seed-check|project-seed-delete|project-seed-reset|sql|manifest|transition-rules|manifest-write|query-ir|query-sql|query-run|data-insert|data-insert-sql|seed-run|seed-dry-run|seed-check|seed-delete|seed-reset|tx-ir|tx-sql|tx-run|explain|migrate-create|migrate-plan|migrate-diff-create|migrate-status|migrate-apply|outbox-list|outbox-claim|outbox-mark-processed|outbox-mark-failed|outbox-requeue|outbox-requeue-stale> [args]");
 }
 
 function packageVersion(): string {
@@ -559,6 +585,28 @@ function formatProjectSummary(summary: ProjectSummary): string {
   }
 
   return lines.join("\n");
+}
+
+function formatDiagnosticReports(reports: Array<{ path: string } & ReturnType<typeof diagnoseSource>>): string {
+  return reports.map((report) => formatDiagnosticReport(report.path, report)).join("\n\n");
+}
+
+function formatDiagnosticReport(path: string, report: ReturnType<typeof diagnoseSource>): string {
+  if (report.ok) {
+    const summary = report.summary;
+    if (!summary) return `${path}: ok`;
+    return [
+      `${path}: ok`,
+      `  module: ${summary.moduleName}`,
+      `  entities: ${summary.entities}`,
+      `  enums: ${summary.enums}`,
+      `  queries: ${summary.queries}`,
+      `  transactions: ${summary.transactions}`,
+      `  transitions: ${summary.transitions}`,
+    ].join("\n");
+  }
+
+  return [`${path}: ${report.diagnostics.length} error${report.diagnostics.length === 1 ? "" : "s"}`, ...report.diagnostics.map((diagnostic) => `  error: ${diagnostic.message}`)].join("\n");
 }
 
 function formatList(values: string[]): string {
