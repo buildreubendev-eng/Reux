@@ -49,7 +49,7 @@ For another machine, push the repo or share the generated tarball, then install 
 Before tagging a prototype release:
 
 1. Run `npm run verify`.
-2. Run `npm run verify:postgres` against a live PostgreSQL database.
+2. Run `npm run verify:postgres:full` against a live PostgreSQL database.
 3. Run `npm run verify:package`.
 4. Check `docs/technical/phase-status.md`.
 5. Check `docs/technical/cli.md` for new or changed commands.

@@ -61,4 +61,4 @@ jobs:
         run: npm ci
 
       - name: Verify PostgreSQL runtime
-        run: npm run verify:postgres
+        run: npm run verify:postgres:full

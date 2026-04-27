@@ -48,6 +48,12 @@ npm run build
 
 `npm run verify` runs the TypeScript no-emit check, unit test suite, build, and CLI smoke checks. Use it before committing changes that do not need a live database. `npm run verify:cli` can be run after a build to repeat only the built CLI smoke checks.
 
+Check database reachability before running integration tests:
+
+```bash
+npm run postgres:preflight
+```
+
 ## Apply Migrations
 
 ```bash
@@ -119,8 +125,10 @@ Integration tests are skipped unless `DATABASE_URL` is set:
 
 ```bash
 $env:DATABASE_URL="postgres://datalang:datalang@localhost:5432/datalang_dev"
+npm run postgres:preflight
 npm run verify:postgres
+npm run verify:postgres:full
 npm run test:postgres
 ```
 
-`npm run verify:postgres` runs both PostgreSQL-backed suites: the root runtime integration test and the pilot application test. `npm test` also runs the integration suite when `DATABASE_URL` is set. These tests use the configured database and should be run against a disposable development database.
+`npm run verify:postgres` checks connectivity and runs both PostgreSQL-backed suites: the root runtime integration test and the pilot application test. `npm run verify:postgres:full` adds a built CLI `project-doctor --db --json` pass. `npm test` also runs the integration suite when `DATABASE_URL` is set. These tests use the configured database and should be run against a disposable development database.

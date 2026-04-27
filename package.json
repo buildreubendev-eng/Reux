@@ -32,7 +32,9 @@
     "verify": "npm run check && npm test && npm run build && npm run verify:cli",
     "verify:cli": "node ./dist/cli.js project-diagnose --json && node ./dist/cli.js project-check && node ./dist/cli.js project-summary --json && node ./dist/cli.js project-doctor --json && node ./dist/cli.js project-transition-rules && node ./dist/cli.js project-migrate-plan --json && node ./dist/cli.js seed-check examples/commerce_v2.dl examples/seeds/commerce_smoke.json && node ./dist/cli.js diagnose examples/pilot_reux.dl --json && node ./dist/cli.js check examples/pilot_reux.dl",
     "verify:package": "npm pack --dry-run",
-    "verify:postgres": "npm run test:postgres && npm run test:pilot:postgres",
+    "postgres:preflight": "node ./scripts/postgres-preflight.mjs",
+    "verify:postgres": "npm run postgres:preflight && npm run test:postgres && npm run test:pilot:postgres",
+    "verify:postgres:full": "npm run verify:postgres && npm run build && node ./dist/cli.js project-doctor --db --json",
     "reux": "node ./dist/cli.js",
     "dl": "node ./dist/cli.js"
   },
