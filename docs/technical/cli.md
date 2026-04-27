@@ -26,9 +26,10 @@ Summarize every source file matched by `dl.json`:
 node dist/cli.js project-summary
 node dist/cli.js project-summary --json
 node dist/cli.js project-doctor
+node dist/cli.js project-doctor --db
 ```
 
-The summary includes duplicate declaration diagnostics across configured files. `project-doctor` also checks manifest freshness, migration directory visibility, and whether the configured database URL environment variable is set.
+The summary includes duplicate declaration diagnostics across configured files. `project-doctor` also checks manifest freshness, migration directory visibility, and whether the configured database URL environment variable is set. Add `--db` to have `project-doctor` connect to PostgreSQL and include applied/pending migration counts.
 
 Project commands read `dl.json` by default. Set `REUX_CONFIG` to use a different config, such as the pilot application:
 

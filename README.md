@@ -29,6 +29,7 @@ node dist/cli.js project-check
 node dist/cli.js project-summary
 node dist/cli.js project-summary --json
 node dist/cli.js project-doctor
+node dist/cli.js project-doctor --db
 node dist/cli.js project-sql
 node dist/cli.js project-manifest-write
 node dist/cli.js project-migrate-plan

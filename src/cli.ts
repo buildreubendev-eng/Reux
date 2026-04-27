@@ -147,7 +147,14 @@ try {
       console.log(formatProjectSummary(summary));
     }
   } else if (command === "project-doctor") {
-    console.log(formatProjectDoctor(loadConfig()));
+    const config = loadConfig();
+    const lines = [formatProjectDoctor(config)];
+    if (file === "--db") {
+      await withDatabase(async (db) => {
+        lines.push(formatDatabaseDoctor(await migrationStatus(db, config.migrationsDir)));
+      });
+    }
+    console.log(lines.join("\n"));
   } else if (command === "project-sql" || command === "project-manifest" || command === "project-manifest-write") {
     const config = loadConfig();
     const source = readSingleProjectSource(config, command);
@@ -578,4 +585,14 @@ function migrationDoctorLines(config: ReturnType<typeof loadConfig>): string[] {
   }
   const migrationCount = readdirSync(config.migrationsDir).filter((file) => file.endsWith(".sql")).length;
   return [`migrations: ${migrationCount} sql file${migrationCount === 1 ? "" : "s"} (${config.migrationsDir})`];
+}
+
+function formatDatabaseDoctor(status: Awaited<ReturnType<typeof migrationStatus>>): string {
+  const lines = ["database doctor"];
+  lines.push(`applied migrations: ${status.applied.length}`);
+  lines.push(`pending migrations: ${status.pending.length}`);
+  for (const pending of status.pending) {
+    lines.push(`  pending: ${pending.filename}`);
+  }
+  return lines.join("\n");
 }
