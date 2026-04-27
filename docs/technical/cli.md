@@ -11,6 +11,7 @@ npm run build
 Check a Reux source file:
 
 ```bash
+node dist/cli.js version
 node dist/cli.js check examples/commerce.dl
 ```
 

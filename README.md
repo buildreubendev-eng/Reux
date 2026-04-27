@@ -20,6 +20,8 @@ Run:
 npm install
 npm run verify
 npm run verify:cli
+npm run verify:package
+node dist/cli.js version
 $env:DATABASE_URL='postgres://datalang:datalang@127.0.0.1:5432/datalang_dev'
 npm run verify:postgres
 npm run build
@@ -94,6 +96,7 @@ Technical documentation:
 - [CLI reference](docs/technical/cli.md)
 - [Migrations](docs/technical/migrations.md)
 - [Runtime](docs/technical/runtime.md)
+- [Release and packaging](docs/technical/release.md)
 - [Local PostgreSQL](docs/technical/local-postgres.md)
 - [Phase status](docs/technical/phase-status.md)
 - [Pilot application](docs/technical/pilot-application.md)

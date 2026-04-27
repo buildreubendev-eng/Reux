@@ -4,18 +4,34 @@
   "private": true,
   "type": "module",
   "description": "Early Reux compiler prototype for data-native language research.",
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "dist",
+    "docs",
+    "examples",
+    "pilot",
+    "migrations",
+    ".dl",
+    "README.md",
+    "dl.json",
+    "docker-compose.yml"
+  ],
   "bin": {
     "reux": "./dist/cli.js",
     "dl": "./dist/cli.js"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "clean": "node ./scripts/clean-dist.mjs",
+    "build": "npm run clean && tsc -p tsconfig.json",
     "check": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:postgres": "vitest run tests/integration.postgres.test.ts",
     "test:pilot:postgres": "vitest run tests/pilot.postgres.test.ts",
     "verify": "npm run check && npm test && npm run build && npm run verify:cli",
     "verify:cli": "node ./dist/cli.js project-check && node ./dist/cli.js project-summary --json && node ./dist/cli.js project-doctor --json && node ./dist/cli.js project-transition-rules && node ./dist/cli.js project-migrate-plan --json && node ./dist/cli.js seed-check examples/commerce_v2.dl examples/seeds/commerce_smoke.json && node ./dist/cli.js check examples/pilot_reux.dl",
+    "verify:package": "npm pack --dry-run",
     "verify:postgres": "npm run test:postgres && npm run test:pilot:postgres",
     "reux": "node ./dist/cli.js",
     "dl": "node ./dist/cli.js"
