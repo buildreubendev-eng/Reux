@@ -18,6 +18,9 @@ Run:
 
 ```bash
 npm install
+npm run verify
+$env:DATABASE_URL='postgres://datalang:datalang@127.0.0.1:5432/datalang_dev'
+npm run verify:postgres
 npm run build
 npm run test:postgres
 npm run test:pilot:postgres

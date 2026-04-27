@@ -14,6 +14,8 @@
     "test": "vitest run",
     "test:postgres": "vitest run tests/integration.postgres.test.ts",
     "test:pilot:postgres": "vitest run tests/pilot.postgres.test.ts",
+    "verify": "npm run check && npm test && npm run build",
+    "verify:postgres": "npm run test:postgres && npm run test:pilot:postgres",
     "reux": "node ./dist/cli.js",
     "dl": "node ./dist/cli.js"
   },

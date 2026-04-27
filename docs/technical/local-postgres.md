@@ -41,8 +41,11 @@ PowerShell users can also copy `.env.example` into their own shell/profile workf
 
 ```bash
 npm install
+npm run verify
 npm run build
 ```
+
+`npm run verify` runs the TypeScript no-emit check, unit test suite, and build. Use it before committing changes that do not need a live database.
 
 ## Apply Migrations
 
@@ -111,7 +114,8 @@ Integration tests are skipped unless `DATABASE_URL` is set:
 
 ```bash
 $env:DATABASE_URL="postgres://datalang:datalang@localhost:5432/datalang_dev"
+npm run verify:postgres
 npm run test:postgres
 ```
 
-`npm test` also runs the integration suite when `DATABASE_URL` is set. These tests use the configured database and should be run against a disposable development database.
+`npm run verify:postgres` runs both PostgreSQL-backed suites: the root runtime integration test and the pilot application test. `npm test` also runs the integration suite when `DATABASE_URL` is set. These tests use the configured database and should be run against a disposable development database.
