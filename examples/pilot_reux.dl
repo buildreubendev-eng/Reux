@@ -103,6 +103,14 @@ transaction function capturePayment(orderRef: Order, amount: Decimal) writes Pay
   after commit sendReceipt(orderRef)
 }
 
+transaction function markOrderPaid(orderRef: Order) writes Order retry 3 {
+  let order = load orderRef for update
+  order.status = Paid
+  save order
+  enqueue OrderPaid { order: orderRef }
+  after commit notifyOrderPaid(orderRef)
+}
+
 transaction function creditAccount(accountRef: Account, amount: Decimal) writes Account retry 3 {
   let account = load accountRef for update
   account.balance += amount

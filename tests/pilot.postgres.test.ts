@@ -89,6 +89,19 @@ describeIntegration("pilot postgres smoke", () => {
       ]);
       expect(captureResult.afterCommit).toEqual(["sendReceipt(orderRef)"]);
 
+      const markPaidResult = await runTransactionSql(
+        pilotDb,
+        emitTransactionSql(source, "markOrderPaid"),
+        [order.id],
+        transactionRetryAttempts(source, "markOrderPaid"),
+      );
+      expect(markPaidResult.outboxEvents).toEqual([
+        expect.objectContaining({
+          event_type: "OrderPaid",
+        }),
+      ]);
+      expect(markPaidResult.afterCommit).toEqual(["notifyOrderPaid(orderRef)"]);
+
       const creditResult = await runTransactionSql(
         pilotDb,
         emitTransactionSql(source, "creditAccount"),

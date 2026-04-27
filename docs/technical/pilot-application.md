@@ -38,6 +38,7 @@ node dist/cli.js project-query-sql accountOrders
 node dist/cli.js project-query-sql orderPayments
 node dist/cli.js project-query-sql accountOrderSummary
 node dist/cli.js project-tx-sql capturePayment
+node dist/cli.js project-tx-sql markOrderPaid
 node dist/cli.js project-tx-sql creditAccount
 node dist/cli.js project-seed-check pilot/seeds/smoke.json
 node dist/cli.js project-seed-dry-run pilot/seeds/smoke.json
@@ -66,7 +67,21 @@ transition Payment.status {
 }
 ```
 
-These rules are validated against `OrderStatus` and `PaymentStatus` and emitted in Schema IR/manifests. They are not yet enforced during transaction execution; runtime transition checks remain a later hardening step.
+These rules are validated against `OrderStatus` and `PaymentStatus` and emitted in Schema IR/manifests. Literal enum assignments over loaded entity state use the rules as runtime guards.
+
+`markOrderPaid` demonstrates a guarded transition:
+
+```dl
+transaction function markOrderPaid(orderRef: Order) writes Order retry 3 {
+  let order = load orderRef for update
+  order.status = Paid
+  save order
+  enqueue OrderPaid { order: orderRef }
+  after commit notifyOrderPaid(orderRef)
+}
+```
+
+The generated `UPDATE` only succeeds when the current status is a declared predecessor of `Paid`, currently `Pending`.
 
 ## Transaction Conflict Slice
 
@@ -114,7 +129,7 @@ node dist/cli.js project-tx-sql creditAccount
 node dist/cli.js project-seed-check pilot/seeds/smoke.json
 ```
 
-`test:pilot:postgres` creates a temporary PostgreSQL schema, applies the pilot migrations, seeds accounts/orders/payments data, runs the join and aggregation queries, runs `capturePayment` and `creditAccount`, then drops the temporary schema. This verifies the pilot without requiring Docker Desktop and without colliding with the root commerce fixtures.
+`test:pilot:postgres` creates a temporary PostgreSQL schema, applies the pilot migrations, seeds accounts/orders/payments data, runs the join and aggregation queries, runs `capturePayment`, `markOrderPaid`, and `creditAccount`, then drops the temporary schema. This verifies the pilot without requiring Docker Desktop and without colliding with the root commerce fixtures.
 
 ## Pilot Seed
 
@@ -138,5 +153,5 @@ Likely next language/runtime needs exposed by this pilot:
 - typed money/currency conventions;
 - transaction-local generated IDs;
 - richer insert result binding;
-- runtime status transition enforcement;
+- broader transition checking for parameterized assignments;
 - richer seed reset modes for truncating or refreshing whole fixture groups.

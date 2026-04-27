@@ -103,6 +103,7 @@ describe("compiler prototype", () => {
 
     expect(result.schema.entities.map((entity) => entity.name)).toEqual(["Account", "Product", "Order", "Payment"]);
     expect(result.program.declarations.some((declaration) => declaration.kind === "transaction" && declaration.name === "capturePayment")).toBe(true);
+    expect(result.program.declarations.some((declaration) => declaration.kind === "transaction" && declaration.name === "markOrderPaid")).toBe(true);
     expect(result.program.declarations.some((declaration) => declaration.kind === "transaction" && declaration.name === "creditAccount")).toBe(true);
   });
 
@@ -164,6 +165,15 @@ query accountOrderStats(): Query<{ email: String, averageTotal: Decimal, smalles
     expect(sql).toContain("UPDATE accounts SET balance = balance + $2 WHERE id = $1;");
     expect(sql).toContain("INSERT INTO _dl_outbox (event_type, payload) VALUES ('AccountCredited', jsonb_build_object('account', $1::uuid, 'amount', $2::numeric)) RETURNING id, event_type, payload;");
     expect(sql).toContain("-- after commit: notifyAccountCredited(accountRef)");
+  });
+
+  it("lowers the Reux pilot order transition transaction to guarded PostgreSQL", () => {
+    const sql = emitTransactionSql(readFileSync("examples/pilot_reux.dl", "utf8"), "markOrderPaid");
+
+    expect(sql).toContain("-- transition guard: Order.status -> Paid");
+    expect(sql).toContain("UPDATE orders SET status = 'Paid' WHERE id = $1 AND status IN ('Pending');");
+    expect(sql).toContain("INSERT INTO _dl_outbox (event_type, payload) VALUES ('OrderPaid', jsonb_build_object('order', $1::uuid)) RETURNING id, event_type, payload;");
+    expect(sql).toContain("-- after commit: notifyOrderPaid(orderRef)");
   });
 
   it("builds Schema IR for entities, references, enums, and indexes", () => {
