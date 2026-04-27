@@ -61,6 +61,7 @@ Status: implemented for the MVP workflow.
 - `project-check` compiles configured sources.
 - `project-summary` inventories configured sources and reports duplicate cross-file declarations.
 - `project-doctor` checks source discovery, manifest freshness, migration directory visibility, and database URL environment status.
+- `api-ts` and `project-api-ts` emit generated TypeScript API clients for supported queries and transaction functions.
 - Seed tooling supports schema-only checks with enum validation, PostgreSQL dry runs, rerunnable upserts, deletes, and transactional resets.
 - GitHub Actions runs the core verification script, built CLI smoke checks, and PostgreSQL-backed runtime verification on pushes and pull requests to `main`.
 - Technical documentation is maintained alongside implementation.
@@ -81,4 +82,4 @@ Phase 6 coverage:
 - Transaction conflict behavior represented by `creditAccount`, which lowers to `SELECT ... FOR UPDATE`, a balance update, retry metadata, and an outbox event.
 - Production-like verification path documented for WSL PostgreSQL through `npm run test:postgres`.
 
-The remaining gaps are beyond Phase 6 rather than blockers for it: richer query composition, deeper aggregation semantics, broader transition checking for parameterized assignments, broader fixture/seed workflows, a full always-on worker service for after-commit hooks and outbox dispatch, and eventually switching `dl.json` from commerce fixtures to the pilot source when the project is ready to treat the pilot as the active application.
+The remaining gaps are beyond Phase 6 rather than blockers for it: richer query composition, deeper aggregation semantics, broader transition checking for parameterized assignments, broader fixture/seed workflows, turning the embeddable outbox loop into a packaged service process, and eventually switching `dl.json` from commerce fixtures to the pilot source when the project is ready to treat the pilot as the active application.

@@ -4,6 +4,7 @@ import { basename, dirname, join } from "node:path";
 import {
   compileSource,
   diagnoseSource,
+  emitApiClient,
   emitInsertStatement,
   emitDiffMigration,
   emitInitialMigration,
@@ -217,6 +218,9 @@ try {
   } else if (command === "project-transition-rules") {
     const source = readSingleProjectSource(loadConfig(), command);
     console.log(emitTransitionRules(source, file));
+  } else if (command === "project-api-ts") {
+    const source = readSingleProjectSource(loadConfig(), command);
+    console.log(emitApiClient(source, { runtimeImport: file }));
   } else if (command === "project-query-ir" || command === "project-query-sql" || command === "project-explain") {
     if (!file) {
       throw new Error(`${command} requires a query name`);
@@ -365,6 +369,8 @@ try {
       console.log(emitSchemaManifest(source));
     } else if (command === "transition-rules") {
       console.log(emitTransitionRules(source, extra));
+    } else if (command === "api-ts") {
+      console.log(emitApiClient(source, { runtimeImport: extra }));
     } else if (command === "manifest-write") {
       const config = loadConfig();
       mkdirSync(dirname(config.schemaManifest), { recursive: true });
@@ -500,7 +506,7 @@ try {
 }
 
 function usage(): void {
-  console.error("usage: dl <version|diagnose|check|project-diagnose|project-check|project-summary|project-doctor|project-sql|project-manifest|project-manifest-write|project-transition-rules|project-migrate-plan|project-migrate-diff-create|project-query-ir|project-query-sql|project-query-run|project-explain|project-tx-ir|project-tx-sql|project-tx-run|project-data-insert|project-data-insert-sql|project-seed-run|project-seed-dry-run|project-seed-check|project-seed-delete|project-seed-reset|sql|manifest|transition-rules|manifest-write|query-ir|query-sql|query-run|data-insert|data-insert-sql|seed-run|seed-dry-run|seed-check|seed-delete|seed-reset|tx-ir|tx-sql|tx-run|explain|migrate-create|migrate-plan|migrate-diff-create|migrate-status|migrate-apply|outbox-list|outbox-claim|outbox-mark-processed|outbox-mark-failed|outbox-requeue|outbox-requeue-stale> [args]");
+  console.error("usage: dl <version|diagnose|check|project-diagnose|project-check|project-summary|project-doctor|project-sql|project-manifest|project-manifest-write|project-transition-rules|project-api-ts|project-migrate-plan|project-migrate-diff-create|project-query-ir|project-query-sql|project-query-run|project-explain|project-tx-ir|project-tx-sql|project-tx-run|project-data-insert|project-data-insert-sql|project-seed-run|project-seed-dry-run|project-seed-check|project-seed-delete|project-seed-reset|sql|manifest|transition-rules|api-ts|manifest-write|query-ir|query-sql|query-run|data-insert|data-insert-sql|seed-run|seed-dry-run|seed-check|seed-delete|seed-reset|tx-ir|tx-sql|tx-run|explain|migrate-create|migrate-plan|migrate-diff-create|migrate-status|migrate-apply|outbox-list|outbox-claim|outbox-mark-processed|outbox-mark-failed|outbox-requeue|outbox-requeue-stale> [args]");
 }
 
 function packageVersion(): string {

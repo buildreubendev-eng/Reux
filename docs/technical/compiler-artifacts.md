@@ -122,3 +122,22 @@ node dist/cli.js tx-run examples/commerce_v2.dl rewardUser '["user-id","100"]'
 ```
 
 `tx-run` executes recognized SQL statements inside a managed transaction. `enqueue` writes durable `_dl_outbox` rows. `after commit` comments become reported pending hooks.
+
+## TypeScript API Client
+
+The compiler can emit a TypeScript client that wraps generated query and transaction SQL in runtime calls:
+
+```bash
+node dist/cli.js api-ts examples/pilot_reux.dl ./runtime.js
+node dist/cli.js project-api-ts ./runtime.js
+```
+
+The generated client includes:
+
+- enum union types;
+- row interfaces for entities and query projections;
+- parameter interfaces for queries and transactions;
+- embedded SQL constants;
+- a `create<Module>Api(db)` factory that calls `runSqlQuery` and `runTransactionSql`.
+
+Entity parameters are represented as the underlying UUID string handle. Decimal values accept `number | string` so callers can avoid losing precision when they need exact PostgreSQL numeric behavior.

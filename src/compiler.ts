@@ -15,6 +15,7 @@ import { buildQueryIr } from "./query-ir.js";
 import { buildSchema, SchemaIr, TransitionIr } from "./schema.js";
 import { buildTransactionIr } from "./transaction-ir.js";
 import { DlAggregateError } from "./errors.js";
+import { emitTypeScriptApi, TypeScriptApiOptions } from "./api-generator.js";
 
 export interface CompileResult {
   program: Program;
@@ -113,6 +114,10 @@ export function emitTransactionIr(source: string, transactionName: string): stri
 export function emitTransactionSql(source: string, transactionName: string): string {
   const { program, schema } = compileSource(source);
   return transactionToPostgres(schema, findTransaction(program, transactionName));
+}
+
+export function emitApiClient(source: string, options?: TypeScriptApiOptions): string {
+  return emitTypeScriptApi(source, options);
 }
 
 export function transactionRetryAttempts(source: string, transactionName: string): number {

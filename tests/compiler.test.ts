@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import {
   compileSource,
   diagnoseSource,
+  emitApiClient,
   emitDiffMigration,
   emitInitialMigration,
   emitMigrationPlan,
@@ -275,6 +276,22 @@ transition Order.status {
     expect(sql).toContain("CREATE TYPE order_status AS ENUM ('Pending', 'Paid', 'Cancelled');");
     expect(sql).toContain("FOREIGN KEY (user_id) REFERENCES users(id)");
     expect(sql).toContain("CREATE INDEX users_by_balance ON users (balance DESC);");
+  });
+
+  it("emits a TypeScript API client for queries and transactions", () => {
+    const api = emitApiClient(readFileSync("examples/pilot_reux.dl", "utf8"), { runtimeImport: "@reux/runtime" });
+
+    expect(api).toContain('import type { Database, QueryRunResult, TransactionRunResult } from "@reux/runtime";');
+    expect(api).toContain("export interface PilotApi");
+    expect(api).toContain("export type OrderStatus = \"Pending\" | \"Paid\" | \"Cancelled\" | \"Refunded\";");
+    expect(api).toContain("export interface OpenOrdersParams");
+    expect(api).toContain("minTotal: number | string;");
+    expect(api).toContain("orderRef: string;");
+    expect(api).toContain("export type OpenOrdersRow = { total: number | string; status: OrderStatus };");
+    expect(api).toContain("openOrders(params: OpenOrdersParams): Promise<ReuxQueryResult<OpenOrdersRow>>;");
+    expect(api).toContain("capturePayment(params: CapturePaymentParams): Promise<TransactionRunResult>;");
+    expect(api).toContain("return runSqlQuery(db, querySql.openOrders, [params.minTotal]) as Promise<ReuxQueryResult<OpenOrdersRow>>;");
+    expect(api).toContain("return runTransactionSql(db, transactionSql.capturePayment, [params.orderRef, params.amount], 3);");
   });
 
   it("rejects invalid transition rules", () => {

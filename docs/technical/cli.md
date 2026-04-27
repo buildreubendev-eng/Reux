@@ -48,6 +48,7 @@ node dist/cli.js project-check
 node dist/cli.js project-transition-rules
 node dist/cli.js project-transition-rules Order.status
 node dist/cli.js project-query-sql accountOrderSummary
+node dist/cli.js project-api-ts ./runtime.js
 Remove-Item Env:REUX_CONFIG
 ```
 
@@ -77,6 +78,7 @@ node dist/cli.js project-explain highValueUsers
 node dist/cli.js project-tx-ir rewardUser
 node dist/cli.js project-tx-sql rewardUser
 node dist/cli.js project-tx-run rewardUser '["user-id","100"]'
+node dist/cli.js project-api-ts ./runtime.js
 node dist/cli.js project-data-insert-sql User '{"name":"Ada","email":"ada@example.com","balance":"1200"}'
 node dist/cli.js project-data-insert User '{"name":"Ada","email":"ada@example.com","balance":"1200"}'
 node dist/cli.js project-seed-check pilot/seeds/smoke.json
@@ -103,6 +105,15 @@ Inspect transition rules:
 node dist/cli.js transition-rules examples/pilot_reux.dl
 node dist/cli.js transition-rules examples/pilot_reux.dl Order.status
 ```
+
+Emit a generated TypeScript API client:
+
+```bash
+node dist/cli.js api-ts examples/pilot_reux.dl ./runtime.js
+node dist/cli.js project-api-ts ./runtime.js
+```
+
+The optional import argument controls where the generated file imports `Database`, `runSqlQuery`, and `runTransactionSql` from. Generated API clients include enum unions, row interfaces, query/transaction parameter interfaces, SQL constants, and a `create<Module>Api(db)` factory.
 
 Write a schema manifest to the configured `schemaManifest` path:
 
