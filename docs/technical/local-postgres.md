@@ -42,10 +42,11 @@ PowerShell users can also copy `.env.example` into their own shell/profile workf
 ```bash
 npm install
 npm run verify
+npm run verify:cli
 npm run build
 ```
 
-`npm run verify` runs the TypeScript no-emit check, unit test suite, and build. Use it before committing changes that do not need a live database.
+`npm run verify` runs the TypeScript no-emit check, unit test suite, build, and CLI smoke checks. Use it before committing changes that do not need a live database. `npm run verify:cli` can be run after a build to repeat only the built CLI smoke checks.
 
 ## Apply Migrations
 
