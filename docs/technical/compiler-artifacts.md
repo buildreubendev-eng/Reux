@@ -4,7 +4,7 @@ The Reux prototype keeps source syntax, schema, query plans, and SQL as separate
 
 ## AST
 
-The parser reads source files into declaration-oriented AST objects for modules, entities, enums, and queries.
+The parser reads source files into declaration-oriented AST objects for modules, entities, enums, transition rules, queries, and transaction functions.
 
 ## Schema IR
 
@@ -16,8 +16,11 @@ Schema IR is the backend-neutral durable model. It records:
 - references between entities;
 - indexes;
 - enums.
+- enum-backed transition rules.
 
 Before Schema IR is emitted, the compiler rejects duplicate durable names, fields, indexes, enum values, and parameters so downstream artifacts remain deterministic.
+
+Transition rules validate entity/field references and enum values before they appear in Schema IR. They are currently compiler artifacts rather than generated database constraints.
 
 The CLI emits Schema IR as a manifest:
 

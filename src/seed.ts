@@ -342,7 +342,7 @@ function fieldColumn(entity: EntityIr, fieldName: string): { columnName: string 
 }
 
 function findRequiredEntity(entities: EntityIr[], entityName: string): EntityIr {
-  const entity = findEntity({ moduleName: "seed", enums: [], entities }, entityName);
+  const entity = findEntity({ moduleName: "seed", enums: [], transitions: [], entities }, entityName);
   if (!entity) {
     throw new Error(`unknown entity ${entityName}`);
   }

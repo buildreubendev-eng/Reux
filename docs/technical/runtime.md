@@ -75,7 +75,7 @@ node dist/cli.js project-seed-delete pilot/seeds/smoke.json
 node dist/cli.js project-seed-reset pilot/seeds/smoke.json
 ```
 
-The initial source discovery supports exact paths plus `*` and `**` glob patterns, deduplicates overlapping matches, and reports each compiled file in stable path order. `project-summary` also reports duplicate declaration names across configured files by module and declaration kind.
+The initial source discovery supports exact paths plus `*` and `**` glob patterns, deduplicates overlapping matches, and reports each compiled file in stable path order. `project-summary` also reports duplicate declaration names across configured files by module and declaration kind, including transition-rule declarations.
 
 ## Schema Manifest
 

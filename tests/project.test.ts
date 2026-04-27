@@ -85,6 +85,7 @@ transaction function touchUser(userRef: User) writes User {
           enums: ["Status"],
           queries: ["users"],
           transactions: ["touchUser"],
+          transitions: [],
         },
       ],
       diagnostics: [],
@@ -94,6 +95,7 @@ transaction function touchUser(userRef: User) writes User {
         enums: 1,
         queries: 1,
         transactions: 1,
+        transitions: 0,
       },
     });
   });

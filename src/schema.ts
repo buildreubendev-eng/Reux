@@ -1,4 +1,4 @@
-import { EntityDeclaration, FieldDeclaration, Program, QueryDeclaration, QueryProjection, TypeRef } from "./ast.js";
+import { EntityDeclaration, FieldDeclaration, Program, QueryDeclaration, QueryProjection, TransitionDeclaration, TypeRef } from "./ast.js";
 import { DlAggregateError } from "./errors.js";
 import { parseObjectLiteral } from "./object-literal.js";
 
@@ -6,6 +6,7 @@ export interface SchemaIr {
   moduleName: string;
   entities: EntityIr[];
   enums: EnumIr[];
+  transitions: TransitionIr[];
 }
 
 export interface EntityIr {
@@ -45,6 +46,14 @@ export interface EnumIr {
   values: string[];
 }
 
+export interface TransitionIr {
+  entity: string;
+  field: string;
+  enumName: string;
+  from: string;
+  to: string;
+}
+
 const scalarTypes = new Set([
   "Bool",
   "Int",
@@ -67,6 +76,7 @@ export function buildSchema(program: Program): SchemaIr {
   const enumDecls = program.declarations.filter((decl) => decl.kind === "enum");
   const queryDecls = program.declarations.filter((decl): decl is QueryDeclaration => decl.kind === "query");
   const transactionDecls = program.declarations.filter((decl) => decl.kind === "transaction");
+  const transitionDecls = program.declarations.filter((decl): decl is TransitionDeclaration => decl.kind === "transition");
   const entityNames = new Set(entityDecls.map((entity) => entity.name));
   const enumNames = new Set(enumDecls.map((enumeration) => enumeration.name));
 
@@ -81,6 +91,9 @@ export function buildSchema(program: Program): SchemaIr {
   }
   for (const duplicate of duplicates(transactionDecls.map((transaction) => transaction.name))) {
     diagnostics.push(`duplicate transaction declaration ${duplicate}`);
+  }
+  for (const duplicate of duplicates(transitionDecls.map((transition) => `${transition.entity}.${transition.field}`))) {
+    diagnostics.push(`duplicate transition declaration ${duplicate}`);
   }
   for (const duplicate of [...entityNames].filter((name) => enumNames.has(name))) {
     diagnostics.push(`duplicate durable type declaration ${duplicate}`);
@@ -154,6 +167,8 @@ export function buildSchema(program: Program): SchemaIr {
     validateTransactionEffects(transaction, entityDecls, enumDecls, diagnostics);
   }
 
+  validateTransitions(transitionDecls, entityDecls, enumDecls, diagnostics);
+
   if (diagnostics.length > 0) {
     throw new DlAggregateError(diagnostics);
   }
@@ -165,6 +180,7 @@ export function buildSchema(program: Program): SchemaIr {
       name: enumeration.name,
       values: enumeration.values,
     })),
+    transitions: lowerTransitions(transitionDecls, entityDecls),
   };
 }
 
@@ -361,6 +377,70 @@ function validateQueryResultType(query: QueryDeclaration, aliases: Map<string, E
 
 function isCountExpression(expression: string): boolean {
   return /^count\(\s*\)$/.test(expression);
+}
+
+function validateTransitions(
+  transitions: TransitionDeclaration[],
+  entities: EntityDeclaration[],
+  enumerations: Extract<Program["declarations"][number], { kind: "enum" }>[],
+  diagnostics: string[],
+): void {
+  const enumByName = new Map(enumerations.map((enumeration) => [enumeration.name, enumeration]));
+
+  for (const transition of transitions) {
+    const entity = entities.find((candidate) => candidate.name === transition.entity);
+    if (!entity) {
+      diagnostics.push(`transition ${transition.entity}.${transition.field} references unknown entity ${transition.entity}`);
+      continue;
+    }
+
+    const field = entity.fields.find((candidate) => candidate.name === transition.field);
+    if (!field) {
+      diagnostics.push(`transition ${transition.entity}.${transition.field} references unknown field ${transition.entity}.${transition.field}`);
+      continue;
+    }
+
+    const enumeration = enumByName.get(field.type.name);
+    if (!enumeration) {
+      diagnostics.push(`transition ${transition.entity}.${transition.field} must target an enum field`);
+      continue;
+    }
+
+    if (transition.rules.length === 0) {
+      diagnostics.push(`transition ${transition.entity}.${transition.field} must declare at least one rule`);
+    }
+
+    for (const duplicate of duplicates(transition.rules.map((rule) => `${rule.from}->${rule.to}`))) {
+      diagnostics.push(`transition ${transition.entity}.${transition.field} declares duplicate rule ${duplicate}`);
+    }
+
+    for (const rule of transition.rules) {
+      if (!enumeration.values.includes(rule.from)) {
+        diagnostics.push(`transition ${transition.entity}.${transition.field} references invalid ${enumeration.name} value ${rule.from}`);
+      }
+      if (!enumeration.values.includes(rule.to)) {
+        diagnostics.push(`transition ${transition.entity}.${transition.field} references invalid ${enumeration.name} value ${rule.to}`);
+      }
+      if (rule.from === rule.to) {
+        diagnostics.push(`transition ${transition.entity}.${transition.field} declares no-op rule ${rule.from}->${rule.to}`);
+      }
+    }
+  }
+}
+
+function lowerTransitions(transitions: TransitionDeclaration[], entities: EntityDeclaration[]): TransitionIr[] {
+  return transitions.flatMap((transition) => {
+    const entity = entities.find((candidate) => candidate.name === transition.entity);
+    const field = entity?.fields.find((candidate) => candidate.name === transition.field);
+    if (!field) return [];
+    return transition.rules.map((rule) => ({
+      entity: transition.entity,
+      field: transition.field,
+      enumName: field.type.name,
+      from: rule.from,
+      to: rule.to,
+    }));
+  });
 }
 
 function validateTransactionEffects(

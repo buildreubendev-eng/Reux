@@ -1,6 +1,6 @@
 {
   "format": "dl.schema.v1",
-  "schemaHash": "a6348be9d0b5e895b012c99cdac19b602181b805d03c6bbc33d9ad1533939ad3",
+  "schemaHash": "dc9d7082d5311a49e35d468f35a775675466eeb6e5be37012b6f1481dcbdbb60",
   "schema": {
     "moduleName": "commerce",
     "enums": [
@@ -14,6 +14,7 @@
         ]
       }
     ],
+    "transitions": [],
     "entities": [
       {
         "name": "Order",

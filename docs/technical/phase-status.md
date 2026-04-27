@@ -17,6 +17,7 @@ Status: mostly implemented for the MVP subset.
 
 - Supports scalar fields, entity references, generated IDs, enums, indexes, defaults, checks, uniqueness, and nullability.
 - Emits backend-neutral Schema IR and stable schema manifests.
+- Supports enum-backed transition rules as validated Schema IR artifacts.
 - Rejects duplicate declarations, invalid references, unsupported types, duplicate fields/indexes/enum values, and invalid query/transaction parameters.
 
 ## Phase 2: Query Compiler
@@ -80,4 +81,4 @@ Phase 6 coverage:
 - Transaction conflict behavior represented by `creditAccount`, which lowers to `SELECT ... FOR UPDATE`, a balance update, retry metadata, and an outbox event.
 - Production-like verification path documented for WSL PostgreSQL through `npm run test:postgres`.
 
-The remaining gaps are beyond Phase 6 rather than blockers for it: richer query composition, broader aggregation semantics, status transition rules, broader fixture/seed workflows, a full always-on worker service for after-commit hooks and outbox dispatch, and eventually switching `dl.json` from commerce fixtures to the pilot source when the project is ready to treat the pilot as the active application.
+The remaining gaps are beyond Phase 6 rather than blockers for it: richer query composition, broader aggregation semantics, runtime enforcement for status transition rules, broader fixture/seed workflows, a full always-on worker service for after-commit hooks and outbox dispatch, and eventually switching `dl.json` from commerce fixtures to the pilot source when the project is ready to treat the pilot as the active application.

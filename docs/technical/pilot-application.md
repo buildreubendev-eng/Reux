@@ -14,6 +14,7 @@ The pilot intentionally stays inside the currently supported compiler/runtime su
 - one-base-entity queries with explicit joins;
 - explicit joins over entity references;
 - enum-backed status fields;
+- validated transition rules for order and payment status fields;
 - generated UUID identities;
 - entity references;
 - indexes;
@@ -44,6 +45,26 @@ node dist/cli.js project-seed-reset pilot/seeds/smoke.json
 ```
 
 The pilot is activated through `pilot/dl.json`, `pilot/.dl/schema-manifest.json`, and `pilot/migrations/`. Keeping those separate lets the root `dl.json` and root `migrations/` continue to drive the commerce fixtures while the completed Phase 6 pilot remains available as an independent application slice.
+
+## Transition Rules
+
+The pilot declares compiler-visible state transitions for the two lifecycle fields:
+
+```dl
+transition Order.status {
+  Pending -> Paid
+  Pending -> Cancelled
+  Paid -> Refunded
+}
+
+transition Payment.status {
+  Authorized -> Captured
+  Authorized -> Failed
+  Captured -> Refunded
+}
+```
+
+These rules are validated against `OrderStatus` and `PaymentStatus` and emitted in Schema IR/manifests. They are not yet enforced during transaction execution; runtime transition checks remain a later hardening step.
 
 ## Transaction Conflict Slice
 
@@ -115,5 +136,5 @@ Likely next language/runtime needs exposed by this pilot:
 - typed money/currency conventions;
 - transaction-local generated IDs;
 - richer insert result binding;
-- status transition validation;
+- runtime status transition enforcement;
 - richer seed reset modes for truncating or refreshing whole fixture groups.

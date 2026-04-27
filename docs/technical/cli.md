@@ -31,7 +31,7 @@ node dist/cli.js project-doctor --json
 node dist/cli.js project-doctor --db --json
 ```
 
-The summary includes duplicate declaration diagnostics across configured files. `project-doctor` also checks manifest freshness, migration directory visibility, and whether the configured database URL environment variable is set. Add `--db` to have `project-doctor` connect to PostgreSQL and include applied/pending migration counts. Add `--json` for machine-readable output.
+The summary inventories entities, enums, queries, transactions, and transition-rule declarations, and includes duplicate declaration diagnostics across configured files. `project-doctor` also checks manifest freshness, migration directory visibility, and whether the configured database URL environment variable is set. Add `--db` to have `project-doctor` connect to PostgreSQL and include applied/pending migration counts. Add `--json` for machine-readable output.
 
 Project commands read `dl.json` by default. Set `REUX_CONFIG` to use a different config, such as the pilot application:
 

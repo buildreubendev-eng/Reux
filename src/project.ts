@@ -17,6 +17,7 @@ export interface ProjectSummary {
     enums: number;
     queries: number;
     transactions: number;
+    transitions: number;
   };
 }
 
@@ -27,6 +28,7 @@ export interface ProjectFileSummary {
   enums: string[];
   queries: string[];
   transactions: string[];
+  transitions: string[];
 }
 
 export function discoverSourceFiles(config: DlConfig, cwd = process.cwd()): ProjectSourceFile[] {
@@ -53,6 +55,9 @@ export function summarizeProject(config: DlConfig, cwd = process.cwd()): Project
       transactions: result.program.declarations
         .filter((declaration) => declaration.kind === "transaction")
         .map((declaration) => declaration.name),
+      transitions: result.program.declarations
+        .filter((declaration) => declaration.kind === "transition")
+        .map((declaration) => `${declaration.entity}.${declaration.field}`),
     };
   });
 
@@ -65,6 +70,7 @@ export function summarizeProject(config: DlConfig, cwd = process.cwd()): Project
       enums: sum(files, (file) => file.enums.length),
       queries: sum(files, (file) => file.queries.length),
       transactions: sum(files, (file) => file.transactions.length),
+      transitions: sum(files, (file) => file.transitions.length),
     },
   };
 }
@@ -75,6 +81,7 @@ function projectDiagnostics(files: ProjectFileSummary[]): string[] {
   diagnostics.push(...duplicateDeclarations(files, "enum", (file) => file.enums));
   diagnostics.push(...duplicateDeclarations(files, "query", (file) => file.queries));
   diagnostics.push(...duplicateDeclarations(files, "transaction", (file) => file.transactions));
+  diagnostics.push(...duplicateDeclarations(files, "transition", (file) => file.transitions));
   return diagnostics;
 }
 

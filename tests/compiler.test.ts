@@ -148,6 +148,32 @@ describe("compiler prototype", () => {
     });
   });
 
+  it("builds Schema IR for transition rules", () => {
+    const { schema } = compileSource(`module commerce
+
+entity Order {
+  id: Id<Order> primary generated
+  status: OrderStatus default Pending
+}
+
+enum OrderStatus {
+  Pending
+  Paid
+  Cancelled
+}
+
+transition Order.status {
+  Pending -> Paid
+  Pending -> Cancelled
+}
+`);
+
+    expect(schema.transitions).toEqual([
+      { entity: "Order", field: "status", enumName: "OrderStatus", from: "Pending", to: "Paid" },
+      { entity: "Order", field: "status", enumName: "OrderStatus", from: "Pending", to: "Cancelled" },
+    ]);
+  });
+
   it("emits PostgreSQL DDL from Schema IR", () => {
     const sql = emitPostgresSchema(commerce);
 
@@ -160,6 +186,27 @@ describe("compiler prototype", () => {
     expect(sql).toContain("CREATE TYPE order_status AS ENUM ('Pending', 'Paid', 'Cancelled');");
     expect(sql).toContain("FOREIGN KEY (user_id) REFERENCES users(id)");
     expect(sql).toContain("CREATE INDEX users_by_balance ON users (balance DESC);");
+  });
+
+  it("rejects invalid transition rules", () => {
+    expect(() =>
+      compileSource(`module commerce
+
+entity Order {
+  id: Id<Order> primary generated
+  status: OrderStatus
+}
+
+enum OrderStatus {
+  Pending
+  Paid
+}
+
+transition Order.status {
+  Pending -> Refunded
+}
+`),
+    ).toThrow(DlAggregateError);
   });
 
   it("explains simple query lowering", () => {

@@ -7,6 +7,7 @@ This prototype implements the first data-module subset of Reux. It is intentiona
 - `module <name>`
 - `entity <Name> { ... }`
 - `enum <Name> { ... }`
+- `transition <Entity>.<field> { ... }`
 - `query <name>(params): Query<T> = from ...`
 - `transaction function <name>(params) writes Entity, ... { ... }`
 
@@ -57,6 +58,19 @@ enum OrderStatus {
   Paid
 }
 ```
+
+## Transition Rules
+
+Transition declarations attach allowed enum-state edges to an entity field:
+
+```dl
+transition Order.status {
+  Pending -> Paid
+  Pending -> Cancelled
+}
+```
+
+The compiler validates that the target entity and field exist, that the field is enum-typed, and that each `from`/`to` value is declared by the enum. Transition rules are emitted into Schema IR and manifests as compiler-visible domain rules. Runtime enforcement is intentionally deferred until transaction-state validation grows beyond the current MVP subset.
 
 ## Query Subset
 

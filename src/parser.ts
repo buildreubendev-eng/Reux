@@ -9,12 +9,13 @@ import {
   QueryDeclaration,
   QueryParameter,
   QueryProjection,
+  TransitionDeclaration,
   TransactionDeclaration,
   TypeRef,
 } from "./ast.js";
 import { DlError } from "./errors.js";
 
-const declarationStart = /^(entity|enum|query|transaction\s+function)\s+/;
+const declarationStart = /^(entity|enum|query|transition|transaction\s+function)\s+/;
 
 export function parseProgram(source: string): Program {
   const lines = normalizeLines(source);
@@ -60,6 +61,13 @@ export function parseProgram(source: string): Program {
       continue;
     }
 
+    if (text.startsWith("transition ")) {
+      const parsed = parseTransition(lines, index);
+      declarations.push(parsed.declaration);
+      index = parsed.nextIndex;
+      continue;
+    }
+
     if (text.startsWith("transaction function ")) {
       const parsed = parseTransaction(lines, index);
       declarations.push(parsed.declaration);
@@ -74,6 +82,43 @@ export function parseProgram(source: string): Program {
     moduleName: moduleMatch[1],
     declarations,
   };
+}
+
+function parseTransition(lines: SourceLine[], start: number): { declaration: TransitionDeclaration; nextIndex: number } {
+  const header = lines[start].text.trim();
+  const match = header.match(/^transition\s+([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)\s*\{$/);
+  if (!match) {
+    throw new DlError(`line ${lines[start].number}: expected 'transition Entity.field {'`);
+  }
+
+  const rules: TransitionDeclaration["rules"] = [];
+  let index = start + 1;
+  while (index < lines.length) {
+    const text = lines[index].text.trim();
+    if (!text) {
+      index += 1;
+      continue;
+    }
+    if (text === "}") {
+      return {
+        declaration: {
+          kind: "transition",
+          entity: match[1],
+          field: match[2],
+          rules,
+        },
+        nextIndex: index + 1,
+      };
+    }
+    const rule = text.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*->\s*([A-Za-z_][A-Za-z0-9_]*)$/);
+    if (!rule) {
+      throw new DlError(`line ${lines[index].number}: expected transition rule like 'Pending -> Paid'`);
+    }
+    rules.push({ from: rule[1], to: rule[2] });
+    index += 1;
+  }
+
+  throw new DlError(`line ${lines[start].number}: transition '${match[1]}.${match[2]}' is missing a closing brace`);
 }
 
 function parseTransaction(lines: SourceLine[], start: number): { declaration: TransactionDeclaration; nextIndex: number } {

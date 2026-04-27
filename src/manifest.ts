@@ -32,6 +32,9 @@ function normalize(schema: SchemaIr): SchemaIr {
   return {
     moduleName: schema.moduleName,
     enums: [...schema.enums].sort((left, right) => left.name.localeCompare(right.name)),
+    transitions: [...(schema.transitions ?? [])].sort((left, right) =>
+      `${left.entity}.${left.field}.${left.from}.${left.to}`.localeCompare(`${right.entity}.${right.field}.${right.from}.${right.to}`),
+    ),
     entities: [...schema.entities]
       .map((entity) => ({
         ...entity,

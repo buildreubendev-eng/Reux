@@ -1,4 +1,4 @@
-export type Declaration = EntityDeclaration | EnumDeclaration | QueryDeclaration | TransactionDeclaration;
+export type Declaration = EntityDeclaration | EnumDeclaration | QueryDeclaration | TransactionDeclaration | TransitionDeclaration;
 
 export interface Program {
   moduleName: string;
@@ -61,6 +61,18 @@ export interface TransactionDeclaration {
     attempts: number;
   };
   body: string;
+}
+
+export interface TransitionDeclaration {
+  kind: "transition";
+  entity: string;
+  field: string;
+  rules: TransitionRuleDeclaration[];
+}
+
+export interface TransitionRuleDeclaration {
+  from: string;
+  to: string;
 }
 
 export interface QueryParameter {

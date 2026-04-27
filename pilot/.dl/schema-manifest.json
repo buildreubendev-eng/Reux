@@ -1,6 +1,6 @@
 {
   "format": "dl.schema.v1",
-  "schemaHash": "ac206e5c2735aeba965db04014f6f61fce4b6c53fa164ebd2d9c0638be758f35",
+  "schemaHash": "717771f773a03c63e462e8e0174519ebc147f4804e488f521ae17532fdded97b",
   "schema": {
     "moduleName": "pilot",
     "enums": [
@@ -21,6 +21,50 @@
           "Failed",
           "Refunded"
         ]
+      }
+    ],
+    "transitions": [
+      {
+        "entity": "Order",
+        "field": "status",
+        "enumName": "OrderStatus",
+        "from": "Paid",
+        "to": "Refunded"
+      },
+      {
+        "entity": "Order",
+        "field": "status",
+        "enumName": "OrderStatus",
+        "from": "Pending",
+        "to": "Cancelled"
+      },
+      {
+        "entity": "Order",
+        "field": "status",
+        "enumName": "OrderStatus",
+        "from": "Pending",
+        "to": "Paid"
+      },
+      {
+        "entity": "Payment",
+        "field": "status",
+        "enumName": "PaymentStatus",
+        "from": "Authorized",
+        "to": "Captured"
+      },
+      {
+        "entity": "Payment",
+        "field": "status",
+        "enumName": "PaymentStatus",
+        "from": "Authorized",
+        "to": "Failed"
+      },
+      {
+        "entity": "Payment",
+        "field": "status",
+        "enumName": "PaymentStatus",
+        "from": "Captured",
+        "to": "Refunded"
       }
     ],
     "entities": [

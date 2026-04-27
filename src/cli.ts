@@ -523,6 +523,7 @@ function formatProjectSummary(summary: ProjectSummary): string {
     `enums: ${summary.totals.enums}`,
     `queries: ${summary.totals.queries}`,
     `transactions: ${summary.totals.transactions}`,
+    `transitions: ${summary.totals.transitions}`,
     "",
   ];
 
@@ -541,6 +542,7 @@ function formatProjectSummary(summary: ProjectSummary): string {
     lines.push(`  enums: ${formatList(file.enums)}`);
     lines.push(`  queries: ${formatList(file.queries)}`);
     lines.push(`  transactions: ${formatList(file.transactions)}`);
+    lines.push(`  transitions: ${formatList(file.transitions)}`);
   }
 
   return lines.join("\n");

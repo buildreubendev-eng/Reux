@@ -51,6 +51,18 @@ enum PaymentStatus {
   Refunded
 }
 
+transition Order.status {
+  Pending -> Paid
+  Pending -> Cancelled
+  Paid -> Refunded
+}
+
+transition Payment.status {
+  Authorized -> Captured
+  Authorized -> Failed
+  Captured -> Refunded
+}
+
 query openOrders(minTotal: Decimal): Query<{ total: Decimal, status: OrderStatus }> =
   from order in Order
   where order.total > minTotal
