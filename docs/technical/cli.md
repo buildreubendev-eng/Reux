@@ -135,6 +135,8 @@ Preview insert SQL without connecting to a database:
 node dist/cli.js data-insert-sql examples/commerce.dl User '{"name":"Ada","email":"ada@example.com","balance":"1200"}'
 ```
 
+`data-insert-sql` and `data-insert` validate enum field values before connecting to PostgreSQL.
+
 For shells that make inline JSON awkward, pass `@path/to/file.json`:
 
 ```bash

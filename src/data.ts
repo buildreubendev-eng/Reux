@@ -20,6 +20,18 @@ export function insertEntityStatement(schema: SchemaIr, entityName: string, reco
     }
   }
 
+  const enumsByName = new Map(schema.enums.map((enumeration) => [enumeration.name, enumeration]));
+  for (const field of entity.fields) {
+    if (!Object.prototype.hasOwnProperty.call(record, field.name)) continue;
+    const enumeration = enumsByName.get(field.type.name);
+    if (!enumeration) continue;
+    const value = record[field.name];
+    if (value === null || value === undefined) continue;
+    if (typeof value !== "string" || !enumeration.values.includes(value)) {
+      throw new DlError(`data value ${String(value)} is not a valid ${enumeration.name} for ${entity.name}.${field.name}`);
+    }
+  }
+
   const columns: string[] = [];
   const params: unknown[] = [];
   for (const field of entity.fields) {

@@ -161,6 +161,8 @@ For larger fixtures or shells that strip JSON quotes, pass `@path/to/file.json`.
 
 The JSON object keys must match entity fields. Generated primary keys and omitted fields are left to database defaults or nullable columns.
 
+Enum field values are validated before the runtime opens a database connection, so typos fail with a Reux diagnostic instead of a PostgreSQL enum cast error.
+
 ## Seed Files
 
 Run a seed file against an explicit source:

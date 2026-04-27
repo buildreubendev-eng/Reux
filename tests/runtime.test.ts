@@ -187,6 +187,27 @@ entity User {
     ).toThrow("entity User has no field missing");
   });
 
+  it("rejects invalid enum values for data insert statements", () => {
+    expect(() =>
+      emitInsertStatement(
+        `module commerce
+
+entity Order {
+  id: Id<Order> primary generated
+  status: OrderStatus
+}
+
+enum OrderStatus {
+  Pending
+  Paid
+}
+`,
+        "Order",
+        { status: "Refunded" },
+      ),
+    ).toThrow("data value Refunded is not a valid OrderStatus for Order.status");
+  });
+
   it("parses JSON objects for data insert", () => {
     expect(parseJsonObject('{"name":"Ada"}')).toEqual({ name: "Ada" });
     expect(() => parseJsonObject("[1,2]")).toThrow("expected a JSON object");
