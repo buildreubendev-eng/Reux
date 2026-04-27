@@ -22,6 +22,10 @@ export interface SeedRunResult {
   inserted: SeedInsertedRecord[];
 }
 
+export interface SeedDryRunResult extends SeedRunResult {
+  rolledBack: true;
+}
+
 export interface SeedDeleteResult {
   deleted: SeedDeletedRecord[];
 }
@@ -127,6 +131,21 @@ export async function runSeed(db: Database, source: string, spec: SeedSpec): Pro
   }
 
   return { inserted };
+}
+
+export async function dryRunSeed(db: Database, source: string, spec: SeedSpec): Promise<SeedDryRunResult> {
+  await db.query("BEGIN;");
+  try {
+    const result = await runSeed(db, source, spec);
+    await db.query("ROLLBACK;");
+    return {
+      ...result,
+      rolledBack: true,
+    };
+  } catch (error) {
+    await db.query("ROLLBACK;");
+    throw error;
+  }
 }
 
 export async function deleteSeed(db: Database, source: string, spec: SeedSpec): Promise<SeedDeleteResult> {

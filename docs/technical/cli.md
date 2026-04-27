@@ -68,6 +68,7 @@ node dist/cli.js project-tx-run rewardUser '["user-id","100"]'
 node dist/cli.js project-data-insert-sql User '{"name":"Ada","email":"ada@example.com","balance":"1200"}'
 node dist/cli.js project-data-insert User '{"name":"Ada","email":"ada@example.com","balance":"1200"}'
 node dist/cli.js project-seed-check pilot/seeds/smoke.json
+node dist/cli.js project-seed-dry-run pilot/seeds/smoke.json
 node dist/cli.js project-seed-run pilot/seeds/smoke.json
 node dist/cli.js project-seed-reset pilot/seeds/smoke.json
 ```
@@ -132,16 +133,23 @@ Run an ordered seed file:
 
 ```bash
 node dist/cli.js seed-check examples/pilot_reux.dl pilot/seeds/smoke.json
+node dist/cli.js seed-dry-run examples/commerce_v2.dl examples/seeds/commerce_smoke.json
+node dist/cli.js seed-dry-run examples/pilot_reux.dl pilot/seeds/smoke.json
 node dist/cli.js seed-run examples/pilot_reux.dl pilot/seeds/smoke.json
 node dist/cli.js seed-delete examples/pilot_reux.dl pilot/seeds/smoke.json
 node dist/cli.js seed-reset examples/pilot_reux.dl pilot/seeds/smoke.json
 node dist/cli.js project-seed-check pilot/seeds/smoke.json
+node dist/cli.js project-seed-dry-run pilot/seeds/smoke.json
 node dist/cli.js project-seed-run pilot/seeds/smoke.json
 node dist/cli.js project-seed-delete pilot/seeds/smoke.json
 node dist/cli.js project-seed-reset pilot/seeds/smoke.json
 ```
 
 `seed-check` and `project-seed-check` compile the Reux source and validate the seed file without opening a database connection. The check verifies entity names, data field names, `by` fields, required conflict keys for upsert records, and `$alias` references in declaration order.
+
+`seed-dry-run` and `project-seed-dry-run` run the seed against PostgreSQL inside a transaction that always rolls back. Use dry runs to catch database-level constraint or type errors without keeping inserted fixture rows.
+
+`examples/seeds/commerce_smoke.json` is a small file-scoped fixture for the root commerce example. `pilot/seeds/smoke.json` is the richer pilot fixture used with `pilot/dl.json`.
 
 `seed-reset` and `project-seed-reset` first delete the seed records in reverse order, then run the seed again inside one database transaction. Use reset when changing a fixture and wanting the local database to match the file in one command.
 

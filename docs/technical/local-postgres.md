@@ -60,6 +60,7 @@ node dist/cli.js migrate-status
 ```bash
 node dist/cli.js data-insert examples/commerce.dl User '{"name":"Ada","email":"ada@example.com","balance":"1200"}'
 node dist/cli.js project-data-insert User '{"name":"Ada","email":"ada@example.com","balance":"1200"}'
+node dist/cli.js seed-dry-run examples/commerce_v2.dl examples/seeds/commerce_smoke.json
 ```
 
 Fields omitted from the JSON object are left to database defaults or nullable columns.

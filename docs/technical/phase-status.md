@@ -60,6 +60,7 @@ Status: implemented for the MVP workflow.
 - `project-check` compiles configured sources.
 - `project-summary` inventories configured sources and reports duplicate cross-file declarations.
 - `project-doctor` checks source discovery, manifest freshness, migration directory visibility, and database URL environment status.
+- Seed tooling supports schema-only checks, PostgreSQL dry runs, rerunnable upserts, deletes, and transactional resets.
 - Technical documentation is maintained alongside implementation.
 
 ## Phase 6: Pilot Application

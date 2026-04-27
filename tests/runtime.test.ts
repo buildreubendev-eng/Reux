@@ -6,7 +6,7 @@ import { databaseUrl, loadConfig } from "../src/config.js";
 import { emitInsertStatement, emitQuerySql } from "../src/compiler.js";
 import { mapDatabaseError } from "../src/db-errors.js";
 import { parseJsonObject } from "../src/data.js";
-import { checkSeed, deleteSeed, parseSeedSpec, resetSeed, runSeed } from "../src/seed.js";
+import { checkSeed, deleteSeed, dryRunSeed, parseSeedSpec, resetSeed, runSeed } from "../src/seed.js";
 import {
   applyMigrations,
   claimOutboxEvents,
@@ -343,6 +343,50 @@ entity User {
       sql: 'INSERT INTO users ("email", "balance") VALUES ($1, $2) ON CONFLICT ("email") DO UPDATE SET "balance" = EXCLUDED."balance" RETURNING *;',
       params: ["ada@example.com", "100"],
     });
+  });
+
+  it("dry-runs seed records inside a rollback transaction", async () => {
+    const db = new FakeDb();
+    const source = `module commerce
+
+entity User {
+  id: Id<User> primary generated
+  email: String
+}
+
+entity Order {
+  id: Id<Order> primary generated
+  user: User required
+  total: Decimal
+}
+`;
+
+    const result = await dryRunSeed(
+      db,
+      source,
+      parseSeedSpec(
+        JSON.stringify({
+          records: [
+            { entity: "User", as: "ada", data: { email: "ada@example.com" } },
+            { entity: "Order", as: "order1", data: { user: "$ada", total: "100" } },
+          ],
+        }),
+      ),
+    );
+
+    expect(result).toEqual({
+      inserted: [
+        { entity: "User", as: "ada", id: "row-1" },
+        { entity: "Order", as: "order1", id: "row-2" },
+      ],
+      rolledBack: true,
+    });
+    expect(db.queryCalls).toEqual([
+      { sql: "BEGIN;", params: undefined },
+      { sql: "INSERT INTO users (email) VALUES ($1) RETURNING *;", params: ["ada@example.com"] },
+      { sql: "INSERT INTO orders (user_id, total) VALUES ($1, $2) RETURNING *;", params: ["row-1", "100"] },
+      { sql: "ROLLBACK;", params: undefined },
+    ]);
   });
 
   it("deletes seed records in reverse dependency order", async () => {
