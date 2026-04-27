@@ -49,9 +49,11 @@ node dist/cli.js project-summary
 node dist/cli.js project-summary --json
 node dist/cli.js project-doctor
 node dist/cli.js project-doctor --db
+node dist/cli.js project-doctor --json
+node dist/cli.js project-doctor --db --json
 ```
 
-`project-doctor` checks source discovery, duplicate declaration warnings, schema manifest freshness, migration directory visibility, and whether the configured database URL environment variable is set. `project-doctor --db` also opens a PostgreSQL connection and reports applied and pending migration counts.
+`project-doctor` checks source discovery, duplicate declaration warnings, schema manifest freshness, migration directory visibility, and whether the configured database URL environment variable is set. `project-doctor --db` also opens a PostgreSQL connection and reports applied and pending migration counts. Add `--json` for machine-readable output.
 
 Emit active project artifacts when `sources` resolves to exactly one file:
 

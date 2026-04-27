@@ -152,13 +152,15 @@ try {
     }
   } else if (command === "project-doctor") {
     const config = loadConfig();
-    const lines = [formatProjectDoctor(config)];
-    if (file === "--db") {
+    const includeDatabase = args.includes("--db");
+    const json = args.includes("--json");
+    const report = buildProjectDoctorReport(config);
+    if (includeDatabase) {
       await withDatabase(async (db) => {
-        lines.push(formatDatabaseDoctor(await migrationStatus(db, config.migrationsDir)));
+        report.database = databaseDoctorReport(await migrationStatus(db, config.migrationsDir));
       });
     }
-    console.log(lines.join("\n"));
+    console.log(json ? JSON.stringify(report, null, 2) : formatProjectDoctorReport(report));
   } else if (command === "project-sql" || command === "project-manifest" || command === "project-manifest-write") {
     const config = loadConfig();
     const source = readSingleProjectSource(config, command);
@@ -548,55 +550,147 @@ function formatList(values: string[]): string {
   return values.length === 0 ? "-" : values.join(", ");
 }
 
-function formatProjectDoctor(config: ReturnType<typeof loadConfig>): string {
-  const lines = ["project doctor"];
-  lines.push(`backend: ${config.backend}`);
-  lines.push(`database env: ${config.databaseUrlEnv} ${process.env[config.databaseUrlEnv] ? "(set)" : "(not set)"}`);
-  lines.push(`sources: ${config.sources.join(", ")}`);
+interface ProjectDoctorReport {
+  backend: string;
+  databaseUrlEnv: {
+    name: string;
+    set: boolean;
+  };
+  sources: string[];
+  matchedSourceFiles: number;
+  warnings: string[];
+  schemaManifest: ProjectDoctorSchemaManifest;
+  migrations: ProjectDoctorMigrations;
+  database?: ProjectDoctorDatabase;
+}
 
+interface ProjectDoctorSchemaManifest {
+  path: string;
+  status: "current" | "missing" | "present" | "stale";
+  storedHash?: string;
+  currentHash?: string;
+  note?: string;
+}
+
+interface ProjectDoctorMigrations {
+  path: string;
+  status: "missing" | "present";
+  sqlFiles: number;
+}
+
+interface ProjectDoctorDatabase {
+  appliedMigrations: number;
+  pendingMigrations: number;
+  pendingFiles: string[];
+}
+
+function buildProjectDoctorReport(config: ReturnType<typeof loadConfig>): ProjectDoctorReport {
   const summary = summarizeProject(config);
-  lines.push(`matched source files: ${summary.totals.files}`);
-  for (const diagnostic of summary.diagnostics) {
+  return {
+    backend: config.backend,
+    databaseUrlEnv: {
+      name: config.databaseUrlEnv,
+      set: Boolean(process.env[config.databaseUrlEnv]),
+    },
+    sources: config.sources,
+    matchedSourceFiles: summary.totals.files,
+    warnings: summary.diagnostics,
+    schemaManifest: schemaManifestDoctorReport(config),
+    migrations: migrationsDoctorReport(config),
+  };
+}
+
+function formatProjectDoctorReport(report: ProjectDoctorReport): string {
+  const lines = ["project doctor"];
+  lines.push(`backend: ${report.backend}`);
+  lines.push(`database env: ${report.databaseUrlEnv.name} ${report.databaseUrlEnv.set ? "(set)" : "(not set)"}`);
+  lines.push(`sources: ${report.sources.join(", ")}`);
+  lines.push(`matched source files: ${report.matchedSourceFiles}`);
+  for (const diagnostic of report.warnings) {
     lines.push(`warning: ${diagnostic}`);
   }
 
-  lines.push(...manifestDoctorLines(config));
-  lines.push(...migrationDoctorLines(config));
+  lines.push(...formatSchemaManifestDoctor(report.schemaManifest));
+  lines.push(formatMigrationsDoctor(report.migrations));
+  if (report.database) {
+    lines.push(...formatDatabaseDoctor(report.database));
+  }
   return lines.join("\n");
 }
 
-function manifestDoctorLines(config: ReturnType<typeof loadConfig>): string[] {
+function schemaManifestDoctorReport(config: ReturnType<typeof loadConfig>): ProjectDoctorSchemaManifest {
   if (!existsSync(config.schemaManifest)) {
-    return [`schema manifest: missing (${config.schemaManifest})`];
+    return { path: config.schemaManifest, status: "missing" };
   }
 
   const files = discoverSourceFiles(config);
   if (files.length !== 1) {
-    return [`schema manifest: present (${config.schemaManifest}); freshness check requires exactly one configured source`];
+    return {
+      path: config.schemaManifest,
+      status: "present",
+      note: "freshness check requires exactly one configured source",
+    };
   }
 
   const current = JSON.parse(emitSchemaManifest(readFileSync(files[0].path, "utf8"))) as { schemaHash: string };
   const stored = JSON.parse(readFileSync(config.schemaManifest, "utf8")) as { schemaHash?: string };
   if (stored.schemaHash === current.schemaHash) {
-    return [`schema manifest: current (${config.schemaManifest})`];
+    return { path: config.schemaManifest, status: "current", storedHash: stored.schemaHash, currentHash: current.schemaHash };
   }
-  return [`schema manifest: stale (${config.schemaManifest})`, `  stored: ${stored.schemaHash ?? "missing"}`, `  current: ${current.schemaHash}`];
+  return {
+    path: config.schemaManifest,
+    status: "stale",
+    storedHash: stored.schemaHash,
+    currentHash: current.schemaHash,
+  };
 }
 
-function migrationDoctorLines(config: ReturnType<typeof loadConfig>): string[] {
+function formatSchemaManifestDoctor(manifest: ProjectDoctorSchemaManifest): string[] {
+  if (manifest.status === "missing") {
+    return [`schema manifest: missing (${manifest.path})`];
+  }
+  if (manifest.status === "present") {
+    return [`schema manifest: present (${manifest.path}); ${manifest.note}`];
+  }
+  if (manifest.status === "current") {
+    return [`schema manifest: current (${manifest.path})`];
+  }
+  return [
+    `schema manifest: stale (${manifest.path})`,
+    `  stored: ${manifest.storedHash ?? "missing"}`,
+    `  current: ${manifest.currentHash}`,
+  ];
+}
+
+function migrationsDoctorReport(config: ReturnType<typeof loadConfig>): ProjectDoctorMigrations {
   if (!existsSync(config.migrationsDir)) {
-    return [`migrations: missing directory (${config.migrationsDir})`];
+    return { path: config.migrationsDir, status: "missing", sqlFiles: 0 };
   }
   const migrationCount = readdirSync(config.migrationsDir).filter((file) => file.endsWith(".sql")).length;
-  return [`migrations: ${migrationCount} sql file${migrationCount === 1 ? "" : "s"} (${config.migrationsDir})`];
+  return { path: config.migrationsDir, status: "present", sqlFiles: migrationCount };
 }
 
-function formatDatabaseDoctor(status: Awaited<ReturnType<typeof migrationStatus>>): string {
-  const lines = ["database doctor"];
-  lines.push(`applied migrations: ${status.applied.length}`);
-  lines.push(`pending migrations: ${status.pending.length}`);
-  for (const pending of status.pending) {
-    lines.push(`  pending: ${pending.filename}`);
+function formatMigrationsDoctor(migrations: ProjectDoctorMigrations): string {
+  if (migrations.status === "missing") {
+    return `migrations: missing directory (${migrations.path})`;
   }
-  return lines.join("\n");
+  return `migrations: ${migrations.sqlFiles} sql file${migrations.sqlFiles === 1 ? "" : "s"} (${migrations.path})`;
+}
+
+function databaseDoctorReport(status: Awaited<ReturnType<typeof migrationStatus>>): ProjectDoctorDatabase {
+  return {
+    appliedMigrations: status.applied.length,
+    pendingMigrations: status.pending.length,
+    pendingFiles: status.pending.map((pending) => pending.filename),
+  };
+}
+
+function formatDatabaseDoctor(database: ProjectDoctorDatabase): string[] {
+  const lines = ["database doctor"];
+  lines.push(`applied migrations: ${database.appliedMigrations}`);
+  lines.push(`pending migrations: ${database.pendingMigrations}`);
+  for (const pending of database.pendingFiles) {
+    lines.push(`  pending: ${pending}`);
+  }
+  return lines;
 }
