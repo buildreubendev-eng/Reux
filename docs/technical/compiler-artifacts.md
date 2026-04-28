@@ -47,6 +47,7 @@ Query IR is the typed intermediate representation used before SQL lowering. The 
 - `Filter`
 - `Group`
 - `Order`
+- `Limit`
 - `Map`
 
 Inspect a query plan:
@@ -75,7 +76,7 @@ The PostgreSQL backend currently emits:
 - foreign key constraints for references;
 - column constraints for nullability, uniqueness, defaults, and checks;
 - `CREATE INDEX` for declared indexes;
-- `SELECT` statements for the supported query subset, including explicit joins over entity references and narrow grouped aggregations.
+- `SELECT` statements for the supported query subset, including explicit joins over entity references, narrow grouped aggregations, and `LIMIT`.
 
 ## Transaction IR
 

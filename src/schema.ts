@@ -284,6 +284,7 @@ function validateQuery(query: QueryDeclaration, entities: EntityDeclaration[], d
     query.body.where,
     ...query.body.groupBy,
     query.body.orderBy?.expression,
+    query.body.limit,
     ...projectionExpressions(query.body.select),
   ].filter((expression): expression is string => Boolean(expression));
 

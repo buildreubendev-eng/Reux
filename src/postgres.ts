@@ -47,7 +47,15 @@ export function transactionToPostgres(schema: SchemaIr, transaction: Transaction
 
 export function queryIrToPostgres(plan: QueryPlanIr): string {
   const clauses = collectClauses(plan.root.input);
-  return [`SELECT ${projectionSql(plan.root.projection)}`, clauses.from, ...clauses.joins, clauses.where, clauses.groupBy, clauses.orderBy]
+  return [
+    `SELECT ${projectionSql(plan.root.projection)}`,
+    clauses.from,
+    ...clauses.joins,
+    clauses.where,
+    clauses.groupBy,
+    clauses.orderBy,
+    clauses.limit,
+  ]
     .filter(Boolean)
     .join("\n")
     .concat(";");
@@ -114,7 +122,14 @@ function checkSql(field: FieldIr): string {
   return field.check?.replaceAll(field.name, field.columnName) ?? "";
 }
 
-function collectClauses(input: QueryInputIr): { from: string; joins: string[]; where?: string; groupBy?: string; orderBy?: string } {
+function collectClauses(input: QueryInputIr): {
+  from: string;
+  joins: string[];
+  where?: string;
+  groupBy?: string;
+  orderBy?: string;
+  limit?: string;
+} {
   if (input.kind === "Scan") {
     return {
       from: `FROM ${input.table} AS ${quoteIdentifier(input.alias)}`,
@@ -150,6 +165,13 @@ function collectClauses(input: QueryInputIr): { from: string; joins: string[]; w
       orderBy: `ORDER BY ${input.keys
         .map((key) => `${expressionSql(key.expression)} ${key.direction.toUpperCase()}`)
         .join(", ")}`,
+    };
+  }
+
+  if (input.kind === "Limit") {
+    return {
+      ...clauses,
+      limit: `LIMIT ${expressionSql(input.count)}`,
     };
   }
 

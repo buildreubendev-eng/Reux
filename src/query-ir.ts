@@ -4,7 +4,7 @@ import { EntityIr, FieldIr, findEntity, SchemaIr } from "./schema.js";
 
 export type QueryIr = MapIr;
 
-export type QueryInputIr = ScanIr | JoinIr | FilterIr | GroupIr | OrderIr | MapIr;
+export type QueryInputIr = ScanIr | JoinIr | FilterIr | GroupIr | OrderIr | LimitIr | MapIr;
 
 export interface QueryPlanIr {
   name: string;
@@ -51,6 +51,12 @@ export interface OrderIr {
   kind: "Order";
   input: QueryInputIr;
   keys: OrderKeyIr[];
+}
+
+export interface LimitIr {
+  kind: "Limit";
+  input: QueryInputIr;
+  count: ExpressionIr;
 }
 
 export interface OrderKeyIr {
@@ -170,6 +176,14 @@ export function buildQueryIr(schema: SchemaIr, query: QueryDeclaration): QueryPl
           direction: query.body.orderBy.direction,
         },
       ],
+    };
+  }
+
+  if (query.body.limit) {
+    input = {
+      kind: "Limit",
+      input,
+      count: expressionIr(schema, query, aliases, query.body.limit),
     };
   }
 

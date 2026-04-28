@@ -162,6 +162,35 @@ query accountOrderStats(): Query<{ email: String, averageTotal: Decimal, smalles
     expect(sql).toContain('ORDER BY max("order".total) DESC');
   });
 
+  it("lowers query limit clauses to PostgreSQL", () => {
+    const source = `module commerce
+
+entity User {
+  id: Id<User> primary generated
+  email: String
+  balance: Decimal
+}
+
+query topUsers(maxRows: Int): Query<{ email: String, balance: Decimal }> =
+  from user in User
+  order by user.balance desc
+  limit maxRows
+  select { email: user.email, balance: user.balance }
+`;
+    const queryIr = JSON.parse(emitQueryIr(source, "topUsers"));
+    const sql = emitQuerySql(source, "topUsers");
+
+    expect(queryIr.root.input).toMatchObject({
+      kind: "Limit",
+      count: {
+        source: "maxRows",
+        parameters: [{ name: "maxRows", position: 1 }],
+      },
+    });
+    expect(sql).toContain('ORDER BY "user".balance DESC');
+    expect(sql).toContain("LIMIT $1;");
+  });
+
   it("lowers the Reux pilot conflict transaction to PostgreSQL", () => {
     const sql = emitTransactionSql(readFileSync("examples/pilot_reux.dl", "utf8"), "creditAccount");
 

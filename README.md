@@ -8,7 +8,7 @@ Current scope:
 - Build a backend-neutral Schema IR.
 - Validate basic type, reference, optionality, primary key, uniqueness, check, and index constraints.
 - Lower Schema IR to PostgreSQL DDL.
-- Lower a narrow query comprehension subset with explicit joins to PostgreSQL `SELECT`.
+- Lower a narrow query comprehension subset with explicit joins and limits to PostgreSQL `SELECT`.
 - Lower narrow grouped aggregations with `count()` and `sum(field)`.
 - Emit schema manifests, Query IR, initial migrations, and conservative migration plans.
 - Parse transaction functions, emit Transaction IR, lower a supported subset to PostgreSQL, and run it against PostgreSQL.

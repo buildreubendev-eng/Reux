@@ -90,6 +90,7 @@ export interface QueryBody {
     expression: string;
     direction: "asc" | "desc";
   };
+  limit?: string;
   select: QueryProjection;
 }
 

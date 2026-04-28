@@ -70,9 +70,9 @@ transition Order.status {
 }
 ```
 
-The compiler validates that the target entity and field exist, that the field is enum-typed, and that each `from`/`to` value is declared by the enum. Transition rules are emitted into Schema IR and manifests as compiler-visible domain rules. Runtime enforcement is intentionally deferred until transaction-state validation grows beyond the current MVP subset.
+The compiler validates that the target entity and field exist, that the field is enum-typed, and that each `from`/`to` value is declared by the enum. Transition rules are emitted into Schema IR and manifests as compiler-visible domain rules.
 
-For the current runtime subset, literal enum assignments inside loaded-entity transactions are guarded when transition rules exist. For example, `order.status = Paid` only updates rows whose current status is one of the declared predecessors of `Paid`; otherwise the transaction fails and rolls back.
+For the current runtime subset, literal and enum-parameter assignments inside loaded-entity transactions are guarded when transition rules exist. For example, `order.status = Paid` only updates rows whose current status is one of the declared predecessors of `Paid`; otherwise the transaction fails and rolls back.
 
 If a transaction assigns a literal enum value to a field with transition rules, the target value must appear as a `to` value in at least one rule. This prevents transition-managed fields from silently compiling to unguarded updates.
 
@@ -85,17 +85,28 @@ node dist/cli.js transition-rules examples/pilot_reux.dl Order.status
 
 ## Query Subset
 
-The current query subset supports one scanned entity, optional joins, optional `where`, optional `group by`, optional `order by`, and `select` projections:
+The current query subset supports one scanned entity, optional joins, optional `where`, optional `group by`, optional `order by`, optional `limit`, and `select` projections:
 
 ```dl
 query highValueUsers(min: Decimal): Query<{ email: String?, balance: Decimal }> =
   from user in User
   where user.balance > min
   order by user.balance desc
+  limit 20
   select { email: user.email, balance: user.balance }
 ```
 
 Query parameters lower to positional PostgreSQL parameters such as `$1`. Entity field references are validated against Schema IR before SQL is emitted.
+
+`limit` accepts a numeric literal or a query parameter:
+
+```dl
+query topUsers(maxRows: Int): Query<{ email: String, balance: Decimal }> =
+  from user in User
+  order by user.balance desc
+  limit maxRows
+  select { email: user.email, balance: user.balance }
+```
 
 Enum fields can be compared with bare enum literals in query predicates. For example, `order.status == Paid` lowers to a PostgreSQL enum literal comparison, and invalid values are rejected during query lowering.
 

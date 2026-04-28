@@ -424,29 +424,33 @@ function parseQueryBody(source: string, lineNumber: number): QueryBody {
   const orderIndex = findKeyword(beforeSelect, "order by");
   const groupIndex = findKeyword(beforeSelect, "group by");
   const whereIndex = findKeyword(beforeSelect, "where");
-  const firstClauseIndex = minDefined(whereIndex, groupIndex, orderIndex) ?? beforeSelect.length;
+  const limitIndex = findKeyword(beforeSelect, "limit");
+  const firstClauseIndex = minDefined(whereIndex, groupIndex, orderIndex, limitIndex) ?? beforeSelect.length;
   const joinsSource = beforeSelect.slice(0, firstClauseIndex).trim();
   const clauseSource = beforeSelect.slice(firstClauseIndex).trim();
   const clauseOrderIndex = findKeyword(clauseSource, "order by");
   const clauseGroupIndex = findKeyword(clauseSource, "group by");
   const clauseWhereIndex = findKeyword(clauseSource, "where");
+  const clauseLimitIndex = findKeyword(clauseSource, "limit");
 
   let where: string | undefined;
   let groupBy: string[] = [];
   let orderBy: QueryBody["orderBy"];
+  let limit: string | undefined;
 
   if (clauseWhereIndex >= 0) {
-    const whereEnd = minDefinedAfter(clauseWhereIndex, clauseGroupIndex, clauseOrderIndex) ?? clauseSource.length;
+    const whereEnd = minDefinedAfter(clauseWhereIndex, clauseGroupIndex, clauseOrderIndex, clauseLimitIndex) ?? clauseSource.length;
     where = clauseSource.slice(clauseWhereIndex + "where".length, whereEnd).trim();
   }
 
   if (clauseGroupIndex >= 0) {
-    const groupEnd = minDefinedAfter(clauseGroupIndex, clauseOrderIndex) ?? clauseSource.length;
+    const groupEnd = minDefinedAfter(clauseGroupIndex, clauseOrderIndex, clauseLimitIndex) ?? clauseSource.length;
     groupBy = splitTopLevel(clauseSource.slice(clauseGroupIndex + "group by".length, groupEnd).trim(), ",");
   }
 
   if (clauseOrderIndex >= 0) {
-    const orderSource = clauseSource.slice(clauseOrderIndex + "order by".length).trim();
+    const orderEnd = minDefinedAfter(clauseOrderIndex, clauseLimitIndex) ?? clauseSource.length;
+    const orderSource = clauseSource.slice(clauseOrderIndex + "order by".length, orderEnd).trim();
     const orderMatch = orderSource.match(/^(.+)\s+(asc|desc)$/);
     if (!orderMatch) {
       throw new DlError(`line ${lineNumber}: order by must end with 'asc' or 'desc'`);
@@ -457,6 +461,13 @@ function parseQueryBody(source: string, lineNumber: number): QueryBody {
     };
   }
 
+  if (clauseLimitIndex >= 0) {
+    limit = clauseSource.slice(clauseLimitIndex + "limit".length).trim();
+    if (!limit) {
+      throw new DlError(`line ${lineNumber}: limit clause requires a value`);
+    }
+  }
+
   return {
     rangeName: fromMatch[1],
     sourceEntity: fromMatch[2],
@@ -464,6 +475,7 @@ function parseQueryBody(source: string, lineNumber: number): QueryBody {
     where,
     groupBy,
     orderBy,
+    limit,
     select: parseProjection(selectSource, lineNumber),
   };
 }
