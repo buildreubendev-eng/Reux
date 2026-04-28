@@ -4,7 +4,7 @@ The browser demo in `demo/pilot-app` can run as a hosted Node service backed by 
 
 ## Required Build Settings
 
-Use these settings on Railway, Render, Fly.io, or any Node-capable host:
+The repo includes `railway.json` and `render.yaml` for hosted deployments. For any Node-capable host, use these settings:
 
 ```text
 Build command: npm install && npm run build
@@ -13,6 +13,26 @@ Health check: /api/health
 ```
 
 The service reads the platform `PORT` variable automatically and binds to `0.0.0.0` by default so public hosts can route traffic to it.
+
+## Railway
+
+1. Create a new Railway project from `benn4105/Reux`.
+2. Add a PostgreSQL service to the same Railway project.
+3. On the Reux service, set:
+
+```text
+DATABASE_URL=${{Postgres.DATABASE_URL}}
+REUX_DEMO_SCHEMA=reux_demo
+REUX_DEMO_SETUP_TOKEN=<private admin token>
+```
+
+`railway.json` sets the build command, start command, `/api/health` health check, and restart policy. Railway reads this file during deployment.
+
+## Render
+
+Use the repo Blueprint (`render.yaml`) to create the web service and a managed PostgreSQL database together. The Blueprint wires `DATABASE_URL` from the database, sets `REUX_DEMO_SCHEMA`, and generates `REUX_DEMO_SETUP_TOKEN`.
+
+If creating the Render service manually instead of through the Blueprint, use the build/start settings above and add the three environment variables manually.
 
 ## Environment Variables
 

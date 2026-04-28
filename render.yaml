@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: reux-pilot-demo
+    runtime: node
+    plan: starter
+    buildCommand: npm install && npm run build
+    startCommand: npm run start:demo
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: reux-pilot-demo-db
+          property: connectionString
+      - key: REUX_DEMO_SCHEMA
+        value: reux_demo
+      - key: REUX_DEMO_SETUP_TOKEN
+        generateValue: true
+
+databases:
+  - name: reux-pilot-demo-db
+    plan: starter
+    databaseName: reux_demo
+    user: reux_demo

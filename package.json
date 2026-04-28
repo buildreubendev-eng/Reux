@@ -38,6 +38,7 @@
     "verify:postgres:full": "npm run verify:postgres && npm run build && node ./dist/cli.js project-doctor --db --json",
     "demo:pilot": "node ./scripts/demo-pilot.mjs",
     "demo:pilot-app": "npm run build && node ./demo/pilot-app/server.mjs",
+    "start": "npm run start:demo",
     "start:demo": "node ./demo/pilot-app/server.mjs",
     "reux": "node ./dist/cli.js",
     "dl": "node ./dist/cli.js"
