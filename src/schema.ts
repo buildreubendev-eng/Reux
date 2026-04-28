@@ -1,6 +1,7 @@
 import { EntityDeclaration, FieldDeclaration, Program, QueryDeclaration, QueryProjection, TransitionDeclaration, TypeRef } from "./ast.js";
 import { DlAggregateError } from "./errors.js";
 import { parseObjectLiteral } from "./object-literal.js";
+import { parseTypeRef } from "./parser.js";
 
 export interface SchemaIr {
   moduleName: string;
@@ -142,7 +143,7 @@ export function buildSchema(program: Program): SchemaIr {
     if (!entityNames.has(query.body.sourceEntity)) {
       diagnostics.push(`query ${query.name} scans unknown entity ${query.body.sourceEntity}`);
     } else {
-      validateQuery(query, entityDecls, diagnostics);
+      validateQuery(query, entityDecls, enumNames, diagnostics);
     }
     for (const param of query.parameters) {
       validateType({ name: param.name, type: param.type, attributes: emptyAttrs(), source: param.type.raw }, `query ${query.name}`, entityNames, enumNames, diagnostics);
@@ -285,7 +286,7 @@ function decimalTypeArgument(type: TypeRef): number | undefined {
   return Number.parseInt(type.name, 10);
 }
 
-function validateQuery(query: QueryDeclaration, entities: EntityDeclaration[], diagnostics: string[]): void {
+function validateQuery(query: QueryDeclaration, entities: EntityDeclaration[], enumNames: Set<string>, diagnostics: string[]): void {
   const entity = entities.find((candidate) => candidate.name === query.body.sourceEntity);
   if (!entity) return;
   const aliases = new Map<string, EntityDeclaration>([[query.body.rangeName, entity]]);
@@ -333,7 +334,7 @@ function validateQuery(query: QueryDeclaration, entities: EntityDeclaration[], d
   }
 
   validateQueryLimit(query, diagnostics);
-  validateQueryResultType(query, aliases, diagnostics);
+  validateQueryResultType(query, aliases, new Set(entities.map((entity) => entity.name)), enumNames, diagnostics);
 }
 
 function projectionExpressions(projection: QueryProjection): string[] {
@@ -357,7 +358,13 @@ function validateQueryLimit(query: QueryDeclaration, diagnostics: string[]): voi
   diagnostics.push(`query ${query.name} limit must be a positive integer literal or Int parameter`);
 }
 
-function validateQueryResultType(query: QueryDeclaration, aliases: Map<string, EntityDeclaration>, diagnostics: string[]): void {
+function validateQueryResultType(
+  query: QueryDeclaration,
+  aliases: Map<string, EntityDeclaration>,
+  entityNames: Set<string>,
+  enumNames: Set<string>,
+  diagnostics: string[],
+): void {
   if (query.body.select.kind === "entity") {
     const entity = aliases.get(query.body.rangeName);
     if (!entity) return;
@@ -373,6 +380,16 @@ function validateQueryResultType(query: QueryDeclaration, aliases: Map<string, E
 
   const declaredFields = parseResultRecord(query.resultType);
   if (!declaredFields) return;
+
+  for (const [fieldName, sourceType] of declaredFields) {
+    validateType(
+      { name: fieldName, type: parseTypeRef(sourceType), attributes: emptyAttrs(), source: sourceType },
+      `query ${query.name} result`,
+      entityNames,
+      enumNames,
+      diagnostics,
+    );
+  }
 
   for (const projection of query.body.select.fields) {
     const declared = declaredFields.get(projection.name);

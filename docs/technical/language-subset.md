@@ -118,7 +118,7 @@ query topUsers(maxRows: Int): Query<{ email: String, balance: Decimal<12,2> }> =
 
 Enum fields can be compared with bare enum literals in query predicates. For example, `order.status == Paid` lowers to a PostgreSQL enum literal comparison, and invalid values are rejected during query lowering.
 
-Record projections must match the declared `Query<{ ... }>` result shape: projected fields must be declared, declared fields must be projected, duplicate projected field names are rejected, and simple field optionality must match.
+Record projections must match the declared `Query<{ ... }>` result shape: projected fields must be declared, declared fields must be projected, declared result field types must be valid Reux types, duplicate projected field names are rejected, and simple field optionality must match.
 
 Join support is intentionally narrow and explicit:
 

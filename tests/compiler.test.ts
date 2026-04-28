@@ -1046,6 +1046,22 @@ entity Invoice {
     ).toThrow(DlAggregateError);
   });
 
+  it("rejects invalid query result field types", () => {
+    expect(() =>
+      compileSource(`module broken
+
+entity Invoice {
+  id: Id<Invoice> primary generated
+  amount: Decimal<12,2>
+}
+
+query invoices(): Query<{ amount: Decimal<2,4> }> =
+  from invoice in Invoice
+  select { amount: invoice.amount }
+`),
+    ).toThrow(DlAggregateError);
+  });
+
   it("rejects duplicate durable declarations and members", () => {
     expect(() =>
       compileSource(`module broken
