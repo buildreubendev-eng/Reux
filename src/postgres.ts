@@ -83,7 +83,7 @@ export function sqlType(schema: SchemaIr, field: FieldIr): string {
     case "Float":
       return "double precision";
     case "Decimal":
-      return "numeric";
+      return decimalSqlType(field.type.raw);
     case "String":
       return "text";
     case "Bytes":
@@ -426,6 +426,7 @@ class TransactionLowering {
 
   private parameterSqlType(type: string): string {
     if (findEntity(this.schema, type)) return "uuid";
+    if (type.startsWith("Decimal")) return decimalSqlType(type);
     switch (type) {
       case "Bool":
         return "boolean";
@@ -435,8 +436,6 @@ class TransactionLowering {
         return "bigint";
       case "Float":
         return "double precision";
-      case "Decimal":
-        return "numeric";
       case "String":
         return "text";
       case "Date":
@@ -456,6 +455,13 @@ class TransactionLowering {
         return "text";
     }
   }
+}
+
+function decimalSqlType(type: string): string {
+  const required = type.endsWith("?") ? type.slice(0, -1) : type;
+  const match = required.match(/^Decimal(?:<(\d+),\s*(\d+)>)?$/);
+  if (!match?.[1]) return "numeric";
+  return `numeric(${match[1]}, ${match[2]})`;
 }
 
 function quoteLiteral(value: string): string {

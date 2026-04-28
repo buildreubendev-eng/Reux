@@ -107,6 +107,7 @@ describe("compiler prototype", () => {
     const result = compileSource(readFileSync("examples/pilot_reux.dl", "utf8"));
 
     expect(result.schema.entities.map((entity) => entity.name)).toEqual(["Account", "Product", "Order", "Payment"]);
+    expect(result.schema.entities[0].fields.find((field) => field.name === "balance")?.type.raw).toBe("Decimal<12,2>");
     expect(result.program.declarations.some((declaration) => declaration.kind === "transaction" && declaration.name === "capturePayment")).toBe(true);
     expect(result.program.declarations.some((declaration) => declaration.kind === "transaction" && declaration.name === "markOrderPaid")).toBe(true);
     expect(result.program.declarations.some((declaration) => declaration.kind === "transaction" && declaration.name === "creditAccount")).toBe(true);
@@ -229,7 +230,7 @@ query users(): Query<User> =
 
     expect(sql).toContain("SELECT * FROM accounts WHERE id = $1 FOR UPDATE;");
     expect(sql).toContain("UPDATE accounts SET balance = balance + $2 WHERE id = $1;");
-    expect(sql).toContain("INSERT INTO _dl_outbox (event_type, payload) VALUES ('AccountCredited', jsonb_build_object('account', $1::uuid, 'amount', $2::numeric)) RETURNING id, event_type, payload;");
+    expect(sql).toContain("INSERT INTO _dl_outbox (event_type, payload) VALUES ('AccountCredited', jsonb_build_object('account', $1::uuid, 'amount', $2::numeric(12, 2))) RETURNING id, event_type, payload;");
     expect(sql).toContain("-- after commit: notifyAccountCredited(accountRef)");
   });
 
@@ -237,7 +238,7 @@ query users(): Query<User> =
     const sql = emitTransactionSql(readFileSync("examples/pilot_reux.dl", "utf8"), "capturePayment");
 
     expect(sql).toContain("-- bind result: payment");
-    expect(sql).toContain("jsonb_build_object('payment', :payment.id::uuid, 'order', $1::uuid, 'amount', $2::numeric)");
+    expect(sql).toContain("jsonb_build_object('payment', :payment.id::uuid, 'order', $1::uuid, 'amount', $2::numeric(12, 2))");
   });
 
   it("lowers the Reux pilot order transition transaction to guarded PostgreSQL", () => {
@@ -347,6 +348,20 @@ transition Order.status {
     expect(sql).toContain("CREATE TYPE order_status AS ENUM ('Pending', 'Paid', 'Cancelled');");
     expect(sql).toContain("FOREIGN KEY (user_id) REFERENCES users(id)");
     expect(sql).toContain("CREATE INDEX users_by_balance ON users (balance DESC);");
+  });
+
+  it("emits bounded Decimal precision and scale as PostgreSQL numeric precision", () => {
+    const sql = emitPostgresSchema(`module billing
+
+entity Invoice {
+  id: Id<Invoice> primary generated
+  amount: Decimal<12,2> check amount >= 0
+  discount: Decimal<6,2>?
+}
+`);
+
+    expect(sql).toContain("amount numeric(12, 2) NOT NULL CHECK (amount >= 0)");
+    expect(sql).toContain("discount numeric(6, 2) NULL");
   });
 
   it("emits a TypeScript API client for queries and transactions", () => {
@@ -1014,6 +1029,18 @@ transaction function bad(userRef: User) writes Missing {
 entity User {
   id: Id<User> primary generated
   email: EmailAddress
+}
+`),
+    ).toThrow(DlAggregateError);
+  });
+
+  it("rejects invalid Decimal precision and scale declarations", () => {
+    expect(() =>
+      compileSource(`module broken
+
+entity Invoice {
+  id: Id<Invoice> primary generated
+  amount: Decimal<2,4>
 }
 `),
     ).toThrow(DlAggregateError);

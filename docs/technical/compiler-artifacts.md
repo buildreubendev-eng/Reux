@@ -141,7 +141,7 @@ The generated client includes:
 - embedded SQL constants;
 - a `create<Module>Api(db)` factory that calls `runSqlQuery` and `runTransactionSql`.
 
-Entity parameters are represented as the underlying UUID string handle. Decimal values accept `number | string` so callers can avoid losing precision when they need exact PostgreSQL numeric behavior.
+Entity parameters are represented as the underlying UUID string handle. Decimal values, including bounded forms such as `Decimal<12,2>`, accept `number | string` so callers can avoid losing precision when they need exact PostgreSQL numeric behavior.
 
 The compiler can also emit a minimal HTTP server scaffold around the generated client:
 

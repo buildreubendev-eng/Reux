@@ -246,6 +246,11 @@ function validateType(
     return;
   }
 
+  if (field.type.name === "Decimal") {
+    validateDecimalType(field, owner, diagnostics);
+    return;
+  }
+
   if (field.type.args.length > 0) {
     diagnostics.push(`${owner}.${field.name} uses unsupported generic type ${field.type.raw}`);
     return;
@@ -254,6 +259,30 @@ function validateType(
   if (!scalarTypes.has(field.type.name) && !entityNames.has(field.type.name) && !enumNames.has(field.type.name)) {
     diagnostics.push(`${owner}.${field.name} uses unknown type ${field.type.raw}`);
   }
+}
+
+function validateDecimalType(field: FieldDeclaration, owner: string, diagnostics: string[]): void {
+  if (field.type.args.length === 0) return;
+  if (field.type.args.length !== 2) {
+    diagnostics.push(`${owner}.${field.name} uses Decimal precision as Decimal<precision, scale>`);
+    return;
+  }
+  const [precision, scale] = field.type.args.map(decimalTypeArgument);
+  if (precision === undefined || scale === undefined) {
+    diagnostics.push(`${owner}.${field.name} uses Decimal precision and scale as integer literals`);
+    return;
+  }
+  if (precision < 1 || precision > 1000) {
+    diagnostics.push(`${owner}.${field.name} Decimal precision must be between 1 and 1000`);
+  }
+  if (scale < 0 || scale > precision) {
+    diagnostics.push(`${owner}.${field.name} Decimal scale must be between 0 and precision`);
+  }
+}
+
+function decimalTypeArgument(type: TypeRef): number | undefined {
+  if (type.optional || type.args.length > 0 || !/^\d+$/.test(type.name)) return undefined;
+  return Number.parseInt(type.name, 10);
 }
 
 function validateQuery(query: QueryDeclaration, entities: EntityDeclaration[], diagnostics: string[]): void {

@@ -1,5 +1,5 @@
 import { QueryDeclaration, TransactionDeclaration, TypeRef } from "./ast.js";
-import { parseProgram } from "./parser.js";
+import { parseProgram, parseTypeRef } from "./parser.js";
 import { queryToPostgres, transactionToPostgres } from "./postgres.js";
 import { buildSchema, FieldIr, findEntity, SchemaIr } from "./schema.js";
 
@@ -474,16 +474,11 @@ function typeRefToTs(type: TypeRef, schema?: SchemaIr): string {
 }
 
 function sourceTypeToTs(schema: SchemaIr, source: string): string {
-  const trimmed = source.trim();
-  const optional = trimmed.endsWith("?");
-  const required = optional ? trimmed.slice(0, -1) : trimmed;
-  const idMatch = required.match(/^Id<([A-Za-z_][A-Za-z0-9_]*)>$/);
-  const base = idMatch ? "string" : sourceTypeNameToTs(required, undefined, schema);
-  return optional ? `${base} | null` : base;
+  return typeRefToTs(parseTypeRef(source), schema);
 }
 
 function sourceTypeNameToTs(typeName: string, idArg?: string, schema?: SchemaIr): string {
-  if (typeName === "Id" || idArg) return "string";
+  if (typeName === "Id") return "string";
   if (schema?.enums.some((enumeration) => enumeration.name === typeName)) return typeName;
   if (schema?.entities.some((entity) => entity.name === typeName)) return "string";
   switch (typeName) {

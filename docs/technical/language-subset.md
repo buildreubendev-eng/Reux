@@ -38,6 +38,14 @@ Scalar types:
 Bool Int Int64 Float Decimal String Bytes Date Time Instant Duration Uuid Json
 ```
 
+`Decimal` may also declare explicit PostgreSQL numeric precision and scale:
+
+```dl
+balance: Decimal<12,2> default 0
+```
+
+Bounded decimals lower to `numeric(precision, scale)`. The compiler validates that precision and scale are integer literals, that precision is between 1 and 1000, and that scale is between 0 and precision.
+
 Entity IDs:
 
 ```dl
@@ -88,7 +96,7 @@ node dist/cli.js transition-rules examples/pilot_reux.dl Order.status
 The current query subset supports one scanned entity, optional joins, optional `where`, optional `group by`, optional `order by`, optional `limit`, and `select` projections:
 
 ```dl
-query highValueUsers(min: Decimal): Query<{ email: String?, balance: Decimal }> =
+query highValueUsers(min: Decimal<12,2>): Query<{ email: String?, balance: Decimal<12,2> }> =
   from user in User
   where user.balance > min
   order by user.balance desc
@@ -101,7 +109,7 @@ Query parameters lower to positional PostgreSQL parameters such as `$1`. Entity 
 `limit` accepts a positive integer literal or a non-optional `Int`/`Int64` query parameter:
 
 ```dl
-query topUsers(maxRows: Int): Query<{ email: String, balance: Decimal }> =
+query topUsers(maxRows: Int): Query<{ email: String, balance: Decimal<12,2> }> =
   from user in User
   order by user.balance desc
   limit maxRows
@@ -115,7 +123,7 @@ Record projections must match the declared `Query<{ ... }>` result shape: projec
 Join support is intentionally narrow and explicit:
 
 ```dl
-query accountOrders(minTotal: Decimal): Query<{ email: String, total: Decimal }> =
+query accountOrders(minTotal: Decimal<12,2>): Query<{ email: String, total: Decimal<12,2> }> =
   from order in Order
   join account in Account on order.account == account
   where order.total > minTotal
@@ -127,7 +135,7 @@ The supported join predicate shape is an entity reference compared with a joined
 Aggregation support is intentionally narrow:
 
 ```dl
-query accountOrderSummary(minTotal: Decimal): Query<{ email: String, orderCount: Int64, totalSpend: Decimal }> =
+query accountOrderSummary(minTotal: Decimal<12,2>): Query<{ email: String, orderCount: Int64, totalSpend: Decimal<12,2> }> =
   from order in Order
   join account in Account on order.account == account
   where order.total > minTotal
@@ -143,7 +151,7 @@ Supported aggregate expressions are `count()`, `sum(alias.field)`, `avg(alias.fi
 The compiler can parse transaction functions, emit Transaction IR, lower the supported subset to PostgreSQL statements, and run that subset through `tx-run`.
 
 ```dl
-transaction function rewardUser(userRef: User, amount: Decimal) writes User retry 3 {
+transaction function rewardUser(userRef: User, amount: Decimal<12,2>) writes User retry 3 {
   let user = load userRef for update
   user.balance += amount
   save user

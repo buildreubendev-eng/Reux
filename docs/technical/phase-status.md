@@ -15,7 +15,7 @@ Status: mostly implemented for the MVP subset.
 
 Status: mostly implemented for the MVP subset.
 
-- Supports scalar fields, entity references, generated IDs, enums, indexes, defaults, checks, uniqueness, and nullability.
+- Supports scalar fields, bounded `Decimal<precision, scale>` fields, entity references, generated IDs, enums, indexes, defaults, checks, uniqueness, and nullability.
 - Emits backend-neutral Schema IR and stable schema manifests.
 - Supports enum-backed transition rules as validated Schema IR artifacts.
 - Rejects duplicate declarations, invalid references, unsupported types, duplicate fields/indexes/enum values, and invalid query/transaction parameters.

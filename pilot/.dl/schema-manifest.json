@@ -1,6 +1,6 @@
 {
   "format": "dl.schema.v1",
-  "schemaHash": "717771f773a03c63e462e8e0174519ebc147f4804e488f521ae17532fdded97b",
+  "schemaHash": "f9ce676cb872dc8ca05f4327a9672aa6317450a1aa931887491b5c3a7586c1d3",
   "schema": {
     "moduleName": "pilot",
     "enums": [
@@ -78,8 +78,21 @@
             "type": {
               "name": "Decimal",
               "optional": false,
-              "args": [],
-              "raw": "Decimal"
+              "args": [
+                {
+                  "name": "12",
+                  "optional": false,
+                  "args": [],
+                  "raw": "12"
+                },
+                {
+                  "name": "2",
+                  "optional": false,
+                  "args": [],
+                  "raw": "2"
+                }
+              ],
+              "raw": "Decimal<12,2>"
             },
             "nullable": false,
             "primary": false,
@@ -244,8 +257,21 @@
             "type": {
               "name": "Decimal",
               "optional": false,
-              "args": [],
-              "raw": "Decimal"
+              "args": [
+                {
+                  "name": "12",
+                  "optional": false,
+                  "args": [],
+                  "raw": "12"
+                },
+                {
+                  "name": "2",
+                  "optional": false,
+                  "args": [],
+                  "raw": "2"
+                }
+              ],
+              "raw": "Decimal<12,2>"
             },
             "nullable": false,
             "primary": false,
@@ -277,8 +303,21 @@
             "type": {
               "name": "Decimal",
               "optional": false,
-              "args": [],
-              "raw": "Decimal"
+              "args": [
+                {
+                  "name": "12",
+                  "optional": false,
+                  "args": [],
+                  "raw": "12"
+                },
+                {
+                  "name": "2",
+                  "optional": false,
+                  "args": [],
+                  "raw": "2"
+                }
+              ],
+              "raw": "Decimal<12,2>"
             },
             "nullable": false,
             "primary": false,
@@ -413,8 +452,21 @@
             "type": {
               "name": "Decimal",
               "optional": false,
-              "args": [],
-              "raw": "Decimal"
+              "args": [
+                {
+                  "name": "12",
+                  "optional": false,
+                  "args": [],
+                  "raw": "12"
+                },
+                {
+                  "name": "2",
+                  "optional": false,
+                  "args": [],
+                  "raw": "2"
+                }
+              ],
+              "raw": "Decimal<12,2>"
             },
             "nullable": false,
             "primary": false,

@@ -97,7 +97,7 @@ The generated `UPDATE` only succeeds when the current status is a declared prede
 `capturePayment` demonstrates a transaction-local generated ID flowing into durable outbox coordination:
 
 ```dl
-transaction function capturePayment(orderRef: Order, amount: Decimal) writes Payment retry 3 {
+transaction function capturePayment(orderRef: Order, amount: Decimal<12,2>) writes Payment retry 3 {
   let payment = insert Payment { order: orderRef, amount: amount, status: Captured }
   enqueue PaymentCaptured { payment: payment.id, order: orderRef, amount: amount }
   after commit sendReceipt(orderRef)
@@ -109,7 +109,7 @@ The generated SQL binds the inserted `Payment` row and resolves `payment.id` whe
 `creditAccount` is the current pilot transaction for retryable write conflicts:
 
 ```dl
-transaction function creditAccount(accountRef: Account, amount: Decimal) writes Account retry 3 {
+transaction function creditAccount(accountRef: Account, amount: Decimal<12,2>) writes Account retry 3 {
   let account = load accountRef for update
   account.balance += amount
   save account
@@ -169,6 +169,8 @@ Use `project-seed-dry-run pilot/seeds/smoke.json` to run the fixture against Pos
 
 Use `project-seed-delete pilot/seeds/smoke.json` to remove the fixture rows. Deletes run in reverse seed order, so `Payment` is removed before `Order`, and `Order` before `Account`. Use `project-seed-reset pilot/seeds/smoke.json` to truncate the fixture tables and reapply the fixture in one local development transaction.
 
+The pilot models money-like values as `Decimal<12,2>`, which compiles to PostgreSQL `numeric(12, 2)` and remains `number | string` in generated TypeScript APIs.
+
 Likely next language/runtime needs exposed by this pilot:
 
-- typed money/currency conventions;
+- multi-currency conventions and currency-code validation;
