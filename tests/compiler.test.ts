@@ -4,6 +4,7 @@ import {
   compileSource,
   diagnoseSource,
   emitApiClient,
+  emitApiServer,
   emitDiffMigration,
   emitInitialMigration,
   emitMigrationPlan,
@@ -292,6 +293,23 @@ transition Order.status {
     expect(api).toContain("capturePayment(params: CapturePaymentParams): Promise<TransactionRunResult>;");
     expect(api).toContain("return runSqlQuery(db, querySql.openOrders, [params.minTotal]) as Promise<ReuxQueryResult<OpenOrdersRow>>;");
     expect(api).toContain("return runTransactionSql(db, transactionSql.capturePayment, [params.orderRef, params.amount], 3);");
+  });
+
+  it("emits a TypeScript HTTP API server scaffold", () => {
+    const server = emitApiServer(readFileSync("examples/pilot_reux.dl", "utf8"), {
+      apiImport: "./pilot-api.js",
+      configImport: "./pilot-config.js",
+      runtimeImport: "./pilot-runtime.js",
+    });
+
+    expect(server).toContain('import { createServer, type IncomingMessage, type ServerResponse } from "node:http";');
+    expect(server).toContain('import { loadConfig } from "./pilot-config.js";');
+    expect(server).toContain('import { createPostgresDatabase } from "./pilot-runtime.js";');
+    expect(server).toContain("import { createPilotApi, type OpenOrdersParams, type AccountBalancesParams");
+    expect(server).toContain('openOrders: async (body: unknown) => api.queries.openOrders(body as OpenOrdersParams),');
+    expect(server).toContain('capturePayment: async (body: unknown) => api.transactions.capturePayment(body as CapturePaymentParams),');
+    expect(server).toContain('sendJson(response, 200, { ok: true, module: "pilot" });');
+    expect(server).toContain("Reux API server listening on http://127.0.0.1:${port}");
   });
 
   it("rejects invalid transition rules", () => {

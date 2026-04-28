@@ -141,3 +141,12 @@ The generated client includes:
 - a `create<Module>Api(db)` factory that calls `runSqlQuery` and `runTransactionSql`.
 
 Entity parameters are represented as the underlying UUID string handle. Decimal values accept `number | string` so callers can avoid losing precision when they need exact PostgreSQL numeric behavior.
+
+The compiler can also emit a minimal HTTP server scaffold around the generated client:
+
+```bash
+node dist/cli.js api-server-ts examples/pilot_reux.dl ./api.js ./config.js ./runtime.js
+node dist/cli.js project-api-server-ts ./api.js ./config.js ./runtime.js
+```
+
+The scaffold intentionally uses Node's built-in `http` module, so it remains dependency-light. It wires `GET /health`, `POST /queries/<queryName>`, and `POST /transactions/<transactionName>` to the generated API client. Applications can copy the scaffold into an app package, then replace or wrap the plain HTTP handling with their framework of choice.

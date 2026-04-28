@@ -17,6 +17,7 @@ The script sets `REUX_CONFIG=pilot/dl.json`, builds the CLI, then runs these che
 - emit SQL for `accountOrderSummary`;
 - emit guarded transaction SQL for `markOrderPaid`;
 - emit a generated TypeScript API client;
+- emit a generated HTTP server scaffold around the API client;
 - validate `pilot/seeds/smoke.json` against the pilot schema.
 
 ## Manual Flow
@@ -31,6 +32,7 @@ node dist/cli.js project-transition-rules Order.status
 node dist/cli.js project-query-sql accountOrderSummary
 node dist/cli.js project-tx-sql markOrderPaid
 node dist/cli.js project-api-ts ./runtime.js
+node dist/cli.js project-api-server-ts ./api.js ./config.js ./runtime.js
 node dist/cli.js project-seed-check pilot/seeds/smoke.json
 Remove-Item Env:REUX_CONFIG
 ```
