@@ -901,6 +901,37 @@ transaction function capture(orderRef: Order) writes Payment retry 3 {
     expect(sql).toContain("INSERT INTO payments (order_id, status) VALUES ($1, 'Captured') RETURNING *;");
   });
 
+  it("rejects enum inserts from incompatible transaction parameters", () => {
+    expect(() =>
+      compileSource(`module commerce
+
+entity Order {
+  id: Id<Order> primary generated
+}
+
+entity Payment {
+  id: Id<Payment> primary generated
+  order: Order required
+  status: PaymentStatus
+}
+
+enum OrderStatus {
+  Pending
+  Paid
+}
+
+enum PaymentStatus {
+  Authorized
+  Captured
+}
+
+transaction function capture(orderRef: Order, nextStatus: OrderStatus) writes Payment retry 3 {
+  insert Payment { order: orderRef, status: nextStatus }
+}
+`),
+    ).toThrow(DlAggregateError);
+  });
+
   it("rejects invalid enum literals in transaction writes", () => {
     expect(() =>
       compileSource(`module commerce

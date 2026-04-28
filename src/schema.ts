@@ -524,7 +524,7 @@ function validateTransactionEffects(
       } else if (!writes.has(insert[2])) {
         diagnostics.push(`transaction ${transaction.name} inserts ${insert[2]} but does not declare writes ${insert[2]}`);
       }
-      validateInsertFields(transaction.name, line, entities, enumByName, diagnostics);
+      validateInsertFields(transaction.name, line, entities, enumByName, parameterTypes, diagnostics);
       validateBoundReferences(transaction.name, insert[3], entities, boundEntities, diagnostics);
       if (insert[1] && entityNames.has(insert[2])) {
         boundEntities.set(insert[1], insert[2]);
@@ -570,6 +570,7 @@ function validateInsertFields(
   line: string,
   entities: EntityDeclaration[],
   enumByName: Map<string, Extract<Program["declarations"][number], { kind: "enum" }>>,
+  parameterTypes: Map<string, string>,
   diagnostics: string[],
 ): void {
   const match = line.match(/^(?:let\s+[A-Za-z_][A-Za-z0-9_]*\s*=\s*)?insert\s+([A-Za-z_][A-Za-z0-9_]*)\s+(.+)$/);
@@ -584,6 +585,15 @@ function validateInsertFields(
       continue;
     }
     validateEnumLiteral(transactionName, `${entity.name}.${field.name}`, field, objectField.value, enumByName, diagnostics);
+    validateEnumParameterAssignment(
+      transactionName,
+      `${entity.name}.${field.name}`,
+      field,
+      objectField.value,
+      enumByName,
+      parameterTypes,
+      diagnostics,
+    );
   }
 }
 

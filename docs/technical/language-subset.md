@@ -172,7 +172,7 @@ The compiler also validates the first effect boundary:
 - `insert Entity` requires `writes Entity`;
 - mutation or `save` of an entity loaded from an entity-typed parameter requires `writes Entity`.
 - enum-valued inserts and assignments accept bare enum literals and reject values that are not declared by the enum.
-- enum-valued assignments from transaction parameters require the parameter enum type to match the target field enum type.
+- enum-valued inserts and assignments from transaction parameters require the parameter enum type to match the target field enum type.
 - retryable transactions use `retry N`;
 - direct external-looking calls such as `sendEmail(user)` are rejected inside retryable transactions;
 - `after commit sendEmail(user)` and `enqueue Event { ... }` are allowed retry-safe fences;
