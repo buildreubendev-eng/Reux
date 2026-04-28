@@ -6,9 +6,11 @@ const state = {
 };
 
 const elements = {
+  adminTools: document.querySelector("#adminTools"),
   setupButton: document.querySelector("#setupButton"),
   setupToken: document.querySelector("#setupToken"),
   refreshButton: document.querySelector("#refreshButton"),
+  setupNotice: document.querySelector("#setupNotice"),
   orderId: document.querySelector("#orderId"),
   paymentAmount: document.querySelector("#paymentAmount"),
   accountId: document.querySelector("#accountId"),
@@ -41,6 +43,7 @@ elements.setupButton.addEventListener("click", async () => {
       setupToken: elements.setupToken.value,
     });
     elements.actionResult.textContent = JSON.stringify(result, null, 2);
+    elements.adminTools.open = false;
     notify("Database migrated and pilot seed reset");
     await refresh();
   });
@@ -82,6 +85,7 @@ async function runAction(label, url, payload) {
 
 async function refresh() {
   const dashboard = await getJson("/api/dashboard");
+  elements.setupNotice.hidden = !dashboard.setupRequired;
   state.ids.account = dashboard.ids.account;
   state.ids.order = dashboard.ids.order;
   elements.accountId.value ||= dashboard.ids.account;

@@ -113,21 +113,31 @@ async function route(request, response) {
 async function dashboard() {
   await ensureDemoSchema();
   const status = await migrationStatus(db, config.migrationsDir);
-  const [orders, balances, payments, summary, openOrders, outbox] = await Promise.all([
-    runSqlQuery(db, emitQuerySql(source, "accountOrders"), ["0"]),
-    runSqlQuery(db, emitQuerySql(source, "accountBalances"), ["0"]),
-    runSqlQuery(db, emitQuerySql(source, "orderPayments"), ["0"]),
-    runSqlQuery(db, emitQuerySql(source, "accountOrderSummary"), ["0"]),
-    runSqlQuery(db, emitQuerySql(source, "openOrders"), ["0"]),
-    runSqlQuery(
-      db,
-      "SELECT id, event_type, payload, status, attempts, created_at FROM _dl_outbox ORDER BY created_at DESC LIMIT 10;",
-      [],
-    ).catch(() => ({ rows: [], rowCount: 0 })),
-  ]);
+  let queryResults;
+  try {
+    queryResults = await Promise.all([
+      runSqlQuery(db, emitQuerySql(source, "accountOrders"), ["0"]),
+      runSqlQuery(db, emitQuerySql(source, "accountBalances"), ["0"]),
+      runSqlQuery(db, emitQuerySql(source, "orderPayments"), ["0"]),
+      runSqlQuery(db, emitQuerySql(source, "accountOrderSummary"), ["0"]),
+      runSqlQuery(db, emitQuerySql(source, "openOrders"), ["0"]),
+      runSqlQuery(
+        db,
+        "SELECT id, event_type, payload, status, attempts, created_at FROM _dl_outbox ORDER BY created_at DESC LIMIT 10;",
+        [],
+      ).catch(() => ({ rows: [], rowCount: 0 })),
+    ]);
+  } catch (error) {
+    if (isMissingRelation(error)) {
+      return emptyDashboard(status);
+    }
+    throw error;
+  }
+  const [orders, balances, payments, summary, openOrders, outbox] = queryResults;
 
   return {
     ids: demoIds,
+    setupRequired: false,
     migrations: {
       applied: status.applied.length,
       pending: status.pending.map((migration) => migration.filename),
@@ -138,6 +148,23 @@ async function dashboard() {
     summary: summary.rows,
     openOrders: openOrders.rows,
     outbox: outbox.rows,
+  };
+}
+
+function emptyDashboard(status) {
+  return {
+    ids: demoIds,
+    setupRequired: true,
+    migrations: {
+      applied: status.applied.length,
+      pending: status.pending.map((migration) => migration.filename),
+    },
+    orders: [],
+    balances: [],
+    payments: [],
+    summary: [],
+    openOrders: [],
+    outbox: [],
   };
 }
 
@@ -222,6 +249,10 @@ function assertSetupAllowed(request, body) {
     error.statusCode = 403;
     throw error;
   }
+}
+
+function isMissingRelation(error) {
+  return error?.code === "42P01" || /relation ".+" does not exist/.test(error?.message ?? "");
 }
 
 async function ensureDemoSchema() {

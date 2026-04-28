@@ -13,13 +13,22 @@
         <h1>Commerce Console</h1>
       </div>
       <div class="actions">
-        <input id="setupToken" class="token-input" autocomplete="off" placeholder="Admin token">
-        <button id="setupButton" type="button">Apply Migrations + Reset Seed</button>
         <button id="refreshButton" type="button">Refresh</button>
+        <details id="adminTools" class="admin-tools">
+          <summary>Admin</summary>
+          <div class="admin-menu">
+            <input id="setupToken" class="token-input" autocomplete="off" placeholder="Admin token">
+            <button id="setupButton" type="button">Apply Migrations + Reset Seed</button>
+          </div>
+        </details>
       </div>
     </header>
 
     <main>
+      <section id="setupNotice" class="notice" hidden>
+        Demo data is waiting for admin setup.
+      </section>
+
       <section class="status-grid" aria-label="Status">
         <div class="metric">
           <span>Applied Migrations</span>

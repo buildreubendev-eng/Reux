@@ -55,6 +55,8 @@ After deployment:
 
 Regular visitors can use the dashboard and transaction buttons after setup. Keep the token private so the shared demo database cannot be reset by everyone visiting the public site.
 
+The public UI keeps setup/reset inside a collapsed `Admin` menu. The dashboard can still load before setup and will show a setup-required state instead of failing with a database error. Public visitors do not need the token after the seeded data has been initialized.
+
 ## Website Integration
 
 Point the marketing/docs website at the hosted demo URL with an environment variable such as:
