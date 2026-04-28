@@ -487,6 +487,7 @@ function validateTransactionEffects(
       .map((parameter) => [parameter.name, parameter.type.name]),
   );
   const loadedEntities = new Map<string, string>();
+  const boundEntities = new Map<string, string>();
 
   for (const line of transaction.body.split("\n").map((sourceLine) => sourceLine.trim()).filter(Boolean)) {
     const load = line.match(/^let\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*load\s+([A-Za-z_][A-Za-z0-9_]*)\s+for\s+update$/);
@@ -515,14 +516,24 @@ function validateTransactionEffects(
       continue;
     }
 
-    const insert = line.match(/^(?:let\s+[A-Za-z_][A-Za-z0-9_]*\s*=\s*)?insert\s+([A-Za-z_][A-Za-z0-9_]*)\s+/);
+    const insert = line.match(/^(?:let\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*)?insert\s+([A-Za-z_][A-Za-z0-9_]*)\s+(.+)$/);
     if (insert) {
-      if (!entityNames.has(insert[1])) {
-        diagnostics.push(`transaction ${transaction.name} inserts unknown entity ${insert[1]}`);
-      } else if (!writes.has(insert[1])) {
-        diagnostics.push(`transaction ${transaction.name} inserts ${insert[1]} but does not declare writes ${insert[1]}`);
+      if (!entityNames.has(insert[2])) {
+        diagnostics.push(`transaction ${transaction.name} inserts unknown entity ${insert[2]}`);
+      } else if (!writes.has(insert[2])) {
+        diagnostics.push(`transaction ${transaction.name} inserts ${insert[2]} but does not declare writes ${insert[2]}`);
       }
       validateInsertFields(transaction.name, line, entities, enumByName, diagnostics);
+      validateBoundReferences(transaction.name, insert[3], entities, boundEntities, diagnostics);
+      if (insert[1] && entityNames.has(insert[2])) {
+        boundEntities.set(insert[1], insert[2]);
+      }
+      continue;
+    }
+
+    const enqueue = line.match(/^enqueue\s+[A-Za-z_][A-Za-z0-9_]*\s+(.+)$/);
+    if (enqueue) {
+      validateBoundReferences(transaction.name, enqueue[1], entities, boundEntities, diagnostics);
       continue;
     }
 
@@ -530,6 +541,25 @@ function validateTransactionEffects(
       diagnostics.push(
         `transaction ${transaction.name} is retryable but calls external function '${line}'. Move it to 'after commit ...' or persist an outbox event with 'enqueue ...'.`,
       );
+    }
+  }
+}
+
+function validateBoundReferences(
+  transactionName: string,
+  source: string,
+  entities: EntityDeclaration[],
+  boundEntities: Map<string, string>,
+  diagnostics: string[],
+): void {
+  for (const objectField of parseObjectLiteral(source)) {
+    const match = objectField.value.match(/^([A-Za-z_][A-Za-z0-9_]*)(?:\.([A-Za-z_][A-Za-z0-9_]*))?$/);
+    if (!match || !boundEntities.has(match[1])) continue;
+    const entityName = boundEntities.get(match[1]);
+    const entity = entities.find((candidate) => candidate.name === entityName);
+    const fieldName = match[2] ?? "id";
+    if (!entity?.fields.some((field) => field.name === fieldName)) {
+      diagnostics.push(`transaction ${transactionName} references unknown bound field ${match[1]}.${fieldName}`);
     }
   }
 }

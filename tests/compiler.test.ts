@@ -822,6 +822,23 @@ transaction function capture(accountRef: Account, amount: Decimal) writes Paymen
     expect(sql).toContain("jsonb_build_object('payment', :payment.id::uuid, 'amount', $2::numeric)");
   });
 
+  it("rejects unknown bound insert fields", () => {
+    expect(() =>
+      compileSource(`module commerce
+
+entity Payment {
+  id: Id<Payment> primary generated
+  amount: Decimal
+}
+
+transaction function capture(amount: Decimal) writes Payment retry 3 {
+  let payment = insert Payment { amount: amount }
+  enqueue PaymentCaptured { missing: payment.missing }
+}
+`),
+    ).toThrow(DlAggregateError);
+  });
+
   it("lowers bare enum literals in transaction inserts", () => {
     const sql = emitTransactionSql(
       `module commerce
