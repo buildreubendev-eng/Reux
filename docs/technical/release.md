@@ -48,7 +48,7 @@ For another machine, push the repo or share the generated tarball, then install 
 
 Before tagging a prototype release:
 
-1. Run `npm run verify`.
+1. Run `npm run verify`, including CLI smoke checks for the root commerce seed and pilot seed fixture.
 2. Run `npm run verify:postgres:full` against a live PostgreSQL database.
 3. Run `npm run verify:package`.
 4. Check `docs/technical/phase-status.md`.
