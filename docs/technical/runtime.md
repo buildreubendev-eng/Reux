@@ -218,13 +218,14 @@ Seed files insert records in order. The default mode is `insert`:
 
 `seed-delete` and `project-seed-delete` delete the same records in reverse order. This lets a fixture remove dependent rows first, such as payments before orders and orders before accounts. Deletion uses each record's `by` fields, or the default unique field when `by` is omitted.
 
-`seed-reset` and `project-seed-reset` compose delete and run in one transaction. They are useful for keeping a local development database aligned with a fixture file after editing seed values.
+`seed-reset` and `project-seed-reset` compose a reset step and run in one transaction. By default the reset step deletes the seed records in reverse order. If the seed file declares `"reset": "truncate"`, reset truncates the distinct entity tables used by the file with `RESTART IDENTITY CASCADE` before rerunning the records. Use truncate reset for local/demo fixtures when the seed should refresh whole fixture groups rather than only rows addressable by `by` fields.
 
 Use `mode: "upsert"` for rerunnable local fixtures. Each upsert record uses `by` as its conflict key; if `by` is omitted, Reux uses the first unique non-generated field if one exists:
 
 ```json
 {
   "mode": "upsert",
+  "reset": "truncate",
   "records": [
     {
       "entity": "Account",

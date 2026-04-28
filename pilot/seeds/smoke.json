@@ -1,5 +1,6 @@
 {
   "mode": "upsert",
+  "reset": "truncate",
   "records": [
     {
       "entity": "Account",

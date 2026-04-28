@@ -215,13 +215,14 @@ node dist/cli.js project-seed-reset pilot/seeds/smoke.json
 
 `examples/seeds/commerce_smoke.json` is a small file-scoped fixture for the root commerce example. `pilot/seeds/smoke.json` is the richer pilot fixture used with `pilot/dl.json`.
 
-`seed-reset` and `project-seed-reset` first delete the seed records in reverse order, then run the seed again inside one database transaction. Use reset when changing a fixture and wanting the local database to match the file in one command.
+`seed-reset` and `project-seed-reset` first reset the fixture, then run the seed again inside one database transaction. The default reset deletes the seed records in reverse order. Add `"reset": "truncate"` to a seed file to truncate the distinct entity tables used by the fixture with `RESTART IDENTITY CASCADE` before inserting rows again.
 
 Seed files contain ordered records. `as` creates an alias for the inserted row id; later records can use `$alias` in their data. Use `mode: "upsert"` with `by` to make a seed rerunnable:
 
 ```json
 {
   "mode": "upsert",
+  "reset": "truncate",
   "records": [
     { "entity": "Account", "as": "ada", "by": ["id"], "data": { "id": "00000000-0000-4000-8000-000000000001", "email": "ada@example.com", "balance": "50" } },
     { "entity": "Order", "as": "order1", "by": ["id"], "data": { "id": "00000000-0000-4000-8000-000000000002", "account": "$ada", "total": "250" } }

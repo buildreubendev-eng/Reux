@@ -5,6 +5,7 @@ import { EntityIr, EnumIr, findEntity } from "./schema.js";
 
 export interface SeedSpec {
   mode: SeedMode;
+  reset: SeedResetMode;
   records: SeedRecord[];
 }
 
@@ -17,6 +18,7 @@ export interface SeedRecord {
 }
 
 export type SeedMode = "insert" | "upsert";
+export type SeedResetMode = "delete" | "truncate";
 
 export interface SeedRunResult {
   inserted: SeedInsertedRecord[];
@@ -31,7 +33,8 @@ export interface SeedDeleteResult {
 }
 
 export interface SeedResetResult {
-  deleted: SeedDeletedRecord[];
+  deleted?: SeedDeletedRecord[];
+  truncated?: string[];
   inserted: SeedInsertedRecord[];
 }
 
@@ -70,10 +73,12 @@ export function parseSeedSpec(source: string): SeedSpec {
     throw new Error("seed file must contain a records array");
   }
   const mode = parseSeedMode((parsed as { mode?: unknown }).mode, "insert", "seed file") ?? "insert";
+  const reset = parseSeedResetMode((parsed as { reset?: unknown }).reset, "delete", "seed file") ?? "delete";
 
   const aliases = new Set<string>();
   return {
     mode,
+    reset,
     records: records.map((record, index) => parseSeedRecord(record, index, aliases)),
   };
 }
@@ -174,19 +179,32 @@ export async function deleteSeed(db: Database, source: string, spec: SeedSpec): 
 }
 
 export async function resetSeed(db: Database, source: string, spec: SeedSpec): Promise<SeedResetResult> {
+  const schema = compileSource(source).schema;
   await db.query("BEGIN;");
   try {
-    const deleted = await deleteSeed(db, source, spec);
+    const reset =
+      spec.reset === "truncate"
+        ? { truncated: await truncateSeedTables(db, schema.entities, spec) }
+        : { deleted: (await deleteSeed(db, source, spec)).deleted };
     const inserted = await runSeed(db, source, spec);
     await db.query("COMMIT;");
     return {
-      deleted: deleted.deleted,
+      ...reset,
       inserted: inserted.inserted,
     };
   } catch (error) {
     await db.query("ROLLBACK;");
     throw error;
   }
+}
+
+async function truncateSeedTables(db: Database, entities: EntityIr[], spec: SeedSpec): Promise<string[]> {
+  const tables = unique(
+    spec.records.map((record) => findRequiredEntity(entities, record.entity).tableName),
+  );
+  if (tables.length === 0) return [];
+  await db.query(`TRUNCATE TABLE ${tables.map(quoteIdentifier).join(", ")} RESTART IDENTITY CASCADE;`);
+  return tables;
 }
 
 function parseSeedRecord(record: unknown, index: number, aliases: Set<string>): SeedRecord {
@@ -357,6 +375,14 @@ function parseSeedMode(value: unknown, fallback: SeedMode | undefined, owner: st
   throw new Error(`${owner} mode must be insert or upsert`);
 }
 
+function parseSeedResetMode(value: unknown, fallback: SeedResetMode | undefined, owner: string): SeedResetMode | undefined {
+  if (value === undefined) {
+    return fallback;
+  }
+  if (value === "delete" || value === "truncate") return value;
+  throw new Error(`${owner} reset must be delete or truncate`);
+}
+
 function parseConflictFields(value: unknown, index: number): string[] | undefined {
   if (value === undefined) return undefined;
   if (!Array.isArray(value) || !value.every((item) => typeof item === "string" && item)) {
@@ -405,4 +431,8 @@ function resolveValue(value: unknown, aliases: Map<string, unknown>): unknown {
 
 function quoteIdentifier(value: string): string {
   return `"${value.replaceAll('"', '""')}"`;
+}
+
+function unique(values: string[]): string[] {
+  return [...new Set(values)];
 }

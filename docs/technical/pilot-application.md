@@ -161,15 +161,14 @@ node dist/cli.js project-seed-check pilot/seeds/smoke.json
 - one order aliased as `adaOrder`;
 - one payment aliased as `adaPayment`.
 
-The seed uses stable UUIDs and `mode: "upsert"` with `by: ["id"]`, so it can be run repeatedly during local development. The order references `$ada`, and the payment references `$adaOrder`, so the seed can also run on a fresh database without manually copying UUIDs.
+The seed uses stable UUIDs, `mode: "upsert"` with `by: ["id"]`, and `reset: "truncate"` for local/demo refreshes. It can be run repeatedly during local development. The order references `$ada`, and the payment references `$adaOrder`, so the seed can also run on a fresh database without manually copying UUIDs.
 
 Use `project-seed-check pilot/seeds/smoke.json` before applying the seed when editing fixtures. It validates the fixture against the pilot schema without opening a database connection, including entity names, fields, enum values, conflict keys, and alias order.
 
 Use `project-seed-dry-run pilot/seeds/smoke.json` to run the fixture against PostgreSQL and roll it back, which catches database-level constraint issues without leaving rows behind.
 
-Use `project-seed-delete pilot/seeds/smoke.json` to remove the fixture rows. Deletes run in reverse seed order, so `Payment` is removed before `Order`, and `Order` before `Account`. Use `project-seed-reset pilot/seeds/smoke.json` to delete and reapply the fixture in one local development transaction.
+Use `project-seed-delete pilot/seeds/smoke.json` to remove the fixture rows. Deletes run in reverse seed order, so `Payment` is removed before `Order`, and `Order` before `Account`. Use `project-seed-reset pilot/seeds/smoke.json` to truncate the fixture tables and reapply the fixture in one local development transaction.
 
 Likely next language/runtime needs exposed by this pilot:
 
 - typed money/currency conventions;
-- richer seed reset modes for truncating or refreshing whole fixture groups.

@@ -562,6 +562,67 @@ entity Order {
     ]);
   });
 
+  it("resets seed records by truncating affected tables then running", async () => {
+    const db = new FakeDb();
+    const source = `module commerce
+
+entity User {
+  id: Id<User> primary generated
+  email: String unique
+}
+
+entity Order {
+  id: Id<Order> primary generated
+  user: User required
+  total: Decimal
+}
+`;
+
+    const result = await resetSeed(
+      db,
+      source,
+      parseSeedSpec(
+        JSON.stringify({
+          reset: "truncate",
+          records: [
+            { entity: "User", as: "ada", data: { email: "ada@example.com" } },
+            { entity: "Order", as: "order1", data: { user: "$ada", total: "100" } },
+          ],
+        }),
+      ),
+    );
+
+    expect(result).toEqual({
+      truncated: ["users", "orders"],
+      inserted: [
+        { entity: "User", as: "ada", id: "row-1" },
+        { entity: "Order", as: "order1", id: "row-2" },
+      ],
+    });
+    expect(db.queryCalls).toEqual([
+      {
+        sql: "BEGIN;",
+        params: undefined,
+      },
+      {
+        sql: 'TRUNCATE TABLE "users", "orders" RESTART IDENTITY CASCADE;',
+        params: undefined,
+      },
+      {
+        sql: "INSERT INTO users (email) VALUES ($1) RETURNING *;",
+        params: ["ada@example.com"],
+      },
+      {
+        sql: "INSERT INTO orders (user_id, total) VALUES ($1, $2) RETURNING *;",
+        params: ["row-1", "100"],
+      },
+      {
+        sql: "COMMIT;",
+        params: undefined,
+      },
+    ]);
+  });
+
   it("rejects seed references before their alias is inserted", async () => {
     await expect(
       runSeed(
