@@ -73,8 +73,12 @@ Plan a migration from the configured `schemaManifest` to the active configured s
 ```bash
 node dist/cli.js project-migrate-plan
 node dist/cli.js project-migrate-plan --json
+node dist/cli.js project-migrate-check
+node dist/cli.js project-migrate-check --json
 node dist/cli.js project-migrate-diff-create commerce_next
 ```
+
+`project-migrate-check` fails when unsafe or destructive operations are present. Add `--allow-unsafe` or `--allow-destructive` for explicit deployment gates.
 
 Emit query and transaction artifacts from the active configured source:
 
@@ -262,6 +266,7 @@ Plan a migration from a previous manifest to current source:
 
 ```bash
 node dist/cli.js migrate-plan old-manifest.json examples/commerce_v2.dl
+node dist/cli.js migrate-check old-manifest.json examples/commerce_v2.dl
 ```
 
 Create a diff migration file:

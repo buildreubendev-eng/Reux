@@ -33,7 +33,11 @@ Plan changes from the configured `schemaManifest` to the active configured sourc
 ```bash
 node dist/cli.js project-migrate-plan
 node dist/cli.js project-migrate-plan --json
+node dist/cli.js project-migrate-check
+node dist/cli.js project-migrate-check --json
 ```
+
+`project-migrate-check` exits non-zero when the plan contains unsafe or destructive operations. Use `--allow-unsafe` to permit unsafe operations while still blocking destructive ones, or `--allow-destructive` when a deployment script intentionally permits every planned operation.
 
 Create a diff migration from the configured `schemaManifest` to the active configured source:
 
@@ -56,6 +60,7 @@ Create a reviewable diff migration file:
 
 ```bash
 node dist/cli.js migrate-diff-create old-manifest.json examples/commerce_v2.dl commerce_v2
+node dist/cli.js migrate-check old-manifest.json examples/commerce_v2.dl
 ```
 
 The generated diff migration includes SQL for safe operations and comments for unsafe/destructive operations. Unsafe comments are intentional: they force a human-authored migration step instead of hiding a risky schema change.

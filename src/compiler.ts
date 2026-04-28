@@ -47,6 +47,22 @@ export interface Diagnostic {
   message: string;
 }
 
+export interface MigrationSafetyOptions {
+  allowUnsafe?: boolean;
+  allowDestructive?: boolean;
+}
+
+export interface MigrationSafetyCheck {
+  ok: boolean;
+  allowed: MigrationSafetyOptions;
+  summary: {
+    safe: number;
+    unsafe: number;
+    destructive: number;
+  };
+  diagnostics: string[];
+}
+
 export function compileSource(source: string): CompileResult {
   const program = parseProgram(source);
   const schema = buildSchema(program);
@@ -150,6 +166,33 @@ export function emitMigrationPlan(previousManifestSource: string, currentSource:
   const current = compileSource(currentSource).schema;
   const plan = planMigration(previous, current);
   return format === "json" ? migrationPlanJson(plan) : migrationPlanText(plan);
+}
+
+export function checkMigrationSafety(
+  previousManifestSource: string,
+  currentSource: string,
+  options: MigrationSafetyOptions = {},
+): MigrationSafetyCheck {
+  const previous = parseSchemaManifest(previousManifestSource).schema;
+  const current = compileSource(currentSource).schema;
+  const plan = planMigration(previous, current);
+  const diagnostics = plan.operations
+    .filter((operation) => {
+      if (operation.safety === "safe") return false;
+      if (operation.safety === "unsafe") return !options.allowUnsafe && !options.allowDestructive;
+      return !options.allowDestructive;
+    })
+    .map((operation) => `${operation.safety}: ${operation.description}`);
+
+  return {
+    ok: diagnostics.length === 0,
+    allowed: {
+      allowUnsafe: Boolean(options.allowUnsafe),
+      allowDestructive: Boolean(options.allowDestructive),
+    },
+    summary: plan.summary,
+    diagnostics,
+  };
 }
 
 export function emitDiffMigration(previousManifestSource: string, currentSource: string, name: string): MigrationArtifact {

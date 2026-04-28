@@ -52,6 +52,7 @@ Status: implemented for conservative schema diffs.
 - Emits SQL for safe operations and comments/diagnostics for unsafe or destructive operations.
 - Applies migrations with hash recording and hash mismatch refusal.
 - Provides project-scoped migration planning and diff creation.
+- Provides migration safety checks that fail deployment gates on unsafe or destructive operations unless explicitly allowed.
 
 ## Phase 5: Tooling
 

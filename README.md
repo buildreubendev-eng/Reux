@@ -38,6 +38,7 @@ node dist/cli.js project-doctor --db
 node dist/cli.js project-sql
 node dist/cli.js project-manifest-write
 node dist/cli.js project-migrate-plan
+node dist/cli.js project-migrate-check
 node dist/cli.js project-migrate-diff-create commerce_next
 node dist/cli.js project-query-sql highValueUsers
 node dist/cli.js project-query-run highValueUsers '[1000]'
@@ -92,6 +93,7 @@ node dist/cli.js explain examples/commerce.dl highValueUsers
 node dist/cli.js migrate-create examples/commerce.dl initial_schema
 node dist/cli.js manifest examples/commerce.dl > old-manifest.json
 node dist/cli.js migrate-plan old-manifest.json examples/commerce_v2.dl
+node dist/cli.js migrate-check old-manifest.json examples/commerce_v2.dl
 node dist/cli.js migrate-diff-create old-manifest.json examples/commerce_v2.dl commerce_v2
 ```
 

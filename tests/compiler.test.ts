@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import {
   compileSource,
+  checkMigrationSafety,
   diagnoseSource,
   emitApiClient,
   emitApiServer,
@@ -508,6 +509,8 @@ entity User {
   email: String? unique
   balance: Decimal default 0
   requiredCode: String
+
+  index byBalance(balance desc)
 }
 
 entity Order {
@@ -535,6 +538,42 @@ enum OrderStatus {
         description: expect.stringContaining("requiredCode"),
       }),
     );
+  });
+
+  it("checks migration safety for deployment gates", () => {
+    const previousManifest = emitSchemaManifest(commerce);
+    const next = `module commerce
+
+entity User {
+  id: Id<User> primary generated
+  name: String
+  email: String? unique
+  balance: Decimal default 0
+  requiredCode: String
+
+  index byBalance(balance desc)
+}
+
+entity Order {
+  id: Id<Order> primary generated
+  user: User required
+  total: Decimal check total >= 0
+  status: OrderStatus default Pending
+}
+
+enum OrderStatus {
+  Pending
+  Paid
+  Cancelled
+}
+`;
+
+    const blocked = checkMigrationSafety(previousManifest, next);
+    const allowed = checkMigrationSafety(previousManifest, next, { allowUnsafe: true });
+
+    expect(blocked.ok).toBe(false);
+    expect(blocked.diagnostics).toContain("unsafe: add field User.requiredCode requires backfill or default validation");
+    expect(allowed.ok).toBe(true);
   });
 
   it("emits Transaction IR for transaction functions", () => {

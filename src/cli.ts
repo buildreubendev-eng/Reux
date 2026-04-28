@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 
 import { basename, dirname, join } from "node:path";
 import {
   compileSource,
+  checkMigrationSafety,
   diagnoseSource,
   emitApiClient,
   emitApiServer,
@@ -202,6 +203,13 @@ try {
     const source = readSingleProjectSource(config, command);
     const previousManifest = readFileSync(config.schemaManifest, "utf8");
     console.log(emitMigrationPlan(previousManifest, source, file === "--json" ? "json" : "text"));
+  } else if (command === "project-migrate-check") {
+    const config = loadConfig();
+    const source = readSingleProjectSource(config, command);
+    const previousManifest = readFileSync(config.schemaManifest, "utf8");
+    const check = checkMigrationSafety(previousManifest, source, migrationSafetyOptions());
+    console.log(args.includes("--json") ? JSON.stringify(check, null, 2) : formatMigrationSafetyCheck(check));
+    if (!check.ok) process.exitCode = 1;
   } else if (command === "project-migrate-diff-create") {
     const config = loadConfig();
     const source = readSingleProjectSource(config, command);
@@ -334,7 +342,7 @@ try {
     await withDatabase(async (db) => {
       console.log(JSON.stringify(await resetSeed(db, source, spec), null, 2));
     });
-  } else if (command === "migrate-plan" || command === "migrate-diff-create") {
+  } else if (command === "migrate-plan" || command === "migrate-check" || command === "migrate-diff-create") {
     if (!file) {
       throw new Error(`${command} requires <old-manifest.json> <current-file.dl>`);
     }
@@ -344,7 +352,11 @@ try {
     const previousManifest = readFileSync(file, "utf8");
     const currentSource = readFileSync(extra, "utf8");
     if (command === "migrate-plan") {
-      console.log(emitMigrationPlan(previousManifest, currentSource));
+      console.log(emitMigrationPlan(previousManifest, currentSource, args.includes("--json") ? "json" : "text"));
+    } else if (command === "migrate-check") {
+      const check = checkMigrationSafety(previousManifest, currentSource, migrationSafetyOptions());
+      console.log(args.includes("--json") ? JSON.stringify(check, null, 2) : formatMigrationSafetyCheck(check));
+      if (!check.ok) process.exitCode = 1;
     } else {
       const migrationName = process.argv.slice(2)[3] ?? "schema_diff";
       const artifact = emitDiffMigration(previousManifest, currentSource, migrationName);
@@ -518,7 +530,7 @@ try {
 }
 
 function usage(): void {
-  console.error("usage: dl <version|diagnose|check|project-diagnose|project-check|project-summary|project-doctor|project-sql|project-manifest|project-manifest-write|project-transition-rules|project-api-ts|project-api-server-ts|project-worker-ts|project-migrate-plan|project-migrate-diff-create|project-query-ir|project-query-sql|project-query-run|project-explain|project-tx-ir|project-tx-sql|project-tx-run|project-data-insert|project-data-insert-sql|project-seed-run|project-seed-dry-run|project-seed-check|project-seed-delete|project-seed-reset|sql|manifest|transition-rules|api-ts|api-server-ts|worker-ts|manifest-write|query-ir|query-sql|query-run|data-insert|data-insert-sql|seed-run|seed-dry-run|seed-check|seed-delete|seed-reset|tx-ir|tx-sql|tx-run|explain|migrate-create|migrate-plan|migrate-diff-create|migrate-status|migrate-apply|outbox-list|outbox-claim|outbox-mark-processed|outbox-mark-failed|outbox-requeue|outbox-requeue-stale> [args]");
+  console.error("usage: dl <version|diagnose|check|project-diagnose|project-check|project-summary|project-doctor|project-sql|project-manifest|project-manifest-write|project-transition-rules|project-api-ts|project-api-server-ts|project-worker-ts|project-migrate-plan|project-migrate-check|project-migrate-diff-create|project-query-ir|project-query-sql|project-query-run|project-explain|project-tx-ir|project-tx-sql|project-tx-run|project-data-insert|project-data-insert-sql|project-seed-run|project-seed-dry-run|project-seed-check|project-seed-delete|project-seed-reset|sql|manifest|transition-rules|api-ts|api-server-ts|worker-ts|manifest-write|query-ir|query-sql|query-run|data-insert|data-insert-sql|seed-run|seed-dry-run|seed-check|seed-delete|seed-reset|tx-ir|tx-sql|tx-run|explain|migrate-create|migrate-plan|migrate-check|migrate-diff-create|migrate-status|migrate-apply|outbox-list|outbox-claim|outbox-mark-processed|outbox-mark-failed|outbox-requeue|outbox-requeue-stale> [args]");
 }
 
 function packageVersion(): string {
@@ -568,6 +580,30 @@ function parseApiServerOptions(apiImport?: string, configImport?: string, runtim
     configImport,
     runtimeImport,
   };
+}
+
+function migrationSafetyOptions(): Parameters<typeof checkMigrationSafety>[2] {
+  const allowDestructive = args.includes("--allow-destructive");
+  return {
+    allowDestructive,
+    allowUnsafe: allowDestructive || args.includes("--allow-unsafe"),
+  };
+}
+
+function formatMigrationSafetyCheck(check: ReturnType<typeof checkMigrationSafety>): string {
+  const lines = [
+    check.ok ? "migration safety check passed" : "migration safety check failed",
+    `Safe: ${check.summary.safe}, unsafe: ${check.summary.unsafe}, destructive: ${check.summary.destructive}`,
+  ];
+  if (check.allowed.allowUnsafe || check.allowed.allowDestructive) {
+    lines.push(
+      `Allowed: unsafe=${check.allowed.allowUnsafe ? "yes" : "no"}, destructive=${check.allowed.allowDestructive ? "yes" : "no"}`,
+    );
+  }
+  for (const diagnostic of check.diagnostics) {
+    lines.push(`- ${diagnostic}`);
+  }
+  return lines.join("\n");
 }
 
 function readSingleProjectSource(config: ReturnType<typeof loadConfig>, command: string): string {
