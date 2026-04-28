@@ -372,6 +372,9 @@ transition Order.status {
     expect(server).toContain('openOrders: async (body: unknown) => api.queries.openOrders(body as OpenOrdersParams),');
     expect(server).toContain('capturePayment: async (body: unknown) => api.transactions.capturePayment(body as CapturePaymentParams),');
     expect(server).toContain('sendJson(response, 200, { ok: true, module: "pilot" });');
+    expect(server).toContain('const maxBodyBytes = Number.parseInt(process.env.REUX_HTTP_MAX_BODY_BYTES ?? "1048576", 10);');
+    expect(server).toContain('sendJson(response, 413, { error: "request body too large" });');
+    expect(server).toContain('sendJson(response, 400, { error: "invalid JSON request body" });');
     expect(server).toContain("Reux API server listening on http://127.0.0.1:${port}");
   });
 

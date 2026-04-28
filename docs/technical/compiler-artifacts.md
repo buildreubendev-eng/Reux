@@ -152,6 +152,8 @@ node dist/cli.js project-api-server-ts ./api.js ./config.js ./runtime.js
 
 The scaffold intentionally uses Node's built-in `http` module, so it remains dependency-light. It wires `GET /health`, `POST /queries/<queryName>`, and `POST /transactions/<transactionName>` to the generated API client. Applications can copy the scaffold into an app package, then replace or wrap the plain HTTP handling with their framework of choice.
 
+Generated servers reject invalid JSON with `400` and request bodies larger than `REUX_HTTP_MAX_BODY_BYTES` with `413`. The default body limit is 1 MiB.
+
 ## TypeScript Worker Scaffold
 
 The compiler can emit a worker scaffold for durable transaction events:
