@@ -7,6 +7,7 @@ const state = {
 
 const elements = {
   setupButton: document.querySelector("#setupButton"),
+  setupToken: document.querySelector("#setupToken"),
   refreshButton: document.querySelector("#refreshButton"),
   orderId: document.querySelector("#orderId"),
   paymentAmount: document.querySelector("#paymentAmount"),
@@ -36,7 +37,9 @@ const displayLabels = {
 
 elements.setupButton.addEventListener("click", async () => {
   await withBusy(elements.setupButton, async () => {
-    const result = await postJson("/api/setup", {});
+    const result = await postJson("/api/setup", {
+      setupToken: elements.setupToken.value,
+    });
     elements.actionResult.textContent = JSON.stringify(result, null, 2);
     notify("Database migrated and pilot seed reset");
     await refresh();

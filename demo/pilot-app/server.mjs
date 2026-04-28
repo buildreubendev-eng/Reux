@@ -21,13 +21,16 @@ const config = loadConfig(rootDir, "pilot/dl.json");
 const source = readFileSync(sourcePath, "utf8");
 const seed = parseSeedSpec(`@${seedPath}`);
 const demoSchema = process.env.REUX_DEMO_SCHEMA ?? "reux_demo";
+const setupToken = process.env.REUX_DEMO_SETUP_TOKEN ?? "";
+const host = process.env.HOST ?? "0.0.0.0";
+const publicHost = host === "0.0.0.0" ? "127.0.0.1" : host;
+const port = Number.parseInt(process.env.PORT ?? process.env.REUX_DEMO_PORT ?? "4173", 10);
 process.env[config.databaseUrlEnv] = databaseUrlWithSearchPath(
   process.env[config.databaseUrlEnv],
   demoSchema,
   config.databaseUrlEnv,
 );
 const db = createPostgresDatabase(config);
-const port = Number.parseInt(process.env.REUX_DEMO_PORT ?? "4173", 10);
 
 const demoIds = {
   account: "00000000-0000-4000-8000-000000000001",
@@ -40,12 +43,13 @@ const server = createServer(async (request, response) => {
   try {
     await route(request, response);
   } catch (error) {
-    sendJson(response, 500, { error: error instanceof Error ? error.message : String(error) });
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    sendJson(response, statusCode, { error: error instanceof Error ? error.message : String(error) });
   }
 });
 
-server.listen(port, "127.0.0.1", () => {
-  console.log(`Reux pilot app listening on http://127.0.0.1:${port}`);
+server.listen(port, host, () => {
+  console.log(`Reux pilot app listening on http://${publicHost}:${port}`);
 });
 
 for (const signal of ["SIGINT", "SIGTERM"]) {
@@ -66,6 +70,8 @@ async function route(request, response) {
   }
 
   if (url.pathname === "/api/setup" && method === "POST") {
+    const body = await readJson(request);
+    assertSetupAllowed(request, body);
     await ensureDemoSchema();
     await applyMigrations(db, config.migrationsDir);
     const reset = await resetSeed(db, source, seed);
@@ -204,6 +210,17 @@ function contentType(pathname) {
       return "text/javascript; charset=utf-8";
     default:
       return "application/octet-stream";
+  }
+}
+
+function assertSetupAllowed(request, body) {
+  if (!setupToken) return;
+  const headerToken = request.headers["x-reux-demo-token"];
+  const provided = Array.isArray(headerToken) ? headerToken[0] : headerToken ?? body.setupToken;
+  if (provided !== setupToken) {
+    const error = new Error("setup requires a valid demo admin token");
+    error.statusCode = 403;
+    throw error;
   }
 }
 

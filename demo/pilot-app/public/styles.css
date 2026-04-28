@@ -97,6 +97,10 @@ input {
   color: var(--ink);
 }
 
+.token-input {
+  width: min(180px, 100%);
+}
+
 .actions,
 .button-row {
   display: flex;
