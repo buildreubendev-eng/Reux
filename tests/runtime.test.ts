@@ -293,6 +293,7 @@ enum OrderStatus {
       parseSeedSpec(
         JSON.stringify({
           mode: "upsert",
+          reset: "truncate",
           records: [
             { entity: "User", as: "ada", by: ["email"], data: { email: "ada@example.com" } },
             { entity: "Order", as: "order1", by: ["id"], data: { id: "order-1", user: "$ada", total: "100", status: "Pending" } },
@@ -302,6 +303,8 @@ enum OrderStatus {
     );
 
     expect(result).toEqual({
+      mode: "upsert",
+      reset: "truncate",
       records: [
         { entity: "User", as: "ada", mode: "upsert", by: ["email"], fields: ["email"] },
         { entity: "Order", as: "order1", mode: "upsert", by: ["id"], fields: ["id", "user", "total", "status"] },

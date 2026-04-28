@@ -189,7 +189,7 @@ node dist/cli.js project-seed-delete pilot/seeds/smoke.json
 node dist/cli.js project-seed-reset pilot/seeds/smoke.json
 ```
 
-`seed-check` and `project-seed-check` validate a seed file without connecting to PostgreSQL. They compile the source, verify that every record targets a known entity, reject unknown data fields, validate enum literals, verify each `by` field exists and is present in the record data, and ensure `$alias` values only reference earlier seed records.
+`seed-check` and `project-seed-check` validate a seed file without connecting to PostgreSQL. They compile the source, report the file-level `mode` and `reset` settings, verify that every record targets a known entity, reject unknown data fields, validate enum literals, verify each `by` field exists and is present in the record data, and ensure `$alias` values only reference earlier seed records.
 
 `seed-dry-run` and `project-seed-dry-run` insert the seed records inside a transaction and always roll it back. They are useful after `seed-check` when you also want PostgreSQL to validate foreign keys, uniqueness, enum values, and database casts without preserving fixture rows.
 

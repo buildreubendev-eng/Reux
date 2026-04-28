@@ -39,6 +39,8 @@ export interface SeedResetResult {
 }
 
 export interface SeedCheckResult {
+  mode: SeedMode;
+  reset: SeedResetMode;
   records: SeedCheckedRecord[];
 }
 
@@ -105,7 +107,7 @@ export function checkSeed(source: string, spec: SeedSpec): SeedCheckResult {
     });
   }
 
-  return { records };
+  return { mode: spec.mode, reset: spec.reset, records };
 }
 
 export async function runSeed(db: Database, source: string, spec: SeedSpec): Promise<SeedRunResult> {
