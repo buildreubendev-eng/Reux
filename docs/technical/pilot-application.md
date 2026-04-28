@@ -32,6 +32,7 @@ Useful commands:
 
 ```powershell
 npm run demo:pilot
+npm run demo:pilot-app
 $env:REUX_CONFIG='pilot/dl.json'
 node dist/cli.js project-check
 node dist/cli.js project-doctor
@@ -57,6 +58,24 @@ node dist/cli.js project-seed-reset pilot/seeds/smoke.json
 ```
 
 The pilot is activated through `pilot/dl.json`, `pilot/.dl/schema-manifest.json`, and `pilot/migrations/`. Keeping those separate lets the root `dl.json` and root `migrations/` continue to drive the commerce fixtures while the completed Phase 6 pilot remains available as an independent application slice.
+
+## Browser Demo App
+
+`demo/pilot-app` is the first end-to-end app built on the pilot. It serves a small browser console at `http://127.0.0.1:4173` and uses the Reux compiler/runtime artifacts directly:
+
+- `Apply Migrations + Reset Seed` applies `pilot/migrations/` and refreshes `pilot/seeds/smoke.json`;
+- the dashboard panels run the pilot queries (`accountOrders`, `accountBalances`, `orderPayments`, `accountOrderSummary`, and `openOrders`);
+- the transaction buttons run `capturePayment`, `markOrderPaid`, and `creditAccount` against PostgreSQL;
+- outbox rows are read from `_dl_outbox` so transaction side effects are visible immediately.
+
+Run it after setting the same PostgreSQL connection used by the integration tests:
+
+```powershell
+$env:DATABASE_URL='postgres://datalang:datalang@localhost:5432/datalang_dev'
+npm run demo:pilot-app
+```
+
+The app intentionally stays dependency-light: the server uses Node's built-in HTTP module, static browser files, and the built Reux runtime in `dist/`.
 
 ## Transition Rules
 

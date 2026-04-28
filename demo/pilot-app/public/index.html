@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Reux Pilot Console</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Reux Pilot</p>
+        <h1>Commerce Console</h1>
+      </div>
+      <div class="actions">
+        <button id="setupButton" type="button">Apply Migrations + Reset Seed</button>
+        <button id="refreshButton" type="button">Refresh</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="status-grid" aria-label="Status">
+        <div class="metric">
+          <span>Applied Migrations</span>
+          <strong id="migrationCount">-</strong>
+        </div>
+        <div class="metric">
+          <span>Pending Migrations</span>
+          <strong id="pendingCount">-</strong>
+        </div>
+        <div class="metric">
+          <span>Open Orders</span>
+          <strong id="openOrderCount">-</strong>
+        </div>
+        <div class="metric">
+          <span>Outbox Events</span>
+          <strong id="outboxCount">-</strong>
+        </div>
+      </section>
+
+      <section class="workbench">
+        <div class="panel">
+          <div class="panel-heading">
+            <h2>Transactions</h2>
+            <span id="lastAction">Idle</span>
+          </div>
+          <div class="form-grid">
+            <label>
+              <span>Order ID</span>
+              <input id="orderId" autocomplete="off">
+            </label>
+            <label>
+              <span>Payment Amount</span>
+              <input id="paymentAmount" inputmode="decimal" value="250">
+            </label>
+            <label>
+              <span>Account ID</span>
+              <input id="accountId" autocomplete="off">
+            </label>
+            <label>
+              <span>Credit Amount</span>
+              <input id="creditAmount" inputmode="decimal" value="25">
+            </label>
+          </div>
+          <div class="button-row">
+            <button data-action="capture" type="button">Capture Payment</button>
+            <button data-action="markPaid" type="button">Mark Order Paid</button>
+            <button data-action="credit" type="button">Credit Account</button>
+          </div>
+          <pre id="actionResult" class="log" aria-live="polite"></pre>
+        </div>
+
+        <div class="panel">
+          <div class="panel-heading">
+            <h2>Account Summary</h2>
+          </div>
+          <div id="summaryTable" class="table"></div>
+        </div>
+      </section>
+
+      <section class="data-grid">
+        <div class="panel">
+          <div class="panel-heading">
+            <h2>Orders</h2>
+          </div>
+          <div id="ordersTable" class="table"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-heading">
+            <h2>Payments</h2>
+          </div>
+          <div id="paymentsTable" class="table"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-heading">
+            <h2>Balances</h2>
+          </div>
+          <div id="balancesTable" class="table"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-heading">
+            <h2>Outbox</h2>
+          </div>
+          <div id="outboxTable" class="table"></div>
+        </div>
+      </section>
+    </main>
+
+    <div id="toast" role="status" aria-live="polite"></div>
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>
