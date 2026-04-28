@@ -66,7 +66,8 @@ The pilot is activated through `pilot/dl.json`, `pilot/.dl/schema-manifest.json`
 - `Apply Migrations + Reset Seed` applies `pilot/migrations/` and refreshes `pilot/seeds/smoke.json`;
 - the dashboard panels run the pilot queries (`accountOrders`, `accountBalances`, `orderPayments`, `accountOrderSummary`, and `openOrders`);
 - the transaction buttons run `capturePayment`, `markOrderPaid`, and `creditAccount` against PostgreSQL;
-- outbox rows are read from `_dl_outbox` so transaction side effects are visible immediately.
+- outbox rows are read from `_dl_outbox` so transaction side effects are visible immediately;
+- `Process Outbox` runs the embeddable outbox processor with demo handlers and marks pending events as processed.
 
 Run it after setting the same PostgreSQL connection used by the integration tests:
 

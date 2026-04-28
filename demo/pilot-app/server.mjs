@@ -8,6 +8,7 @@ import {
   applyMigrations,
   createPostgresDatabase,
   migrationStatus,
+  processOutboxEvents,
   runSqlQuery,
   runTransactionSql,
 } from "../../dist/runtime.js";
@@ -25,6 +26,8 @@ const setupToken = process.env.REUX_DEMO_SETUP_TOKEN ?? "";
 const host = process.env.HOST ?? "0.0.0.0";
 const publicHost = host === "0.0.0.0" ? "127.0.0.1" : host;
 const port = Number.parseInt(process.env.PORT ?? process.env.REUX_DEMO_PORT ?? "4173", 10);
+const quotedDemoSchema = quoteIdentifier(demoSchema);
+const outboxTable = `${quotedDemoSchema}._dl_outbox`;
 process.env[config.databaseUrlEnv] = databaseUrlWithSearchPath(
   process.env[config.databaseUrlEnv],
   demoSchema,
@@ -102,6 +105,11 @@ async function route(request, response) {
     return;
   }
 
+  if (url.pathname === "/api/actions/process-outbox" && method === "POST") {
+    sendJson(response, 200, await processDemoOutbox());
+    return;
+  }
+
   if (method !== "GET") {
     sendJson(response, 405, { error: "method not allowed" });
     return;
@@ -112,6 +120,7 @@ async function route(request, response) {
 
 async function dashboard() {
   await ensureDemoSchema();
+  await ensureDemoOutboxTable();
   const status = await migrationStatus(db, config.migrationsDir);
   let queryResults;
   try {
@@ -122,10 +131,10 @@ async function dashboard() {
       runSqlQuery(db, emitQuerySql(source, "accountOrderSummary"), ["0"]),
       runSqlQuery(db, emitQuerySql(source, "openOrders"), ["0"]),
       runSqlQuery(
-        db,
-        "SELECT id, event_type, payload, status, attempts, created_at FROM _dl_outbox ORDER BY created_at DESC LIMIT 10;",
-        [],
-      ).catch(() => ({ rows: [], rowCount: 0 })),
+      db,
+      `SELECT id, event_type, payload, status, attempts, created_at FROM ${outboxTable} ORDER BY created_at DESC LIMIT 10;`,
+      [],
+    ),
     ]);
   } catch (error) {
     if (isMissingRelation(error)) {
@@ -170,6 +179,7 @@ function emptyDashboard(status) {
 
 async function runTransaction(name, params) {
   await ensureDemoSchema();
+  await ensureDemoOutboxTable();
   const result = await runTransactionSql(
     db,
     emitTransactionSql(source, name),
@@ -185,6 +195,29 @@ async function runTransaction(name, params) {
     outboxEvents: result.outboxEvents,
     afterCommit: result.afterCommit,
     bindings: result.bindings,
+  };
+}
+
+async function processDemoOutbox() {
+  await ensureDemoSchema();
+  await ensureDemoOutboxTable();
+  const result = await processOutboxEvents(
+    db,
+    {
+      AccountCredited: () => undefined,
+      OrderPaid: () => undefined,
+      PaymentCaptured: () => undefined,
+    },
+    10,
+  );
+  return {
+    ok: true,
+    processed: result.processed.length,
+    failed: result.failed.length,
+    events: {
+      processed: result.processed,
+      failed: result.failed,
+    },
   };
 }
 
@@ -256,7 +289,28 @@ function isMissingRelation(error) {
 }
 
 async function ensureDemoSchema() {
-  await db.query(`CREATE SCHEMA IF NOT EXISTS ${quoteIdentifier(demoSchema)};`);
+  await db.query(`CREATE SCHEMA IF NOT EXISTS ${quotedDemoSchema};`);
+}
+
+async function ensureDemoOutboxTable() {
+  await db.query(`
+CREATE TABLE IF NOT EXISTS ${outboxTable} (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_type text NOT NULL,
+  payload jsonb NOT NULL,
+  status text NOT NULL DEFAULT 'pending',
+  attempts integer NOT NULL DEFAULT 0,
+  last_error text NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  claimed_at timestamptz NULL,
+  processed_at timestamptz NULL
+);
+`);
+  await db.query(`ALTER TABLE ${outboxTable} ADD COLUMN IF NOT EXISTS attempts integer NOT NULL DEFAULT 0;`);
+  await db.query(`ALTER TABLE ${outboxTable} ADD COLUMN IF NOT EXISTS last_error text NULL;`);
+  await db.query(`ALTER TABLE ${outboxTable} ADD COLUMN IF NOT EXISTS claimed_at timestamptz NULL;`);
+  await db.query(`CREATE INDEX IF NOT EXISTS _dl_outbox_status_created_at_idx ON ${outboxTable} (status, created_at);`);
+  await db.query(`CREATE INDEX IF NOT EXISTS _dl_outbox_status_claimed_at_idx ON ${outboxTable} (status, claimed_at);`);
 }
 
 function databaseUrlWithSearchPath(value, schema, envName) {

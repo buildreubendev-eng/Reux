@@ -71,6 +71,10 @@ document.querySelector('[data-action="credit"]').addEventListener("click", async
   });
 });
 
+document.querySelector('[data-action="processOutbox"]').addEventListener("click", async () => {
+  await runAction("processOutbox", "/api/actions/process-outbox", {});
+});
+
 refresh().catch((error) => {
   notify(error.message, true);
 });

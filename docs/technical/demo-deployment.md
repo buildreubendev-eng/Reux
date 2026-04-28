@@ -55,7 +55,7 @@ After deployment:
 
 Regular visitors can use the dashboard and transaction buttons after setup. Keep the token private so the shared demo database cannot be reset by everyone visiting the public site.
 
-The public UI keeps setup/reset inside a collapsed `Admin` menu. The dashboard can still load before setup and will show a setup-required state instead of failing with a database error. Public visitors do not need the token after the seeded data has been initialized.
+The public UI keeps setup/reset inside a collapsed `Admin` menu. The dashboard can still load before setup and will show a setup-required state instead of failing with a database error. Public visitors do not need the token after the seeded data has been initialized. The `Process Outbox` button runs demo event handlers over pending outbox rows so visitors can see transaction events move from `pending` to `processed`. The app creates and queries `_dl_outbox` inside `REUX_DEMO_SCHEMA`, avoiding accidental reads from another schema in a shared database.
 
 ## Website Integration
 
