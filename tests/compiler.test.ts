@@ -402,6 +402,7 @@ transition Order.status {
     expect(worker).toContain("AccountCredited: async (event) => {");
     expect(worker).toContain("sendReceipt: async (hook) => {");
     expect(worker).toContain("notifyOrderPaid: async (hook) => {");
+    expect(worker).toContain("hook.resolvedArgs ?? hook.args");
     expect(worker).toContain("REUX_WORKER_INTERVAL_MS");
     expect(worker).toContain("REUX_WORKER_REQUEUE_STALE_SECONDS");
     expect(worker).toContain("requeueStaleAfterSeconds,");

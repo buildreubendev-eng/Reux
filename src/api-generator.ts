@@ -238,7 +238,7 @@ export function emitTypeScriptWorker(source: string, options: TypeScriptWorkerOp
     "",
     "const afterCommitHandlers = {",
     ...(hooks.length > 0
-      ? hooks.map((hook) => `  ${hook}: async (hook) => {\n    console.log("after commit hook", hook.call);\n  },`)
+      ? hooks.map((hook) => `  ${hook}: async (hook) => {\n    console.log("after commit hook", hook.call, hook.resolvedArgs ?? hook.args);\n  },`)
       : ["  // No after commit hooks were found in this Reux source."]),
     "} satisfies Record<string, AfterCommitHandler>;",
     "",

@@ -163,6 +163,6 @@ node dist/cli.js worker-ts examples/pilot_reux.dl ./config.js ./runtime.js
 node dist/cli.js project-worker-ts ./config.js ./runtime.js
 ```
 
-The scaffold discovers `enqueue Event { ... }` statements and `after commit hook(...)` calls from transaction functions. It generates placeholder `OutboxHandler` and `AfterCommitHandler` objects, configures graceful shutdown for `SIGINT`/`SIGTERM`, requeues stale processing claims using `REUX_WORKER_REQUEUE_STALE_SECONDS`, and runs `runOutboxWorker` against the configured PostgreSQL database.
+The scaffold discovers `enqueue Event { ... }` statements and `after commit hook(...)` calls from transaction functions. It generates placeholder `OutboxHandler` and `AfterCommitHandler` objects, configures graceful shutdown for `SIGINT`/`SIGTERM`, requeues stale processing claims using `REUX_WORKER_REQUEUE_STALE_SECONDS`, and runs `runOutboxWorker` against the configured PostgreSQL database. Placeholder after-commit handlers log `hook.resolvedArgs ?? hook.args` so copied handlers can opt into runtime argument resolution without losing source-level visibility.
 
 Outbox handlers are durable and can be retried through `_dl_outbox`. After-commit handlers are generated as placeholders because the current runtime reports after-commit hooks from transaction execution but does not persist them across process restarts.
