@@ -58,6 +58,8 @@ export interface OutboxProcessResult {
 export interface OutboxWorkerOptions {
   limit?: number;
   intervalMs?: number;
+  requeueStaleAfterSeconds?: number;
+  requeueStaleLimit?: number;
   maxIterations?: number;
   signal?: AbortSignal;
   onIteration?(result: OutboxProcessResult): void | Promise<void>;
@@ -315,6 +317,9 @@ export async function runOutboxWorker(
   let failed = 0;
 
   while (!options.signal?.aborted) {
+    if (options.requeueStaleAfterSeconds !== undefined) {
+      await requeueStaleOutboxEvents(db, options.requeueStaleAfterSeconds, options.requeueStaleLimit ?? limit);
+    }
     const result = await processOutboxEvents(db, handlers, limit);
     iterations += 1;
     processed += result.processed.length;

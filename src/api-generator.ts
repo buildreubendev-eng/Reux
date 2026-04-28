@@ -195,6 +195,7 @@ export function emitTypeScriptWorker(source: string, options: TypeScriptWorkerOp
     "const controller = new AbortController();",
     "const intervalMs = Number.parseInt(process.env.REUX_WORKER_INTERVAL_MS ?? \"1000\", 10);",
     "const limit = Number.parseInt(process.env.REUX_WORKER_LIMIT ?? \"10\", 10);",
+    "const requeueStaleAfterSeconds = Number.parseInt(process.env.REUX_WORKER_REQUEUE_STALE_SECONDS ?? \"300\", 10);",
     "",
     "const outboxHandlers = {",
     ...(events.length > 0
@@ -216,6 +217,7 @@ export function emitTypeScriptWorker(source: string, options: TypeScriptWorkerOp
     "  await runOutboxWorker(db, outboxHandlers, {",
     "    intervalMs,",
     "    limit,",
+    "    requeueStaleAfterSeconds,",
     "    signal: controller.signal,",
     "    onIteration(result) {",
     "      if (result.processed.length > 0 || result.failed.length > 0) {",

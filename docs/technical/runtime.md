@@ -434,6 +434,6 @@ await runOutboxWorker(
 );
 ```
 
-`runOutboxWorker` repeatedly calls `processOutboxEvents`, supports abort signals for shutdown, and supports `maxIterations` for tests or demos.
+`runOutboxWorker` repeatedly calls `processOutboxEvents`, supports abort signals for shutdown, and supports `maxIterations` for tests or demos. Set `requeueStaleAfterSeconds` to have the worker move abandoned `processing` events back to `pending` before each processing iteration; `requeueStaleLimit` controls how many stale claims are recovered per iteration.
 
 These commands are intentionally small. They provide enough operational visibility for the prototype while leaving hosted worker deployment and handler discovery to the application layer.

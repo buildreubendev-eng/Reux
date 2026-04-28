@@ -1072,6 +1072,41 @@ COMMIT;`,
     });
   });
 
+  it("requeues stale outbox claims before worker processing", async () => {
+    const db = new FakeDb();
+    db.outbox.push({
+      id: "outbox-1",
+      event_type: "RewardGranted",
+      payload: { user: "user-id" },
+      status: "processing",
+      attempts: 1,
+      last_error: null,
+      created_at: "2026-04-25T00:00:00.000Z",
+      claimed_at: "2026-04-25T00:00:00.000Z",
+      processed_at: null,
+    });
+    const handled: unknown[] = [];
+
+    const result = await runOutboxWorker(
+      db,
+      {
+        RewardGranted: (event) => {
+          handled.push(event.payload);
+        },
+      },
+      { intervalMs: 0, maxIterations: 1, requeueStaleAfterSeconds: 300 },
+    );
+
+    expect(handled).toEqual([{ user: "user-id" }]);
+    expect(result).toEqual({
+      iterations: 1,
+      processed: 1,
+      failed: 0,
+      stopped: "maxIterations",
+    });
+    expect(db.queryCalls.some((call) => call.sql.includes("FROM stale") && call.params?.[0] === 300)).toBe(true);
+  });
+
   it("marks outbox events failed when processing has no handler", async () => {
     const db = new FakeDb();
     db.outbox.push({
