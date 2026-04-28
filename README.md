@@ -110,6 +110,7 @@ Technical documentation:
 - [Runtime](docs/technical/runtime.md)
 - [Release and packaging](docs/technical/release.md)
 - [Local PostgreSQL](docs/technical/local-postgres.md)
+- [Roadmap](docs/technical/roadmap.md)
 - [Phase status](docs/technical/phase-status.md)
 - [Pilot application](docs/technical/pilot-application.md)
 - [Pilot demo deployment](docs/technical/demo-deployment.md)

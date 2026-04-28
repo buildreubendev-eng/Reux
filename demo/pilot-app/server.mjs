@@ -13,6 +13,14 @@ import {
   runTransactionSql,
 } from "../../dist/runtime.js";
 import { parseSeedSpec, resetSeed } from "../../dist/seed.js";
+import {
+  assertPostgresIdentifier,
+  databaseUrlWithSearchPath,
+  quoteIdentifier,
+  sessionIdFromHeader,
+  sessionInfo,
+  sessionSchema,
+} from "./session.mjs";
 
 const rootDir = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 const publicDir = join(rootDir, "demo", "pilot-app", "public");
@@ -306,24 +314,13 @@ function isMissingRelation(error) {
 }
 
 function requestContext(request) {
-  const sessionId = sessionMode === "shared" ? "" : sessionIdFromRequest(request);
-  const schema = sessionId ? `${demoSchema}_s_${sessionId}` : demoSchema;
+  const sessionId = sessionMode === "shared" ? "" : sessionIdFromHeader(request.headers["x-reux-demo-session"]);
+  const schema = sessionSchema(demoSchema, sessionId);
   return schemaContext(schema, sessionId);
 }
 
-function sessionIdFromRequest(request) {
-  const rawHeader = request.headers["x-reux-demo-session"];
-  const raw = Array.isArray(rawHeader) ? rawHeader[0] : rawHeader;
-  if (!raw) return "";
-  const normalized = raw.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 16);
-  if (normalized.length < 8) return "";
-  return normalized;
-}
-
 function schemaContext(schema, sessionId) {
-  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(schema)) {
-    throw new Error("demo schema must be a PostgreSQL identifier");
-  }
+  assertPostgresIdentifier(schema, "demo schema must be a PostgreSQL identifier");
   let context = databases.get(schema);
   if (context) return context;
 
@@ -349,14 +346,6 @@ function schemaContext(schema, sessionId) {
   }
 }
 
-function sessionInfo(context) {
-  return {
-    id: context.sessionId,
-    isolated: Boolean(context.sessionId),
-    schema: context.schema,
-  };
-}
-
 async function ensureDemoSchema(context) {
   await context.db.query(`CREATE SCHEMA IF NOT EXISTS ${context.quotedSchema};`);
 }
@@ -380,23 +369,4 @@ CREATE TABLE IF NOT EXISTS ${context.outboxTable} (
   await context.db.query(`ALTER TABLE ${context.outboxTable} ADD COLUMN IF NOT EXISTS claimed_at timestamptz NULL;`);
   await context.db.query(`CREATE INDEX IF NOT EXISTS _dl_outbox_status_created_at_idx ON ${context.outboxTable} (status, created_at);`);
   await context.db.query(`CREATE INDEX IF NOT EXISTS _dl_outbox_status_claimed_at_idx ON ${context.outboxTable} (status, claimed_at);`);
-}
-
-function databaseUrlWithSearchPath(value, schema, envName) {
-  if (!value) {
-    throw new Error(`database URL environment variable ${envName} is not set`);
-  }
-  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(schema)) {
-    throw new Error("REUX_DEMO_SCHEMA must be a PostgreSQL identifier");
-  }
-
-  const url = new URL(value);
-  const options = url.searchParams.get("options");
-  const searchPath = `-c search_path=${schema},public`;
-  url.searchParams.set("options", options ? `${options} ${searchPath}` : searchPath);
-  return url.toString();
-}
-
-function quoteIdentifier(value) {
-  return `"${value.replace(/"/g, '""')}"`;
 }
