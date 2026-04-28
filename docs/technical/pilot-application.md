@@ -33,6 +33,7 @@ Useful commands:
 ```powershell
 npm run demo:pilot
 npm run demo:pilot-app
+npm run demo:pilot-worker
 $env:REUX_CONFIG='pilot/dl.json'
 node dist/cli.js project-check
 node dist/cli.js project-doctor
@@ -77,6 +78,27 @@ npm run demo:pilot-app
 ```
 
 The app keeps its objects in a dedicated PostgreSQL schema named `reux_demo` by default, so it can coexist with the root commerce fixtures in the same database. Override that with `REUX_DEMO_SCHEMA` when you need a different local schema. Public deployments should set `REUX_DEMO_SETUP_TOKEN` so reset/setup requires an admin token. The app intentionally stays dependency-light: the server uses Node's built-in HTTP module, static browser files, and the built Reux runtime in `dist/`.
+
+## Demo Outbox Worker
+
+`scripts/demo-pilot-worker.mjs` is a deployable worker-style process for the pilot outbox. It uses the same pilot config and event names as the browser demo, processes pending `_dl_outbox` rows, and logs handled `AccountCredited`, `OrderPaid`, and `PaymentCaptured` events.
+
+Run it against the demo schema:
+
+```powershell
+$env:DATABASE_URL='postgres://datalang:datalang@localhost:5432/datalang_dev'
+$env:REUX_DEMO_SCHEMA='reux_demo'
+npm run demo:pilot-worker
+```
+
+Useful worker controls:
+
+```powershell
+$env:REUX_WORKER_INTERVAL_MS='1000'
+$env:REUX_WORKER_LIMIT='10'
+$env:REUX_WORKER_MAX_ITERATIONS='1'
+$env:REUX_WORKER_REQUEUE_STALE_SECONDS='300'
+```
 
 ## Transition Rules
 

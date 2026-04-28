@@ -57,6 +57,14 @@ Regular visitors can use the dashboard and transaction buttons after setup. Keep
 
 The public UI keeps setup/reset inside a collapsed `Admin` menu. The dashboard can still load before setup and will show a setup-required state instead of failing with a database error. Public visitors do not need the token after the seeded data has been initialized. The `Process Outbox` button runs demo event handlers over pending outbox rows so visitors can see transaction events move from `pending` to `processed`. The app creates and queries `_dl_outbox` inside `REUX_DEMO_SCHEMA`, avoiding accidental reads from another schema in a shared database.
 
+For a separate worker process, deploy the same repo with:
+
+```text
+Start command: npm run start:demo-worker
+```
+
+Set the same `DATABASE_URL` and `REUX_DEMO_SCHEMA` as the web service. The worker honors `REUX_WORKER_INTERVAL_MS`, `REUX_WORKER_LIMIT`, `REUX_WORKER_MAX_ITERATIONS`, and `REUX_WORKER_REQUEUE_STALE_SECONDS`.
+
 ## Website Integration
 
 Point the marketing/docs website at the hosted demo URL with an environment variable such as:
