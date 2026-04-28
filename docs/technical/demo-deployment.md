@@ -24,13 +24,16 @@ The service reads the platform `PORT` variable automatically and binds to `0.0.0
 DATABASE_URL=${{Postgres.DATABASE_URL}}
 REUX_DEMO_SCHEMA=reux_demo
 REUX_DEMO_SETUP_TOKEN=<private admin token>
+REUX_DEMO_SESSION_MODE=isolated
 ```
 
 `railway.json` sets the build command, start command, `/api/health` health check, and restart policy. Railway reads this file during deployment.
 
+For an optional Railway worker, create a second service from the same repo, set its start command to `npm run start:demo-worker`, and give it the same `DATABASE_URL` and `REUX_DEMO_SCHEMA` values. `railway.worker.json` records the matching worker build/start settings for reference.
+
 ## Render
 
-Use the repo Blueprint (`render.yaml`) to create the web service and a managed PostgreSQL database together. The Blueprint wires `DATABASE_URL` from the database, sets `REUX_DEMO_SCHEMA`, and generates `REUX_DEMO_SETUP_TOKEN`.
+Use the repo Blueprint (`render.yaml`) to create the web service, an optional worker service, and a managed PostgreSQL database together. The Blueprint wires `DATABASE_URL` from the database, sets `REUX_DEMO_SCHEMA`, and generates `REUX_DEMO_SETUP_TOKEN`.
 
 If creating the Render service manually instead of through the Blueprint, use the build/start settings above and add the three environment variables manually.
 
@@ -40,20 +43,21 @@ If creating the Render service manually instead of through the Blueprint, use th
 DATABASE_URL=postgres://...
 REUX_DEMO_SCHEMA=reux_demo
 REUX_DEMO_SETUP_TOKEN=<private admin token>
+REUX_DEMO_SESSION_MODE=isolated
 ```
 
-`DATABASE_URL` is required. `REUX_DEMO_SCHEMA` defaults to `reux_demo`, which keeps demo objects separate from other tables in the same database. `REUX_DEMO_SETUP_TOKEN` is optional for local development but should be set on public deployments; when set, the setup/reset endpoint requires the token before applying migrations or resetting seed data.
+`DATABASE_URL` is required. `REUX_DEMO_SCHEMA` defaults to `reux_demo`, which keeps demo objects separate from other tables in the same database. `REUX_DEMO_SESSION_MODE` defaults to `isolated`, which maps each browser session to its own schema derived from `REUX_DEMO_SCHEMA`; set it to `shared` only for local debugging. `REUX_DEMO_SETUP_TOKEN` is optional for local development but should be set on public deployments; when set, the admin setup/reset endpoint requires the token before applying migrations or resetting shared seed data.
 
 ## First Setup
 
 After deployment:
 
 1. Open the deployed demo URL.
-2. Enter the private admin token if `REUX_DEMO_SETUP_TOKEN` is set.
-3. Click `Apply Migrations + Reset Seed`.
-4. Confirm `/api/dashboard` returns seeded orders, payments, balances, and outbox events.
+2. Click `Reset My Session` to create a fresh isolated visitor schema.
+3. Confirm `/api/dashboard` returns seeded orders, payments, balances, and outbox events.
+4. For admin/shared setup, open the collapsed `Admin` menu, enter the private token if `REUX_DEMO_SETUP_TOKEN` is set, and click `Apply Migrations + Reset Seed`.
 
-Regular visitors can use the dashboard and transaction buttons after setup. Keep the token private so the shared demo database cannot be reset by everyone visiting the public site.
+Regular visitors can reset only their own session and use the dashboard and transaction buttons after setup. Keep the token private so the shared/admin demo database cannot be reset by everyone visiting the public site.
 
 The public UI keeps setup/reset inside a collapsed `Admin` menu. The dashboard can still load before setup and will show a setup-required state instead of failing with a database error. Public visitors do not need the token after the seeded data has been initialized. The `Process Outbox` button runs demo event handlers over pending outbox rows so visitors can see transaction events move from `pending` to `processed`. The app creates and queries `_dl_outbox` inside `REUX_DEMO_SCHEMA`, avoiding accidental reads from another schema in a shared database.
 

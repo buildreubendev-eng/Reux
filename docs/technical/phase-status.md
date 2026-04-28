@@ -78,6 +78,8 @@ Status: complete for the current prototype scope.
 
 The current commerce examples remain compiler/runtime fixtures. The first pilot source now lives at `examples/pilot_reux.dl` and models a realistic accounts/orders/payments slice with several relationships, nontrivial join queries, a payment-capture transaction, a retryable account-credit transaction, and durable outbox coordination.
 
+A second non-commerce pilot source now lives at `examples/logistics_reux.dl`. It models driver dispatch, vehicles, shipments, shipment lifecycle transitions, driver payout credits, and logistics outbox events.
+
 Phase 6 coverage:
 
 - Accounts/orders/payments domain modeled in Reux source.
@@ -89,5 +91,7 @@ Phase 6 coverage:
 - Transaction conflict behavior represented by `creditAccount`, which lowers to `SELECT ... FOR UPDATE`, a balance update, retry metadata, and an outbox event.
 - Production-like verification path documented for WSL PostgreSQL through `npm run test:postgres`.
 - Browser demo app deployed as a Node/PostgreSQL service path with public-safe admin setup controls, schema-isolated outbox state, and a worker-style outbox processing loop.
+- Isolated public demo sessions map each visitor to a session schema and expose a public `Reset My Session` flow, avoiding shared-state collisions in the hosted demo.
+- Logistics pilot coverage shows the same Reux subset applied to dispatch workflows rather than commerce.
 
 The remaining gaps are beyond Phase 6 rather than blockers for it: richer query composition, deeper aggregation semantics, broader fixture/seed workflows, more production-grade worker supervision/dead-letter behavior, and eventually switching `dl.json` from commerce fixtures to the pilot source when the project is ready to treat the pilot as the active application.

@@ -1,0 +1,88 @@
+module logistics
+
+entity Driver {
+  id: Id<Driver> primary generated
+  email: String unique
+  displayName: String
+  payoutBalance: Decimal<12,2> default 0
+
+  index byEmail(email asc)
+}
+
+entity Vehicle {
+  id: Id<Vehicle> primary generated
+  plate: String unique
+  label: String
+  capacity: Decimal<12,2> check capacity >= 0
+}
+
+entity Shipment {
+  id: Id<Shipment> primary generated
+  trackingNumber: String unique
+  driver: Driver required
+  vehicle: Vehicle required
+  destination: String
+  weight: Decimal<12,2> check weight >= 0
+  status: ShipmentStatus default Scheduled
+
+  index byDriver(driver asc)
+  index byStatus(status asc)
+}
+
+enum ShipmentStatus {
+  Scheduled
+  InTransit
+  Delivered
+  Exception
+}
+
+transition Shipment.status {
+  Scheduled -> InTransit
+  InTransit -> Delivered
+  InTransit -> Exception
+  Exception -> InTransit
+}
+
+query activeShipments(minWeight: Decimal<12,2>): Query<{ trackingNumber: String, destination: String, status: ShipmentStatus }> =
+  from shipment in Shipment
+  where shipment.weight > minWeight
+  order by shipment.weight desc
+  select { trackingNumber: shipment.trackingNumber, destination: shipment.destination, status: shipment.status }
+
+query driverManifest(minWeight: Decimal<12,2>): Query<{ email: String, trackingNumber: String, destination: String, weight: Decimal<12,2> }> =
+  from shipment in Shipment
+  join driver in Driver on shipment.driver == driver
+  where shipment.weight > minWeight
+  order by shipment.weight desc
+  select { email: driver.email, trackingNumber: shipment.trackingNumber, destination: shipment.destination, weight: shipment.weight }
+
+query shipmentStatusSummary(minWeight: Decimal<12,2>): Query<{ status: ShipmentStatus, shipmentCount: Int64, totalWeight: Decimal<12,2> }> =
+  from shipment in Shipment
+  where shipment.weight > minWeight
+  group by shipment.status
+  order by sum(shipment.weight) desc
+  select { status: shipment.status, shipmentCount: count(), totalWeight: sum(shipment.weight) }
+
+transaction function startShipment(shipmentRef: Shipment) writes Shipment retry 3 {
+  let shipment = load shipmentRef for update
+  shipment.status = InTransit
+  save shipment
+  enqueue ShipmentStarted { shipment: shipmentRef }
+  after commit notifyDispatch(shipmentRef)
+}
+
+transaction function markDelivered(shipmentRef: Shipment) writes Shipment retry 3 {
+  let shipment = load shipmentRef for update
+  shipment.status = Delivered
+  save shipment
+  enqueue ShipmentDelivered { shipment: shipmentRef }
+  after commit notifyCustomer(shipmentRef)
+}
+
+transaction function creditDriver(driverRef: Driver, amount: Decimal<12,2>) writes Driver retry 3 {
+  let driver = load driverRef for update
+  driver.payoutBalance += amount
+  save driver
+  enqueue DriverCredited { driver: driverRef, amount: amount }
+  after commit notifyDriverPayout(driverRef)
+}

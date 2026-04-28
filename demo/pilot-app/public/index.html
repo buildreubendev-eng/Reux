@@ -11,9 +11,11 @@
       <div>
         <p class="eyebrow">Reux Pilot</p>
         <h1>Commerce Console</h1>
+        <p class="session-line">Session <span id="sessionLabel">starting</span></p>
       </div>
       <div class="actions">
         <button id="refreshButton" type="button">Refresh</button>
+        <button id="resetSessionButton" type="button">Reset My Session</button>
         <details id="adminTools" class="admin-tools">
           <summary>Admin</summary>
           <div class="admin-menu">
@@ -26,7 +28,7 @@
 
     <main>
       <section id="setupNotice" class="notice" hidden>
-        Demo data is waiting for admin setup.
+        Demo data is not initialized for this session yet. Use Reset My Session to create a fresh isolated playground.
       </section>
 
       <section class="status-grid" aria-label="Status">
@@ -53,6 +55,9 @@
           <div class="panel-heading">
             <h2>Transactions</h2>
             <span id="lastAction">Idle</span>
+          </div>
+          <div id="actionSummary" class="action-summary">
+            Run an action to see the generated transaction or outbox result.
           </div>
           <div class="form-grid">
             <label>

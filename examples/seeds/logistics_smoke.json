@@ -1,0 +1,42 @@
+{
+  "mode": "upsert",
+  "reset": "delete",
+  "records": [
+    {
+      "entity": "Driver",
+      "as": "mira",
+      "by": ["id"],
+      "data": {
+        "id": "00000000-0000-4000-8000-200000000001",
+        "email": "mira.dispatch@example.com",
+        "displayName": "Mira Dispatch",
+        "payoutBalance": "125.00"
+      }
+    },
+    {
+      "entity": "Vehicle",
+      "as": "boxTruck",
+      "by": ["id"],
+      "data": {
+        "id": "00000000-0000-4000-8000-200000000002",
+        "plate": "RX-2042",
+        "label": "Box Truck 2042",
+        "capacity": "1200.00"
+      }
+    },
+    {
+      "entity": "Shipment",
+      "as": "shipmentA",
+      "by": ["id"],
+      "data": {
+        "id": "00000000-0000-4000-8000-200000000003",
+        "trackingNumber": "RX-SHIP-1001",
+        "driver": "$mira",
+        "vehicle": "$boxTruck",
+        "destination": "Austin Intake Hub",
+        "weight": "240.50",
+        "status": "Scheduled"
+      }
+    }
+  ]
+}

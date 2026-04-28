@@ -15,6 +15,25 @@ services:
         value: reux_demo
       - key: REUX_DEMO_SETUP_TOKEN
         generateValue: true
+  - type: worker
+    name: reux-pilot-demo-worker
+    runtime: node
+    plan: starter
+    buildCommand: npm install && npm run build
+    startCommand: npm run start:demo-worker
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: reux-pilot-demo-db
+          property: connectionString
+      - key: REUX_DEMO_SCHEMA
+        value: reux_demo
+      - key: REUX_WORKER_INTERVAL_MS
+        value: "1000"
+      - key: REUX_WORKER_LIMIT
+        value: "10"
+      - key: REUX_WORKER_REQUEUE_STALE_SECONDS
+        value: "300"
 
 databases:
   - name: reux-pilot-demo-db

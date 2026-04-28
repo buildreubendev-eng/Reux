@@ -1,4 +1,6 @@
 const state = {
+  sessionId: loadSessionId(),
+  setupRequired: false,
   ids: {
     account: "",
     order: "",
@@ -10,12 +12,15 @@ const elements = {
   setupButton: document.querySelector("#setupButton"),
   setupToken: document.querySelector("#setupToken"),
   refreshButton: document.querySelector("#refreshButton"),
+  resetSessionButton: document.querySelector("#resetSessionButton"),
   setupNotice: document.querySelector("#setupNotice"),
+  sessionLabel: document.querySelector("#sessionLabel"),
   orderId: document.querySelector("#orderId"),
   paymentAmount: document.querySelector("#paymentAmount"),
   accountId: document.querySelector("#accountId"),
   creditAmount: document.querySelector("#creditAmount"),
   actionResult: document.querySelector("#actionResult"),
+  actionSummary: document.querySelector("#actionSummary"),
   lastAction: document.querySelector("#lastAction"),
   toast: document.querySelector("#toast"),
   migrationCount: document.querySelector("#migrationCount"),
@@ -28,6 +33,7 @@ const elements = {
   summaryTable: document.querySelector("#summaryTable"),
   outboxTable: document.querySelector("#outboxTable"),
 };
+const demoActionButtons = [...document.querySelectorAll("[data-action]")];
 
 const displayLabels = {
   event_type: "Event Type",
@@ -50,6 +56,15 @@ elements.setupButton.addEventListener("click", async () => {
 });
 
 elements.refreshButton.addEventListener("click", () => withBusy(elements.refreshButton, refresh));
+elements.resetSessionButton.addEventListener("click", async () => {
+  await withBusy(elements.resetSessionButton, async () => {
+    const result = await postJson("/api/session/reset", {});
+    elements.actionResult.textContent = JSON.stringify(result, null, 2);
+    elements.actionSummary.textContent = "Your isolated demo session was reset with fresh seed data.";
+    notify("Session reset with fresh demo data");
+    await refresh();
+  });
+});
 
 document.querySelector('[data-action="capture"]').addEventListener("click", async () => {
   await runAction("capturePayment", "/api/actions/capture-payment", {
@@ -83,12 +98,15 @@ async function runAction(label, url, payload) {
   elements.lastAction.textContent = label;
   const result = await postJson(url, payload);
   elements.actionResult.textContent = JSON.stringify(result, null, 2);
+  elements.actionSummary.textContent = summarizeAction(label, result);
   notify(`${label} complete`);
   await refresh();
 }
 
 async function refresh() {
   const dashboard = await getJson("/api/dashboard");
+  state.setupRequired = Boolean(dashboard.setupRequired);
+  elements.sessionLabel.textContent = dashboard.session?.id ? dashboard.session.id.slice(0, 8) : "shared";
   elements.setupNotice.hidden = !dashboard.setupRequired;
   state.ids.account = dashboard.ids.account;
   state.ids.order = dashboard.ids.order;
@@ -105,6 +123,7 @@ async function refresh() {
   renderTable(elements.balancesTable, dashboard.balances, ["email", "balance"]);
   renderTable(elements.summaryTable, dashboard.summary, ["email", "ordercount", "totalspend"]);
   renderTable(elements.outboxTable, dashboard.outbox, ["event_type", "status", "attempts", "payload"]);
+  setActionAvailability();
 }
 
 function renderTable(target, rows, preferredColumns) {
@@ -136,14 +155,16 @@ function formatCell(value) {
 }
 
 async function getJson(url) {
-  const response = await fetch(url);
+  const response = await fetch(url, {
+    headers: sessionHeaders(),
+  });
   return parseResponse(response);
 }
 
 async function postJson(url, body) {
   const response = await fetch(url, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", ...sessionHeaders() },
     body: JSON.stringify(body),
   });
   return parseResponse(response);
@@ -152,7 +173,7 @@ async function postJson(url, body) {
 async function parseResponse(response) {
   const body = await response.json();
   if (!response.ok) {
-    throw new Error(body.error ?? `request failed with ${response.status}`);
+    throw new Error(friendlyError(body.error ?? `request failed with ${response.status}`));
   }
   return body;
 }
@@ -170,8 +191,49 @@ async function withBusy(button, task) {
     buttons.forEach((item) => {
       item.disabled = false;
     });
+    setActionAvailability();
     button.focus();
   }
+}
+
+function setActionAvailability() {
+  demoActionButtons.forEach((button) => {
+    button.disabled = state.setupRequired;
+  });
+}
+
+function sessionHeaders() {
+  return { "x-reux-demo-session": state.sessionId };
+}
+
+function loadSessionId() {
+  const key = "reuxDemoSessionId";
+  const existing = window.localStorage.getItem(key);
+  if (existing) return existing;
+  const bytes = new Uint8Array(8);
+  window.crypto.getRandomValues(bytes);
+  const generated = [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  window.localStorage.setItem(key, generated);
+  return generated;
+}
+
+function summarizeAction(label, result) {
+  if (label === "processOutbox") {
+    return `Processed ${result.processed} outbox event(s); ${result.failed} failed.`;
+  }
+  const events = result.outboxEvents?.length ?? 0;
+  const hooks = result.afterCommit?.length ?? 0;
+  return `${label} ran in ${result.attempts} attempt(s), wrote ${events} outbox event(s), and returned ${hooks} after-commit hook(s).`;
+}
+
+function friendlyError(message) {
+  if (/transition guard failed/.test(message)) {
+    return "That state change is not valid from the current status. Reset your session or try another action.";
+  }
+  if (/relation ".+" does not exist/.test(message)) {
+    return "This session is not initialized yet. Use Reset My Session to create demo data.";
+  }
+  return message;
 }
 
 function notify(message, error = false) {

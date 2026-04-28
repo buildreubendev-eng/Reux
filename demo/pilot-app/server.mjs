@@ -26,14 +26,13 @@ const setupToken = process.env.REUX_DEMO_SETUP_TOKEN ?? "";
 const host = process.env.HOST ?? "0.0.0.0";
 const publicHost = host === "0.0.0.0" ? "127.0.0.1" : host;
 const port = Number.parseInt(process.env.PORT ?? process.env.REUX_DEMO_PORT ?? "4173", 10);
-const quotedDemoSchema = quoteIdentifier(demoSchema);
-const outboxTable = `${quotedDemoSchema}._dl_outbox`;
-process.env[config.databaseUrlEnv] = databaseUrlWithSearchPath(
-  process.env[config.databaseUrlEnv],
-  demoSchema,
-  config.databaseUrlEnv,
-);
-const db = createPostgresDatabase(config);
+const sessionMode = process.env.REUX_DEMO_SESSION_MODE ?? "isolated";
+const baseDatabaseUrl = process.env[config.databaseUrlEnv];
+const databases = new Map();
+
+if (!baseDatabaseUrl) {
+  throw new Error(`database URL environment variable ${config.databaseUrlEnv} is not set`);
+}
 
 const demoIds = {
   account: "00000000-0000-4000-8000-000000000001",
@@ -58,7 +57,7 @@ server.listen(port, host, () => {
 for (const signal of ["SIGINT", "SIGTERM"]) {
   process.once(signal, async () => {
     server.close();
-    await db.end?.();
+    await Promise.all([...databases.values()].map(({ db }) => db.end?.()));
     process.exit(0);
   });
 }
@@ -68,45 +67,47 @@ async function route(request, response) {
   const url = new URL(request.url ?? "/", `http://127.0.0.1:${port}`);
 
   if (url.pathname === "/api/health") {
-    sendJson(response, 200, { ok: true, module: "pilot", databaseUrlEnv: config.databaseUrlEnv, schema: demoSchema });
+    sendJson(response, 200, { ok: true, module: "pilot", databaseUrlEnv: config.databaseUrlEnv, schema: demoSchema, sessionMode });
     return;
   }
 
   if (url.pathname === "/api/setup" && method === "POST") {
     const body = await readJson(request);
     assertSetupAllowed(request, body);
-    await ensureDemoSchema();
-    await applyMigrations(db, config.migrationsDir);
-    const reset = await resetSeed(db, source, seed);
-    sendJson(response, 200, { ok: true, reset });
+    sendJson(response, 200, await setupDemo(request));
+    return;
+  }
+
+  if (url.pathname === "/api/session/reset" && method === "POST") {
+    sendJson(response, 200, await setupDemo(request));
     return;
   }
 
   if (url.pathname === "/api/dashboard" && method === "GET") {
-    sendJson(response, 200, await dashboard());
+    sendJson(response, 200, await dashboard(request));
     return;
   }
 
   if (url.pathname === "/api/actions/capture-payment" && method === "POST") {
     const body = await readJson(request);
-    sendJson(response, 200, await runTransaction("capturePayment", [body.orderId ?? demoIds.order, body.amount ?? "250"]));
+    sendJson(response, 200, await runTransaction(request, "capturePayment", [body.orderId ?? demoIds.order, body.amount ?? "250"]));
     return;
   }
 
   if (url.pathname === "/api/actions/mark-paid" && method === "POST") {
     const body = await readJson(request);
-    sendJson(response, 200, await runTransaction("markOrderPaid", [body.orderId ?? demoIds.order]));
+    sendJson(response, 200, await runTransaction(request, "markOrderPaid", [body.orderId ?? demoIds.order]));
     return;
   }
 
   if (url.pathname === "/api/actions/credit-account" && method === "POST") {
     const body = await readJson(request);
-    sendJson(response, 200, await runTransaction("creditAccount", [body.accountId ?? demoIds.account, body.amount ?? "25"]));
+    sendJson(response, 200, await runTransaction(request, "creditAccount", [body.accountId ?? demoIds.account, body.amount ?? "25"]));
     return;
   }
 
   if (url.pathname === "/api/actions/process-outbox" && method === "POST") {
-    sendJson(response, 200, await processDemoOutbox());
+    sendJson(response, 200, await processDemoOutbox(request));
     return;
   }
 
@@ -118,27 +119,37 @@ async function route(request, response) {
   serveStatic(url.pathname, response);
 }
 
-async function dashboard() {
-  await ensureDemoSchema();
-  await ensureDemoOutboxTable();
-  const status = await migrationStatus(db, config.migrationsDir);
+async function setupDemo(request) {
+  const context = requestContext(request);
+  await ensureDemoSchema(context);
+  await applyMigrations(context.db, config.migrationsDir);
+  await ensureDemoOutboxTable(context);
+  const reset = await resetSeed(context.db, source, seed);
+  return { ok: true, reset, session: sessionInfo(context) };
+}
+
+async function dashboard(request) {
+  const context = requestContext(request);
+  await ensureDemoSchema(context);
+  await ensureDemoOutboxTable(context);
+  const status = await migrationStatus(context.db, config.migrationsDir);
   let queryResults;
   try {
     queryResults = await Promise.all([
-      runSqlQuery(db, emitQuerySql(source, "accountOrders"), ["0"]),
-      runSqlQuery(db, emitQuerySql(source, "accountBalances"), ["0"]),
-      runSqlQuery(db, emitQuerySql(source, "orderPayments"), ["0"]),
-      runSqlQuery(db, emitQuerySql(source, "accountOrderSummary"), ["0"]),
-      runSqlQuery(db, emitQuerySql(source, "openOrders"), ["0"]),
+      runSqlQuery(context.db, emitQuerySql(source, "accountOrders"), ["0"]),
+      runSqlQuery(context.db, emitQuerySql(source, "accountBalances"), ["0"]),
+      runSqlQuery(context.db, emitQuerySql(source, "orderPayments"), ["0"]),
+      runSqlQuery(context.db, emitQuerySql(source, "accountOrderSummary"), ["0"]),
+      runSqlQuery(context.db, emitQuerySql(source, "openOrders"), ["0"]),
       runSqlQuery(
-      db,
-      `SELECT id, event_type, payload, status, attempts, created_at FROM ${outboxTable} ORDER BY created_at DESC LIMIT 10;`,
+      context.db,
+      `SELECT id, event_type, payload, status, attempts, created_at FROM ${context.outboxTable} ORDER BY created_at DESC LIMIT 10;`,
       [],
     ),
     ]);
   } catch (error) {
     if (isMissingRelation(error)) {
-      return emptyDashboard(status);
+      return emptyDashboard(status, context);
     }
     throw error;
   }
@@ -146,6 +157,7 @@ async function dashboard() {
 
   return {
     ids: demoIds,
+    session: sessionInfo(context),
     setupRequired: false,
     migrations: {
       applied: status.applied.length,
@@ -160,9 +172,10 @@ async function dashboard() {
   };
 }
 
-function emptyDashboard(status) {
+function emptyDashboard(status, context) {
   return {
     ids: demoIds,
+    session: sessionInfo(context),
     setupRequired: true,
     migrations: {
       applied: status.applied.length,
@@ -177,11 +190,12 @@ function emptyDashboard(status) {
   };
 }
 
-async function runTransaction(name, params) {
-  await ensureDemoSchema();
-  await ensureDemoOutboxTable();
+async function runTransaction(request, name, params) {
+  const context = requestContext(request);
+  await ensureDemoSchema(context);
+  await ensureDemoOutboxTable(context);
   const result = await runTransactionSql(
-    db,
+    context.db,
     emitTransactionSql(source, name),
     params,
     transactionRetryAttempts(source, name),
@@ -195,14 +209,16 @@ async function runTransaction(name, params) {
     outboxEvents: result.outboxEvents,
     afterCommit: result.afterCommit,
     bindings: result.bindings,
+    session: sessionInfo(context),
   };
 }
 
-async function processDemoOutbox() {
-  await ensureDemoSchema();
-  await ensureDemoOutboxTable();
+async function processDemoOutbox(request) {
+  const context = requestContext(request);
+  await ensureDemoSchema(context);
+  await ensureDemoOutboxTable(context);
   const result = await processOutboxEvents(
-    db,
+    context.db,
     {
       AccountCredited: () => undefined,
       OrderPaid: () => undefined,
@@ -218,6 +234,7 @@ async function processDemoOutbox() {
       processed: result.processed,
       failed: result.failed,
     },
+    session: sessionInfo(context),
   };
 }
 
@@ -288,13 +305,65 @@ function isMissingRelation(error) {
   return error?.code === "42P01" || /relation ".+" does not exist/.test(error?.message ?? "");
 }
 
-async function ensureDemoSchema() {
-  await db.query(`CREATE SCHEMA IF NOT EXISTS ${quotedDemoSchema};`);
+function requestContext(request) {
+  const sessionId = sessionMode === "shared" ? "" : sessionIdFromRequest(request);
+  const schema = sessionId ? `${demoSchema}_s_${sessionId}` : demoSchema;
+  return schemaContext(schema, sessionId);
 }
 
-async function ensureDemoOutboxTable() {
-  await db.query(`
-CREATE TABLE IF NOT EXISTS ${outboxTable} (
+function sessionIdFromRequest(request) {
+  const rawHeader = request.headers["x-reux-demo-session"];
+  const raw = Array.isArray(rawHeader) ? rawHeader[0] : rawHeader;
+  if (!raw) return "";
+  const normalized = raw.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 16);
+  if (normalized.length < 8) return "";
+  return normalized;
+}
+
+function schemaContext(schema, sessionId) {
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(schema)) {
+    throw new Error("demo schema must be a PostgreSQL identifier");
+  }
+  let context = databases.get(schema);
+  if (context) return context;
+
+  const quotedSchema = quoteIdentifier(schema);
+  const previousUrl = process.env[config.databaseUrlEnv];
+  process.env[config.databaseUrlEnv] = databaseUrlWithSearchPath(baseDatabaseUrl, schema, config.databaseUrlEnv);
+  try {
+    context = {
+      db: createPostgresDatabase(config),
+      schema,
+      quotedSchema,
+      outboxTable: `${quotedSchema}._dl_outbox`,
+      sessionId,
+    };
+    databases.set(schema, context);
+    return context;
+  } finally {
+    if (previousUrl === undefined) {
+      delete process.env[config.databaseUrlEnv];
+    } else {
+      process.env[config.databaseUrlEnv] = previousUrl;
+    }
+  }
+}
+
+function sessionInfo(context) {
+  return {
+    id: context.sessionId,
+    isolated: Boolean(context.sessionId),
+    schema: context.schema,
+  };
+}
+
+async function ensureDemoSchema(context) {
+  await context.db.query(`CREATE SCHEMA IF NOT EXISTS ${context.quotedSchema};`);
+}
+
+async function ensureDemoOutboxTable(context) {
+  await context.db.query(`
+CREATE TABLE IF NOT EXISTS ${context.outboxTable} (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   event_type text NOT NULL,
   payload jsonb NOT NULL,
@@ -306,11 +375,11 @@ CREATE TABLE IF NOT EXISTS ${outboxTable} (
   processed_at timestamptz NULL
 );
 `);
-  await db.query(`ALTER TABLE ${outboxTable} ADD COLUMN IF NOT EXISTS attempts integer NOT NULL DEFAULT 0;`);
-  await db.query(`ALTER TABLE ${outboxTable} ADD COLUMN IF NOT EXISTS last_error text NULL;`);
-  await db.query(`ALTER TABLE ${outboxTable} ADD COLUMN IF NOT EXISTS claimed_at timestamptz NULL;`);
-  await db.query(`CREATE INDEX IF NOT EXISTS _dl_outbox_status_created_at_idx ON ${outboxTable} (status, created_at);`);
-  await db.query(`CREATE INDEX IF NOT EXISTS _dl_outbox_status_claimed_at_idx ON ${outboxTable} (status, claimed_at);`);
+  await context.db.query(`ALTER TABLE ${context.outboxTable} ADD COLUMN IF NOT EXISTS attempts integer NOT NULL DEFAULT 0;`);
+  await context.db.query(`ALTER TABLE ${context.outboxTable} ADD COLUMN IF NOT EXISTS last_error text NULL;`);
+  await context.db.query(`ALTER TABLE ${context.outboxTable} ADD COLUMN IF NOT EXISTS claimed_at timestamptz NULL;`);
+  await context.db.query(`CREATE INDEX IF NOT EXISTS _dl_outbox_status_created_at_idx ON ${context.outboxTable} (status, created_at);`);
+  await context.db.query(`CREATE INDEX IF NOT EXISTS _dl_outbox_status_claimed_at_idx ON ${context.outboxTable} (status, claimed_at);`);
 }
 
 function databaseUrlWithSearchPath(value, schema, envName) {
