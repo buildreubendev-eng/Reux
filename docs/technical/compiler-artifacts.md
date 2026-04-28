@@ -112,7 +112,7 @@ node dist/cli.js project-tx-sql rewardUser
 
 The SQL lowering currently supports `load <entity-param> for update`, simple field assignment/update statements over loaded state, `insert Entity { ... }`, bound inserts such as `let row = insert Entity { ... }`, and `enqueue Event { ... }`. `save` and `after commit` appear as comments because mutation statements are explicit and external hooks are not executed by the runtime yet.
 
-Bound inserts emit a marker comment before the generated `INSERT ... RETURNING *`; the runtime uses that marker to return the inserted row under `bindings.<name>`.
+Bound inserts emit a marker comment before the generated `INSERT ... RETURNING *`; the runtime uses that marker to return the inserted row under `bindings.<name>`. Later transaction statements can reference the bound row by name, or by field path such as `payment.id`; SQL lowering emits a binding placeholder and runtime execution turns it into a PostgreSQL parameter from the returned row.
 
 When a loaded entity assignment targets an enum field with transition rules, SQL lowering adds a transition guard for literal targets and enum-typed parameter targets. Literal guards include the allowed previous enum values in the `WHERE` clause. Parameterized guards check the current value and requested next value against the declared transition table. Both forms emit a marker comment that the runtime uses to fail the transaction if the update touches no rows.
 

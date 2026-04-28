@@ -780,6 +780,41 @@ transaction function recordReward(amount: Decimal) writes LedgerEntry retry 3 {
     expect(sql).toContain("INSERT INTO ledger_entries (amount) VALUES ($1) RETURNING *;");
   });
 
+  it("lowers bound insert references in later transaction statements", () => {
+    const sql = emitTransactionSql(
+      `module commerce
+
+entity Account {
+  id: Id<Account> primary generated
+}
+
+entity Payment {
+  id: Id<Payment> primary generated
+  account: Account required
+  amount: Decimal
+}
+
+entity PaymentAudit {
+  id: Id<PaymentAudit> primary generated
+  payment: Payment required
+  amount: Decimal
+}
+
+transaction function capture(accountRef: Account, amount: Decimal) writes Payment, PaymentAudit retry 3 {
+  let payment = insert Payment { account: accountRef, amount: amount }
+  insert PaymentAudit { payment: payment, amount: amount }
+  enqueue PaymentCaptured { payment: payment.id, amount: amount }
+}
+`,
+      "capture",
+    );
+
+    expect(sql).toContain("-- bind result: payment");
+    expect(sql).toContain("INSERT INTO payments (account_id, amount) VALUES ($1, $2) RETURNING *;");
+    expect(sql).toContain("INSERT INTO payment_audits (payment_id, amount) VALUES (:payment.id, $2) RETURNING *;");
+    expect(sql).toContain("jsonb_build_object('payment', :payment.id::uuid, 'amount', $2::numeric)");
+  });
+
   it("lowers bare enum literals in transaction inserts", () => {
     const sql = emitTransactionSql(
       `module commerce

@@ -217,6 +217,7 @@ export function transactionIrToPostgres(schema: SchemaIr, transaction: Transacti
 
 class TransactionLowering {
   private readonly loaded = new Map<string, { entity: EntityIr; sourceParameter: number }>();
+  private readonly boundInserts = new Map<string, EntityIr>();
 
   constructor(
     private readonly schema: SchemaIr,
@@ -329,6 +330,8 @@ class TransactionLowering {
     if (parameter) return `$${this.transaction.parameters.indexOf(parameter) + 1}`;
     const loaded = this.loaded.get(expression);
     if (loaded) return `$${loaded.sourceParameter}`;
+    const bound = this.boundReferenceSql(expression);
+    if (bound) return bound;
     if (/^-?\d+(\.\d+)?$/.test(expression)) return expression;
     if ((expression.startsWith("\"") && expression.endsWith("\"")) || (expression.startsWith("'") && expression.endsWith("'"))) {
       return quoteLiteral(expression.slice(1, -1));
@@ -357,6 +360,9 @@ class TransactionLowering {
       columns.length === 0
         ? `INSERT INTO ${entity.tableName} DEFAULT VALUES RETURNING *;`
         : `INSERT INTO ${entity.tableName} (${columns.join(", ")}) VALUES (${values.join(", ")}) RETURNING *;`;
+    if (target) {
+      this.boundInserts.set(target, entity);
+    }
     return target ? `-- bind result: ${target}\n${sql}` : sql;
   }
 
@@ -374,7 +380,31 @@ class TransactionLowering {
     }
     const loaded = this.loaded.get(expression);
     if (loaded) return `$${loaded.sourceParameter}::uuid`;
+    const bound = this.boundReferenceSql(expression);
+    if (bound) return `${bound}::${this.boundReferenceType(expression) ?? "text"}`;
     return this.expressionSql(expression);
+  }
+
+  private boundReferenceSql(expression: string): string | undefined {
+    const match = expression.match(/^([A-Za-z_][A-Za-z0-9_]*)(?:\.([A-Za-z_][A-Za-z0-9_]*))?$/);
+    if (!match) return undefined;
+    const entity = this.boundInserts.get(match[1]);
+    if (!entity) return undefined;
+    const fieldName = match[2] ?? "id";
+    const field = entity.fields.find((candidate) => candidate.name === fieldName);
+    if (!field) {
+      throw new DlError(`cannot lower bound insert reference ${expression}; ${entity.name} has no field ${fieldName}`);
+    }
+    return `:${match[1]}.${field.columnName}`;
+  }
+
+  private boundReferenceType(expression: string): string | undefined {
+    const match = expression.match(/^([A-Za-z_][A-Za-z0-9_]*)(?:\.([A-Za-z_][A-Za-z0-9_]*))?$/);
+    if (!match) return undefined;
+    const entity = this.boundInserts.get(match[1]);
+    if (!entity) return undefined;
+    const field = entity.fields.find((candidate) => candidate.name === (match[2] ?? "id"));
+    return field ? sqlType(this.schema, field) : undefined;
   }
 
   private parameter(name: string): { name: string; type: string; position: number } {

@@ -712,6 +712,30 @@ COMMIT;`,
     expect(result.returnedRows).toEqual([{ id: "row-1" }]);
   });
 
+  it("uses bound transaction result fields in later statements", async () => {
+    const db = new FakeDb();
+
+    const result = await runTransactionSql(
+      db,
+      `BEGIN;
+-- bind result: user
+INSERT INTO users (name) VALUES ($1) RETURNING *;
+INSERT INTO orders (user_id, total) VALUES (:user.id, $2) RETURNING *;
+COMMIT;`,
+      ["Ada", "100"],
+      1,
+    );
+
+    expect(result.bindings).toEqual({
+      user: { id: "row-1" },
+    });
+    expect(result.returnedRows).toEqual([{ id: "row-1" }, { id: "row-2" }]);
+    expect(db.queryCalls).toContainEqual({
+      sql: "INSERT INTO orders (user_id, total) VALUES ($1, $2) RETURNING *;",
+      params: ["row-1", "100"],
+    });
+  });
+
   it("parses and processes after commit hooks", async () => {
     expect(parseAfterCommitHook('sendRewardEmail(userRef, "welcome, ada")')).toEqual({
       call: 'sendRewardEmail(userRef, "welcome, ada")',

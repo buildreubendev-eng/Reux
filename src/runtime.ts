@@ -453,7 +453,8 @@ export async function runTransactionSql(
       const outboxEvents: unknown[] = [];
       const bindings: Record<string, unknown> = {};
       for (const statement of plan.statements) {
-        const result = await db.query(statement.sql, params.slice(0, statement.paramCount));
+        const prepared = prepareTransactionStatement(statement.sql, params.slice(0, statement.paramCount), bindings);
+        const result = await db.query(prepared.sql, prepared.params);
         if (statement.transitionGuard && result.rowCount === 0) {
           throw new Error(`transition guard failed for ${statement.transitionGuard}`);
         }
@@ -561,6 +562,52 @@ function maxPlaceholder(sql: string): number {
     max = Math.max(max, Number.parseInt(match[1], 10));
   }
   return max;
+}
+
+function prepareTransactionStatement(
+  sql: string,
+  params: unknown[],
+  bindings: Record<string, unknown>,
+): { sql: string; params: unknown[] } {
+  if (!/:[A-Za-z_][A-Za-z0-9_]*\.[A-Za-z_][A-Za-z0-9_]*/.test(sql)) {
+    return { sql, params };
+  }
+
+  const preparedParams: unknown[] = [];
+  const parameterIndexes = new Map<number, number>();
+  const bindingIndexes = new Map<string, number>();
+  const preparedSql = sql.replace(/\$(\d+)|:([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)/g, (token, rawPosition, binding, field) => {
+    if (rawPosition !== undefined) {
+      const position = Number.parseInt(rawPosition, 10);
+      const existing = parameterIndexes.get(position);
+      if (existing) return `$${existing}`;
+      preparedParams.push(params[position - 1]);
+      parameterIndexes.set(position, preparedParams.length);
+      return `$${preparedParams.length}`;
+    }
+
+    const key = `${binding}.${field}`;
+    const existing = bindingIndexes.get(key);
+    if (existing) return `$${existing}`;
+    preparedParams.push(boundFieldValue(bindings, binding, field));
+    bindingIndexes.set(key, preparedParams.length);
+    return `$${preparedParams.length}`;
+  });
+  return { sql: preparedSql, params: preparedParams };
+}
+
+function boundFieldValue(bindings: Record<string, unknown>, binding: string, field: string): unknown {
+  const value = bindings[binding];
+  if (value === undefined) {
+    throw new Error(`unknown transaction result binding ${binding}`);
+  }
+  if (Array.isArray(value)) {
+    throw new Error(`transaction result binding ${binding} returned multiple rows`);
+  }
+  if (typeof value !== "object" || value === null || !(field in value)) {
+    throw new Error(`transaction result binding ${binding} has no field ${field}`);
+  }
+  return (value as Record<string, unknown>)[field];
 }
 
 function splitHookArgs(source: string): string[] {
