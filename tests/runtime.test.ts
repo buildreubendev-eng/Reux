@@ -209,6 +209,22 @@ enum OrderStatus {
     ).toThrow("data value Refunded is not a valid OrderStatus for Order.status");
   });
 
+  it("rejects invalid currency codes for data insert statements", () => {
+    expect(() =>
+      emitInsertStatement(
+        `module commerce
+
+entity Product {
+  id: Id<Product> primary generated
+  currency: CurrencyCode
+}
+`,
+        "Product",
+        { currency: "usd" },
+      ),
+    ).toThrow("data value usd is not a valid CurrencyCode for Product.currency");
+  });
+
   it("parses JSON objects for data insert", () => {
     expect(parseJsonObject('{"name":"Ada"}')).toEqual({ name: "Ada" });
     expect(() => parseJsonObject("[1,2]")).toThrow("expected a JSON object");
@@ -370,6 +386,27 @@ enum OrderStatus {
         ),
       ),
     ).toThrow("seed value Refunded is not a valid OrderStatus for Order.status");
+  });
+
+  it("rejects invalid currency codes during seed checks", () => {
+    const source = `module commerce
+
+entity Product {
+  id: Id<Product> primary generated
+  currency: CurrencyCode
+}
+`;
+
+    expect(() =>
+      checkSeed(
+        source,
+        parseSeedSpec(
+          JSON.stringify({
+            records: [{ entity: "Product", data: { currency: "US" } }],
+          }),
+        ),
+      ),
+    ).toThrow("seed value US is not a valid CurrencyCode for Product.currency");
   });
 
   it("runs upsert seed records with explicit conflict fields", async () => {

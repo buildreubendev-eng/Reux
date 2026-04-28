@@ -364,6 +364,18 @@ entity Invoice {
     expect(sql).toContain("discount numeric(6, 2) NULL");
   });
 
+  it("emits CurrencyCode fields with PostgreSQL validation", () => {
+    const sql = emitPostgresSchema(`module billing
+
+entity Invoice {
+  id: Id<Invoice> primary generated
+  currency: CurrencyCode default USD
+}
+`);
+
+    expect(sql).toContain("currency char(3) NOT NULL DEFAULT 'USD' CHECK (\"currency\" ~ '^[A-Z]{3}$')");
+  });
+
   it("emits a TypeScript API client for queries and transactions", () => {
     const api = emitApiClient(readFileSync("examples/pilot_reux.dl", "utf8"), { runtimeImport: "@reux/runtime" });
 
@@ -1060,6 +1072,22 @@ entity Invoice {
 query invoices(): Query<{ amount: Decimal<2,4> }> =
   from invoice in Invoice
   select { amount: invoice.amount }
+`),
+    ).toThrow(DlAggregateError);
+  });
+
+  it("rejects invalid CurrencyCode literals in transaction writes", () => {
+    expect(() =>
+      compileSource(`module commerce
+
+entity Product {
+  id: Id<Product> primary generated
+  currency: CurrencyCode
+}
+
+transaction function createProduct() writes Product retry 3 {
+  insert Product { currency: US }
+}
 `),
     ).toThrow(DlAggregateError);
   });

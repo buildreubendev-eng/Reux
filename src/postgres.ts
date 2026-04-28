@@ -67,6 +67,7 @@ export function columnSql(schema: SchemaIr, field: FieldIr): string {
   if (field.generated && field.type.name === "Id") parts.push("DEFAULT gen_random_uuid()");
   if (field.defaultValue && !field.generated) parts.push(`DEFAULT ${defaultSql(field.defaultValue)}`);
   if (field.unique) parts.push("UNIQUE");
+  if (field.type.name === "CurrencyCode") parts.push(`CHECK (${quoteIdentifier(field.columnName)} ~ '^[A-Z]{3}$')`);
   if (field.check) parts.push(`CHECK (${checkSql(field)})`);
   return parts.join(" ");
 }
@@ -84,6 +85,8 @@ export function sqlType(schema: SchemaIr, field: FieldIr): string {
       return "double precision";
     case "Decimal":
       return decimalSqlType(field.type.raw);
+    case "CurrencyCode":
+      return "char(3)";
     case "String":
       return "text";
     case "Bytes":
@@ -436,6 +439,8 @@ class TransactionLowering {
         return "bigint";
       case "Float":
         return "double precision";
+      case "CurrencyCode":
+        return "char(3)";
       case "String":
         return "text";
       case "Date":

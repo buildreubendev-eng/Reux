@@ -1,6 +1,6 @@
 {
   "format": "dl.schema.v1",
-  "schemaHash": "f9ce676cb872dc8ca05f4327a9672aa6317450a1aa931887491b5c3a7586c1d3",
+  "schemaHash": "1989149c4d3da66850bb57366521ddfaa8824b09c22ce6e2c4e8cbdaee94c9f9",
   "schema": {
     "moduleName": "pilot",
     "enums": [
@@ -201,6 +201,21 @@
             }
           },
           {
+            "name": "currency",
+            "columnName": "currency",
+            "type": {
+              "name": "CurrencyCode",
+              "optional": false,
+              "args": [],
+              "raw": "CurrencyCode"
+            },
+            "nullable": false,
+            "primary": false,
+            "generated": false,
+            "unique": false,
+            "defaultValue": "USD"
+          },
+          {
             "name": "id",
             "columnName": "id",
             "type": {
@@ -340,6 +355,21 @@
             "unique": false
           },
           {
+            "name": "currency",
+            "columnName": "currency",
+            "type": {
+              "name": "CurrencyCode",
+              "optional": false,
+              "args": [],
+              "raw": "CurrencyCode"
+            },
+            "nullable": false,
+            "primary": false,
+            "generated": false,
+            "unique": false,
+            "defaultValue": "USD"
+          },
+          {
             "name": "id",
             "columnName": "id",
             "type": {
@@ -411,6 +441,21 @@
         "name": "Product",
         "tableName": "products",
         "fields": [
+          {
+            "name": "currency",
+            "columnName": "currency",
+            "type": {
+              "name": "CurrencyCode",
+              "optional": false,
+              "args": [],
+              "raw": "CurrencyCode"
+            },
+            "nullable": false,
+            "primary": false,
+            "generated": false,
+            "unique": false,
+            "defaultValue": "USD"
+          },
           {
             "name": "id",
             "columnName": "id",

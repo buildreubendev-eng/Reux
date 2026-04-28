@@ -337,6 +337,7 @@ function httpParamKind(schema: SchemaIr, type: TypeRef): "boolean" | "integer" |
   if (type.name === "Float") return "number";
   if (type.name === "Int64" || type.name === "Decimal") return "numeric";
   if (type.name === "Json") return "json";
+  if (type.name === "CurrencyCode") return "string";
   if (type.name === "Id" || schema.entities.some((entity) => entity.name === type.name)) return "string";
   if (schema.enums.some((enumeration) => enumeration.name === type.name)) return "string";
   return "string";
@@ -529,6 +530,7 @@ function sourceTypeNameToTs(typeName: string, idArg?: string, schema?: SchemaIr)
     case "Decimal":
       return "number | string";
     case "String":
+    case "CurrencyCode":
     case "Bytes":
     case "Duration":
     case "Uuid":

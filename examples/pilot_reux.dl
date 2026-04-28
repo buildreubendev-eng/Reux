@@ -15,12 +15,14 @@ entity Product {
   sku: String unique
   name: String
   price: Decimal<12,2> check price >= 0
+  currency: CurrencyCode default USD
 }
 
 entity Order {
   id: Id<Order> primary generated
   account: Account required
   total: Decimal<12,2> check total >= 0
+  currency: CurrencyCode default USD
   status: OrderStatus default Pending
   placedAt: Instant default now()
 
@@ -31,6 +33,7 @@ entity Payment {
   id: Id<Payment> primary generated
   order: Order required
   amount: Decimal<12,2> check amount >= 0
+  currency: CurrencyCode default USD
   status: PaymentStatus default Authorized
   capturedAt: Instant?
 

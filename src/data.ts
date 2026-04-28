@@ -23,12 +23,17 @@ export function insertEntityStatement(schema: SchemaIr, entityName: string, reco
   const enumsByName = new Map(schema.enums.map((enumeration) => [enumeration.name, enumeration]));
   for (const field of entity.fields) {
     if (!Object.prototype.hasOwnProperty.call(record, field.name)) continue;
-    const enumeration = enumsByName.get(field.type.name);
-    if (!enumeration) continue;
     const value = record[field.name];
     if (value === null || value === undefined) continue;
-    if (typeof value !== "string" || !enumeration.values.includes(value)) {
-      throw new DlError(`data value ${String(value)} is not a valid ${enumeration.name} for ${entity.name}.${field.name}`);
+    const enumeration = enumsByName.get(field.type.name);
+    if (enumeration) {
+      if (typeof value !== "string" || !enumeration.values.includes(value)) {
+        throw new DlError(`data value ${String(value)} is not a valid ${enumeration.name} for ${entity.name}.${field.name}`);
+      }
+      continue;
+    }
+    if (field.type.name === "CurrencyCode" && !isCurrencyCode(value)) {
+      throw new DlError(`data value ${String(value)} is not a valid CurrencyCode for ${entity.name}.${field.name}`);
     }
   }
 
@@ -53,6 +58,10 @@ export function insertEntityStatement(schema: SchemaIr, entityName: string, reco
     sql: `INSERT INTO ${entity.tableName} (${columns.join(", ")}) VALUES (${placeholders.join(", ")}) RETURNING *;`,
     params,
   };
+}
+
+function isCurrencyCode(value: unknown): value is string {
+  return typeof value === "string" && /^[A-Z]{3}$/.test(value);
 }
 
 export function parseJsonObject(source: string): Record<string, unknown> {

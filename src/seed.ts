@@ -299,15 +299,23 @@ function validateSeedRecord(
 function validateEnumFieldValues(entity: EntityIr, record: Record<string, unknown>, enums: EnumIr[]): void {
   const enumsByName = new Map(enums.map((enumeration) => [enumeration.name, enumeration]));
   for (const field of entity.fields) {
-    const enumeration = enumsByName.get(field.type.name);
-    if (!enumeration || !Object.prototype.hasOwnProperty.call(record, field.name)) continue;
+    if (!Object.prototype.hasOwnProperty.call(record, field.name)) continue;
     const value = record[field.name];
     if (value === null || value === undefined) continue;
+    const enumeration = enumsByName.get(field.type.name);
+    if (field.type.name === "CurrencyCode" && typeof value === "string" && !value.startsWith("$") && !isCurrencyCode(value)) {
+      throw new Error(`seed value ${value} is not a valid CurrencyCode for ${entity.name}.${field.name}`);
+    }
+    if (!enumeration) continue;
     if (typeof value !== "string" || value.startsWith("$")) continue;
     if (!enumeration.values.includes(value)) {
       throw new Error(`seed value ${value} is not a valid ${enumeration.name} for ${entity.name}.${field.name}`);
     }
   }
+}
+
+function isCurrencyCode(value: string): boolean {
+  return /^[A-Z]{3}$/.test(value);
 }
 
 function insertColumns(entity: EntityIr, record: Record<string, unknown>): { columns: string[]; placeholders: string[]; params: unknown[] } {

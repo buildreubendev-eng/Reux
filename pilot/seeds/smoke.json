@@ -21,7 +21,8 @@
         "id": "00000000-0000-4000-8000-000000000002",
         "sku": "PILOT-STARTER-KIT",
         "name": "Pilot Starter Kit",
-        "price": "250"
+        "price": "250",
+        "currency": "USD"
       }
     },
     {
@@ -32,6 +33,7 @@
         "id": "00000000-0000-4000-8000-000000000003",
         "account": "$ada",
         "total": "250",
+        "currency": "USD",
         "status": "Pending"
       }
     },
@@ -43,6 +45,7 @@
         "id": "00000000-0000-4000-8000-000000000004",
         "order": "$adaOrder",
         "amount": "125",
+        "currency": "USD",
         "status": "Authorized"
       }
     }

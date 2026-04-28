@@ -35,7 +35,7 @@ Non-optional fields are required by default and lower to `NOT NULL`. Optional fi
 Scalar types:
 
 ```text
-Bool Int Int64 Float Decimal String Bytes Date Time Instant Duration Uuid Json
+Bool Int Int64 Float Decimal CurrencyCode String Bytes Date Time Instant Duration Uuid Json
 ```
 
 `Decimal` may also declare explicit PostgreSQL numeric precision and scale:
@@ -45,6 +45,12 @@ balance: Decimal<12,2> default 0
 ```
 
 Bounded decimals lower to `numeric(precision, scale)`. The compiler validates that precision and scale are integer literals, that precision is between 1 and 1000, and that scale is between 0 and precision.
+
+`CurrencyCode` represents a three-letter ISO-style uppercase currency code. It lowers to PostgreSQL `char(3)` with a generated `CHECK` constraint requiring `^[A-Z]{3}$`:
+
+```dl
+currency: CurrencyCode default USD
+```
 
 Entity IDs:
 

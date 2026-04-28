@@ -169,8 +169,8 @@ Use `project-seed-dry-run pilot/seeds/smoke.json` to run the fixture against Pos
 
 Use `project-seed-delete pilot/seeds/smoke.json` to remove the fixture rows. Deletes run in reverse seed order, so `Payment` is removed before `Order`, and `Order` before `Account`. Use `project-seed-reset pilot/seeds/smoke.json` to truncate the fixture tables and reapply the fixture in one local development transaction.
 
-The pilot models money-like values as `Decimal<12,2>`, which compiles to PostgreSQL `numeric(12, 2)` and remains `number | string` in generated TypeScript APIs.
+The pilot models money-like values as `Decimal<12,2>`, which compiles to PostgreSQL `numeric(12, 2)` and remains `number | string` in generated TypeScript APIs. Product prices, order totals, and payment amounts also carry a `CurrencyCode` field with a default `USD` value; Reux lowers this to `char(3)` with an uppercase three-letter check constraint.
 
 Likely next language/runtime needs exposed by this pilot:
 
-- multi-currency conventions and currency-code validation;
+- cross-entity currency consistency checks for multi-currency orders and payments;

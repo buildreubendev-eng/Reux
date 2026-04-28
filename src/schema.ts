@@ -61,6 +61,7 @@ const scalarTypes = new Set([
   "Int64",
   "Float",
   "Decimal",
+  "CurrencyCode",
   "String",
   "Bytes",
   "Date",
@@ -631,6 +632,7 @@ function validateInsertFields(
       continue;
     }
     validateEnumLiteral(transactionName, `${entity.name}.${field.name}`, field, objectField.value, enumByName, diagnostics);
+    validateCurrencyCodeLiteral(transactionName, `${entity.name}.${field.name}`, field, objectField.value, diagnostics);
     validateEnumParameterAssignment(
       transactionName,
       `${entity.name}.${field.name}`,
@@ -663,6 +665,7 @@ function validateEnumMutation(
     return;
   }
   validateEnumLiteral(transactionName, `${entityName}.${field.name}`, field, match[3], enumByName, diagnostics);
+  validateCurrencyCodeLiteral(transactionName, `${entityName}.${field.name}`, field, match[3], diagnostics);
   validateEnumParameterAssignment(transactionName, `${entityName}.${field.name}`, field, match[3], enumByName, parameterTypes, diagnostics);
   validateTransitionAssignment(transactionName, entityName, field.name, match[3], transitions, diagnostics);
 }
@@ -713,6 +716,21 @@ function validateEnumLiteral(
   if (!literal) return;
   if (!enumeration.values.includes(literal)) {
     diagnostics.push(`transaction ${transactionName} assigns invalid ${enumeration.name} value ${literal} to ${target}`);
+  }
+}
+
+function validateCurrencyCodeLiteral(
+  transactionName: string,
+  target: string,
+  field: FieldDeclaration,
+  expression: string,
+  diagnostics: string[],
+): void {
+  if (field.type.name !== "CurrencyCode") return;
+  const literal = sourceLiteralValue(expression);
+  if (!literal) return;
+  if (!/^[A-Z]{3}$/.test(literal)) {
+    diagnostics.push(`transaction ${transactionName} assigns invalid CurrencyCode value ${literal} to ${target}`);
   }
 }
 
