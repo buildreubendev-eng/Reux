@@ -91,6 +91,17 @@ export function emitTypeScriptApiServer(source: string, options: TypeScriptApiSe
     "  },",
     "} as const;",
     "",
+    "type ExpectedParam = { name: string; optional: boolean };",
+    "",
+    "const routeParams = {",
+    "  queries: {",
+    ...queries.map((query) => routeParamSpec(query.name, query.parameters)),
+    "  },",
+    "  transactions: {",
+    ...transactions.map((transaction) => routeParamSpec(transaction.name, transaction.parameters)),
+    "  },",
+    "} as const;",
+    "",
     "const server = createServer(async (request, response) => {",
     "  try {",
     "    await handleRequest(request, response);",
@@ -125,6 +136,12 @@ export function emitTypeScriptApiServer(source: string, options: TypeScriptApiSe
     "",
     "  const body = await readJson(request, response);",
     "  if (body === undefined) return;",
+    "  const expectedParams = routeParams[group][name as keyof (typeof routeParams)[typeof group]] as readonly ExpectedParam[];",
+    "  const validationError = validateBody(body, expectedParams);",
+    "  if (validationError) {",
+    "    sendJson(response, 400, { error: validationError });",
+    "    return;",
+    "  }",
     "  const handler = routes[group][name as keyof (typeof routes)[typeof group]] as (body: unknown) => Promise<unknown>;",
     "  sendJson(response, 200, await handler(body));",
     "}",
@@ -163,6 +180,22 @@ export function emitTypeScriptApiServer(source: string, options: TypeScriptApiSe
     "    });",
     "    request.on(\"error\", reject);",
     "  });",
+    "}",
+    "",
+    "function validateBody(body: unknown, expectedParams: readonly ExpectedParam[]): string | undefined {",
+    "  if (!isPlainObject(body)) return \"request body must be a JSON object\";",
+    "  const expectedNames = new Set(expectedParams.map((parameter) => parameter.name));",
+    "  for (const key of Object.keys(body)) {",
+    "    if (!expectedNames.has(key)) return `unknown parameter: ${key}`;",
+    "  }",
+    "  for (const parameter of expectedParams) {",
+    "    if (!parameter.optional && !(parameter.name in body)) return `missing required parameter: ${parameter.name}`;",
+    "  }",
+    "  return undefined;",
+    "}",
+    "",
+    "function isPlainObject(value: unknown): value is Record<string, unknown> {",
+    "  return typeof value === \"object\" && value !== null && !Array.isArray(value);",
     "}",
     "",
     "function sendJson(response: ServerResponse, statusCode: number, body: unknown): void {",
@@ -266,6 +299,10 @@ function transactionTypes(transactions: TransactionDeclaration[], schema?: Schem
 function routeHandler(group: "queries" | "transactions", name: string, parameterType: string | undefined): string {
   const body = parameterType ? `body as ${parameterType}` : "";
   return `    ${name}: async (body: unknown) => api.${group}.${name}(${body}),`;
+}
+
+function routeParamSpec(name: string, parameters: { name: string; type: TypeRef }[]): string {
+  return `    ${name}: [${parameters.map((parameter) => `{ name: ${quoteString(parameter.name)}, optional: ${parameter.type.optional ? "true" : "false"} }`).join(", ")}],`;
 }
 
 function enqueueEvents(body: string): string[] {

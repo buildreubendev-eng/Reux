@@ -371,6 +371,10 @@ transition Order.status {
     expect(server).toContain("import { createPilotApi, type OpenOrdersParams, type AccountBalancesParams");
     expect(server).toContain('openOrders: async (body: unknown) => api.queries.openOrders(body as OpenOrdersParams),');
     expect(server).toContain('capturePayment: async (body: unknown) => api.transactions.capturePayment(body as CapturePaymentParams),');
+    expect(server).toContain('openOrders: [{ name: "minTotal", optional: false }],');
+    expect(server).toContain("const validationError = validateBody(body, expectedParams);");
+    expect(server).toContain("return `missing required parameter: ${parameter.name}`;");
+    expect(server).toContain("return `unknown parameter: ${key}`;");
     expect(server).toContain('sendJson(response, 200, { ok: true, module: "pilot" });');
     expect(server).toContain('const maxBodyBytes = Number.parseInt(process.env.REUX_HTTP_MAX_BODY_BYTES ?? "1048576", 10);');
     expect(server).toContain('sendJson(response, 413, { error: "request body too large" });');
