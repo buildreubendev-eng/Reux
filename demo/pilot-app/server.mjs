@@ -20,6 +20,12 @@ const seedPath = join(rootDir, "pilot", "seeds", "smoke.json");
 const config = loadConfig(rootDir, "pilot/dl.json");
 const source = readFileSync(sourcePath, "utf8");
 const seed = parseSeedSpec(`@${seedPath}`);
+const demoSchema = process.env.REUX_DEMO_SCHEMA ?? "reux_demo";
+process.env[config.databaseUrlEnv] = databaseUrlWithSearchPath(
+  process.env[config.databaseUrlEnv],
+  demoSchema,
+  config.databaseUrlEnv,
+);
 const db = createPostgresDatabase(config);
 const port = Number.parseInt(process.env.REUX_DEMO_PORT ?? "4173", 10);
 
@@ -55,11 +61,12 @@ async function route(request, response) {
   const url = new URL(request.url ?? "/", `http://127.0.0.1:${port}`);
 
   if (url.pathname === "/api/health") {
-    sendJson(response, 200, { ok: true, module: "pilot", databaseUrlEnv: config.databaseUrlEnv });
+    sendJson(response, 200, { ok: true, module: "pilot", databaseUrlEnv: config.databaseUrlEnv, schema: demoSchema });
     return;
   }
 
   if (url.pathname === "/api/setup" && method === "POST") {
+    await ensureDemoSchema();
     await applyMigrations(db, config.migrationsDir);
     const reset = await resetSeed(db, source, seed);
     sendJson(response, 200, { ok: true, reset });
@@ -98,6 +105,7 @@ async function route(request, response) {
 }
 
 async function dashboard() {
+  await ensureDemoSchema();
   const status = await migrationStatus(db, config.migrationsDir);
   const [orders, balances, payments, summary, openOrders, outbox] = await Promise.all([
     runSqlQuery(db, emitQuerySql(source, "accountOrders"), ["0"]),
@@ -128,6 +136,7 @@ async function dashboard() {
 }
 
 async function runTransaction(name, params) {
+  await ensureDemoSchema();
   const result = await runTransactionSql(
     db,
     emitTransactionSql(source, name),
@@ -196,4 +205,27 @@ function contentType(pathname) {
     default:
       return "application/octet-stream";
   }
+}
+
+async function ensureDemoSchema() {
+  await db.query(`CREATE SCHEMA IF NOT EXISTS ${quoteIdentifier(demoSchema)};`);
+}
+
+function databaseUrlWithSearchPath(value, schema, envName) {
+  if (!value) {
+    throw new Error(`database URL environment variable ${envName} is not set`);
+  }
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(schema)) {
+    throw new Error("REUX_DEMO_SCHEMA must be a PostgreSQL identifier");
+  }
+
+  const url = new URL(value);
+  const options = url.searchParams.get("options");
+  const searchPath = `-c search_path=${schema},public`;
+  url.searchParams.set("options", options ? `${options} ${searchPath}` : searchPath);
+  return url.toString();
+}
+
+function quoteIdentifier(value) {
+  return `"${value.replace(/"/g, '""')}"`;
 }

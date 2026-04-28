@@ -75,7 +75,7 @@ $env:DATABASE_URL='postgres://datalang:datalang@localhost:5432/datalang_dev'
 npm run demo:pilot-app
 ```
 
-The app intentionally stays dependency-light: the server uses Node's built-in HTTP module, static browser files, and the built Reux runtime in `dist/`.
+The app keeps its objects in a dedicated PostgreSQL schema named `reux_demo` by default, so it can coexist with the root commerce fixtures in the same database. Override that with `REUX_DEMO_SCHEMA` when you need a different local schema. The app intentionally stays dependency-light: the server uses Node's built-in HTTP module, static browser files, and the built Reux runtime in `dist/`.
 
 ## Transition Rules
 
