@@ -486,6 +486,7 @@ function validateTransactionEffects(
       .filter((parameter) => entityNames.has(parameter.type.name))
       .map((parameter) => [parameter.name, parameter.type.name]),
   );
+  const parameterTypes = new Map(transaction.parameters.map((parameter) => [parameter.name, parameter.type.raw]));
   const loadedEntities = new Map<string, string>();
   const boundEntities = new Map<string, string>();
 
@@ -503,7 +504,7 @@ function validateTransactionEffects(
       if (entity && !writes.has(entity)) {
         diagnostics.push(`transaction ${transaction.name} mutates ${entity} through ${mutation[1]} but does not declare writes ${entity}`);
       }
-      validateEnumMutation(transaction.name, line, entity, entities, enumByName, transitions, diagnostics);
+      validateEnumMutation(transaction.name, line, entity, entities, enumByName, parameterTypes, transitions, diagnostics);
       continue;
     }
 
@@ -592,6 +593,7 @@ function validateEnumMutation(
   entityName: string | undefined,
   entities: EntityDeclaration[],
   enumByName: Map<string, Extract<Program["declarations"][number], { kind: "enum" }>>,
+  parameterTypes: Map<string, string>,
   transitions: TransitionDeclaration[],
   diagnostics: string[],
 ): void {
@@ -605,7 +607,23 @@ function validateEnumMutation(
     return;
   }
   validateEnumLiteral(transactionName, `${entityName}.${field.name}`, field, match[3], enumByName, diagnostics);
+  validateEnumParameterAssignment(transactionName, `${entityName}.${field.name}`, field, match[3], enumByName, parameterTypes, diagnostics);
   validateTransitionAssignment(transactionName, entityName, field.name, match[3], transitions, diagnostics);
+}
+
+function validateEnumParameterAssignment(
+  transactionName: string,
+  target: string,
+  field: FieldDeclaration,
+  expression: string,
+  enumByName: Map<string, Extract<Program["declarations"][number], { kind: "enum" }>>,
+  parameterTypes: Map<string, string>,
+  diagnostics: string[],
+): void {
+  if (!enumByName.has(field.type.name)) return;
+  const parameterType = parameterTypes.get(expression.trim());
+  if (!parameterType || parameterType === field.type.raw) return;
+  diagnostics.push(`transaction ${transactionName} assigns ${target} from incompatible parameter type ${parameterType}`);
 }
 
 function validateTransitionAssignment(

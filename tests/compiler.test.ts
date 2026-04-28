@@ -726,6 +726,38 @@ transaction function moveOrder(orderRef: Order, nextStatus: OrderStatus) writes 
     );
   });
 
+  it("rejects enum assignments from incompatible transaction parameters", () => {
+    expect(() =>
+      compileSource(`module commerce
+
+entity Order {
+  id: Id<Order> primary generated
+  status: OrderStatus
+}
+
+enum OrderStatus {
+  Pending
+  Paid
+}
+
+enum PaymentStatus {
+  Authorized
+  Captured
+}
+
+transition Order.status {
+  Pending -> Paid
+}
+
+transaction function moveOrder(orderRef: Order, nextStatus: PaymentStatus) writes Order {
+  let order = load orderRef for update
+  order.status = nextStatus
+  save order
+}
+`),
+    ).toThrow(DlAggregateError);
+  });
+
   it("lowers transaction inserts to PostgreSQL insert statements", () => {
     const sql = emitTransactionSql(
       `module banking
