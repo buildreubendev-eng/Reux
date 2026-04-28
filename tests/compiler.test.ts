@@ -192,6 +192,38 @@ query topUsers(maxRows: Int): Query<{ email: String, balance: Decimal }> =
     expect(sql).toContain("LIMIT $1;");
   });
 
+  it("rejects non-integer query limits", () => {
+    expect(() =>
+      compileSource(`module broken
+
+entity User {
+  id: Id<User> primary generated
+  email: String
+}
+
+query users(limitText: String): Query<User> =
+  from user in User
+  limit limitText
+  select user
+`),
+    ).toThrow(DlAggregateError);
+
+    expect(() =>
+      compileSource(`module broken
+
+entity User {
+  id: Id<User> primary generated
+  email: String
+}
+
+query users(): Query<User> =
+  from user in User
+  limit user.email
+  select user
+`),
+    ).toThrow(DlAggregateError);
+  });
+
   it("lowers the Reux pilot conflict transaction to PostgreSQL", () => {
     const sql = emitTransactionSql(readFileSync("examples/pilot_reux.dl", "utf8"), "creditAccount");
 

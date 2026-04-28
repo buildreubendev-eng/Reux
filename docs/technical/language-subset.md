@@ -98,7 +98,7 @@ query highValueUsers(min: Decimal): Query<{ email: String?, balance: Decimal }> 
 
 Query parameters lower to positional PostgreSQL parameters such as `$1`. Entity field references are validated against Schema IR before SQL is emitted.
 
-`limit` accepts a numeric literal or a query parameter:
+`limit` accepts a positive integer literal or a non-optional `Int`/`Int64` query parameter:
 
 ```dl
 query topUsers(maxRows: Int): Query<{ email: String, balance: Decimal }> =

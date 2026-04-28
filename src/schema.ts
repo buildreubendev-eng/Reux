@@ -303,12 +303,29 @@ function validateQuery(query: QueryDeclaration, entities: EntityDeclaration[], d
     }
   }
 
+  validateQueryLimit(query, diagnostics);
   validateQueryResultType(query, aliases, diagnostics);
 }
 
 function projectionExpressions(projection: QueryProjection): string[] {
   if (projection.kind === "entity") return [projection.expression];
   return projection.fields.map((field) => field.expression);
+}
+
+function validateQueryLimit(query: QueryDeclaration, diagnostics: string[]): void {
+  if (!query.body.limit) return;
+  const limit = query.body.limit.trim();
+  if (/^[1-9][0-9]*$/.test(limit)) return;
+
+  const parameter = query.parameters.find((candidate) => candidate.name === limit);
+  if (parameter) {
+    if (parameter.type.optional || (parameter.type.name !== "Int" && parameter.type.name !== "Int64")) {
+      diagnostics.push(`query ${query.name} limit parameter ${parameter.name} must be Int or Int64`);
+    }
+    return;
+  }
+
+  diagnostics.push(`query ${query.name} limit must be a positive integer literal or Int parameter`);
 }
 
 function validateQueryResultType(query: QueryDeclaration, aliases: Map<string, EntityDeclaration>, diagnostics: string[]): void {
