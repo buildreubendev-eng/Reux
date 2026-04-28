@@ -25,6 +25,7 @@ npm run verify:package
 npm run demo:pilot
 $env:DATABASE_URL='postgres://datalang:datalang@127.0.0.1:5432/datalang_dev'
 npm run demo:pilot-app
+npm run demo:pilot-worker
 node dist/cli.js version
 npm run verify:postgres
 npm run build

@@ -65,6 +65,7 @@ Status: implemented for the MVP workflow.
 - `api-ts` and `project-api-ts` emit generated TypeScript API clients for supported queries and transaction functions.
 - `api-server-ts` and `project-api-server-ts` emit a minimal HTTP server scaffold around the generated client.
 - `worker-ts` and `project-worker-ts` emit an outbox worker scaffold with placeholders for declared event and after-commit handlers.
+- `scripts/demo-pilot-worker.mjs` provides a runnable pilot outbox worker process for hosted and local demo environments.
 - Seed tooling supports schema-only checks with enum validation, PostgreSQL dry runs, rerunnable upserts, deletes, and transactional resets.
 - Seed reset supports delete-and-rerun and truncate-and-rerun modes for local fixture refreshes.
 - `npm run demo:pilot` provides a no-database pilot demo that emits compiler, migration, query, transaction, API-client, and seed-check artifacts.
@@ -87,5 +88,6 @@ Phase 6 coverage:
 - Transaction-local generated ID behavior represented by `capturePayment`, which binds the inserted payment and includes `payment.id` in the durable outbox payload.
 - Transaction conflict behavior represented by `creditAccount`, which lowers to `SELECT ... FOR UPDATE`, a balance update, retry metadata, and an outbox event.
 - Production-like verification path documented for WSL PostgreSQL through `npm run test:postgres`.
+- Browser demo app deployed as a Node/PostgreSQL service path with public-safe admin setup controls, schema-isolated outbox state, and a worker-style outbox processing loop.
 
-The remaining gaps are beyond Phase 6 rather than blockers for it: richer query composition, deeper aggregation semantics, broader fixture/seed workflows, turning the embeddable outbox loop into a packaged service process, and eventually switching `dl.json` from commerce fixtures to the pilot source when the project is ready to treat the pilot as the active application.
+The remaining gaps are beyond Phase 6 rather than blockers for it: richer query composition, deeper aggregation semantics, broader fixture/seed workflows, more production-grade worker supervision/dead-letter behavior, and eventually switching `dl.json` from commerce fixtures to the pilot source when the project is ready to treat the pilot as the active application.
