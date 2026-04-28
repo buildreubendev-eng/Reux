@@ -91,14 +91,14 @@ export function emitTypeScriptApiServer(source: string, options: TypeScriptApiSe
     "  },",
     "} as const;",
     "",
-    "type ExpectedParam = { name: string; optional: boolean };",
+    "type ExpectedParam = { name: string; optional: boolean; kind: \"boolean\" | \"integer\" | \"number\" | \"numeric\" | \"string\" | \"json\" };",
     "",
     "const routeParams = {",
     "  queries: {",
-    ...queries.map((query) => routeParamSpec(query.name, query.parameters)),
+    ...queries.map((query) => routeParamSpec(schema, query.name, query.parameters)),
     "  },",
     "  transactions: {",
-    ...transactions.map((transaction) => routeParamSpec(transaction.name, transaction.parameters)),
+    ...transactions.map((transaction) => routeParamSpec(schema, transaction.name, transaction.parameters)),
     "  },",
     "} as const;",
     "",
@@ -190,8 +190,35 @@ export function emitTypeScriptApiServer(source: string, options: TypeScriptApiSe
     "  }",
     "  for (const parameter of expectedParams) {",
     "    if (!parameter.optional && !(parameter.name in body)) return `missing required parameter: ${parameter.name}`;",
+    "    if (!(parameter.name in body)) continue;",
+    "    const value = body[parameter.name];",
+    "    if (parameter.optional && value === null) continue;",
+    "    const typeError = validateParamValue(value, parameter);",
+    "    if (typeError) return typeError;",
     "  }",
     "  return undefined;",
+    "}",
+    "",
+    "function validateParamValue(value: unknown, parameter: ExpectedParam): string | undefined {",
+    "  const valid =",
+    "    parameter.kind === \"boolean\" ? typeof value === \"boolean\" :",
+    "    parameter.kind === \"integer\" ? typeof value === \"number\" && Number.isInteger(value) :",
+    "    parameter.kind === \"number\" ? typeof value === \"number\" && Number.isFinite(value) :",
+    "    parameter.kind === \"numeric\" ? (typeof value === \"number\" && Number.isFinite(value)) || (typeof value === \"string\" && value.trim().length > 0) :",
+    "    parameter.kind === \"string\" ? typeof value === \"string\" :",
+    "    true;",
+    "  return valid ? undefined : `${parameter.name} must be ${paramKindDescription(parameter.kind)}`;",
+    "}",
+    "",
+    "function paramKindDescription(kind: ExpectedParam[\"kind\"]): string {",
+    "  switch (kind) {",
+    "    case \"boolean\": return \"a boolean\";",
+    "    case \"integer\": return \"an integer number\";",
+    "    case \"number\": return \"a finite number\";",
+    "    case \"numeric\": return \"a finite number or numeric string\";",
+    "    case \"string\": return \"a string\";",
+    "    case \"json\": return \"valid JSON\";",
+    "  }",
     "}",
     "",
     "function isPlainObject(value: unknown): value is Record<string, unknown> {",
@@ -204,7 +231,6 @@ export function emitTypeScriptApiServer(source: string, options: TypeScriptApiSe
     "}",
   ];
 
-  void schema;
   return `${lines.join("\n")}\n`;
 }
 
@@ -301,8 +327,19 @@ function routeHandler(group: "queries" | "transactions", name: string, parameter
   return `    ${name}: async (body: unknown) => api.${group}.${name}(${body}),`;
 }
 
-function routeParamSpec(name: string, parameters: { name: string; type: TypeRef }[]): string {
-  return `    ${name}: [${parameters.map((parameter) => `{ name: ${quoteString(parameter.name)}, optional: ${parameter.type.optional ? "true" : "false"} }`).join(", ")}],`;
+function routeParamSpec(schema: SchemaIr, name: string, parameters: { name: string; type: TypeRef }[]): string {
+  return `    ${name}: [${parameters.map((parameter) => `{ name: ${quoteString(parameter.name)}, optional: ${parameter.type.optional ? "true" : "false"}, kind: ${quoteString(httpParamKind(schema, parameter.type))} }`).join(", ")}],`;
+}
+
+function httpParamKind(schema: SchemaIr, type: TypeRef): "boolean" | "integer" | "number" | "numeric" | "string" | "json" {
+  if (type.name === "Bool") return "boolean";
+  if (type.name === "Int") return "integer";
+  if (type.name === "Float") return "number";
+  if (type.name === "Int64" || type.name === "Decimal") return "numeric";
+  if (type.name === "Json") return "json";
+  if (type.name === "Id" || schema.entities.some((entity) => entity.name === type.name)) return "string";
+  if (schema.enums.some((enumeration) => enumeration.name === type.name)) return "string";
+  return "string";
 }
 
 function enqueueEvents(body: string): string[] {
