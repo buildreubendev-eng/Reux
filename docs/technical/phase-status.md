@@ -63,6 +63,7 @@ Status: implemented for the MVP workflow.
 - `project-doctor` checks source discovery, manifest freshness, migration directory visibility, and database URL environment status.
 - `api-ts` and `project-api-ts` emit generated TypeScript API clients for supported queries and transaction functions.
 - `api-server-ts` and `project-api-server-ts` emit a minimal HTTP server scaffold around the generated client.
+- `worker-ts` and `project-worker-ts` emit an outbox worker scaffold with placeholders for declared event and after-commit handlers.
 - Seed tooling supports schema-only checks with enum validation, PostgreSQL dry runs, rerunnable upserts, deletes, and transactional resets.
 - `npm run demo:pilot` provides a no-database pilot demo that emits compiler, migration, query, transaction, API-client, and seed-check artifacts.
 - GitHub Actions runs the core verification script, built CLI smoke checks, and PostgreSQL-backed runtime verification on pushes and pull requests to `main`.

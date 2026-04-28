@@ -13,7 +13,7 @@ Current scope:
 - Emit schema manifests, Query IR, initial migrations, and conservative migration plans.
 - Parse transaction functions, emit Transaction IR, lower a supported subset to PostgreSQL, and run it against PostgreSQL.
 - Persist durable transaction events through a small `_dl_outbox` runtime table.
-- Emit generated TypeScript API clients and minimal HTTP server scaffolds for supported queries and transaction functions.
+- Emit generated TypeScript API clients, minimal HTTP server scaffolds, and worker scaffolds for supported queries and transaction functions.
 
 Run:
 
@@ -44,6 +44,7 @@ node dist/cli.js project-query-run highValueUsers '[1000]'
 node dist/cli.js project-explain highValueUsers
 node dist/cli.js project-api-ts ./runtime.js
 node dist/cli.js project-api-server-ts ./api.js ./config.js ./runtime.js
+node dist/cli.js project-worker-ts ./config.js ./runtime.js
 node dist/cli.js project-tx-sql rewardUser
 node dist/cli.js project-tx-run rewardUser '["user-id","100"]'
 node dist/cli.js project-data-insert-sql User '{"name":"Ada","email":"ada@example.com","balance":"1200"}'
@@ -69,6 +70,7 @@ node dist/cli.js query-sql examples/pilot_reux.dl accountOrders
 node dist/cli.js query-sql examples/pilot_reux.dl accountOrderSummary
 node dist/cli.js api-ts examples/pilot_reux.dl ./runtime.js
 node dist/cli.js api-server-ts examples/pilot_reux.dl ./api.js ./config.js ./runtime.js
+node dist/cli.js worker-ts examples/pilot_reux.dl ./config.js ./runtime.js
 node dist/cli.js tx-sql examples/pilot_reux.dl creditAccount
 $env:REUX_CONFIG='pilot/dl.json'
 node dist/cli.js project-doctor

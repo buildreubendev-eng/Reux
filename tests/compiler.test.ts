@@ -15,6 +15,7 @@ import {
   emitTransitionRules,
   emitTransactionIr,
   emitTransactionSql,
+  emitWorker,
   explainQuery,
 } from "../src/compiler.js";
 import { DlAggregateError } from "../src/errors.js";
@@ -310,6 +311,23 @@ transition Order.status {
     expect(server).toContain('capturePayment: async (body: unknown) => api.transactions.capturePayment(body as CapturePaymentParams),');
     expect(server).toContain('sendJson(response, 200, { ok: true, module: "pilot" });');
     expect(server).toContain("Reux API server listening on http://127.0.0.1:${port}");
+  });
+
+  it("emits a TypeScript worker scaffold for outbox events", () => {
+    const worker = emitWorker(readFileSync("examples/pilot_reux.dl", "utf8"), {
+      configImport: "./pilot-config.js",
+      runtimeImport: "./pilot-runtime.js",
+    });
+
+    expect(worker).toContain('import { loadConfig } from "./pilot-config.js";');
+    expect(worker).toContain("createPostgresDatabase, runOutboxWorker, type AfterCommitHandler, type OutboxHandler");
+    expect(worker).toContain("PaymentCaptured: async (event) => {");
+    expect(worker).toContain("OrderPaid: async (event) => {");
+    expect(worker).toContain("AccountCredited: async (event) => {");
+    expect(worker).toContain("sendReceipt: async (hook) => {");
+    expect(worker).toContain("notifyOrderPaid: async (hook) => {");
+    expect(worker).toContain("REUX_WORKER_INTERVAL_MS");
+    expect(worker).toContain("await runOutboxWorker(db, outboxHandlers");
   });
 
   it("rejects invalid transition rules", () => {

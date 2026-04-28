@@ -56,6 +56,7 @@ node dist/cli.js project-transition-rules Order.status
 node dist/cli.js project-query-sql accountOrderSummary
 node dist/cli.js project-api-ts ./runtime.js
 node dist/cli.js project-api-server-ts ./api.js ./config.js ./runtime.js
+node dist/cli.js project-worker-ts ./config.js ./runtime.js
 Remove-Item Env:REUX_CONFIG
 ```
 
@@ -87,6 +88,7 @@ node dist/cli.js project-tx-sql rewardUser
 node dist/cli.js project-tx-run rewardUser '["user-id","100"]'
 node dist/cli.js project-api-ts ./runtime.js
 node dist/cli.js project-api-server-ts ./api.js ./config.js ./runtime.js
+node dist/cli.js project-worker-ts ./config.js ./runtime.js
 node dist/cli.js project-data-insert-sql User '{"name":"Ada","email":"ada@example.com","balance":"1200"}'
 node dist/cli.js project-data-insert User '{"name":"Ada","email":"ada@example.com","balance":"1200"}'
 node dist/cli.js project-seed-check pilot/seeds/smoke.json
@@ -131,6 +133,15 @@ node dist/cli.js project-api-server-ts ./api.js ./config.js ./runtime.js
 ```
 
 The scaffold uses Node's built-in HTTP server. It exposes `GET /health`, `POST /queries/<queryName>`, and `POST /transactions/<transactionName>`. The three optional import arguments are the generated API client module, config module, and runtime module.
+
+Emit a generated worker scaffold:
+
+```bash
+node dist/cli.js worker-ts examples/pilot_reux.dl ./config.js ./runtime.js
+node dist/cli.js project-worker-ts ./config.js ./runtime.js
+```
+
+The worker scaffold creates placeholder handlers for each `enqueue` event and each `after commit` hook declared in transaction functions. Fill in those handlers before running the worker in production.
 
 Write a schema manifest to the configured `schemaManifest` path:
 

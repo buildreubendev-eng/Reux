@@ -18,6 +18,7 @@ for (const step of [
   ["Emit the guarded order transaction SQL", ["project-tx-sql", "markOrderPaid"]],
   ["Emit the generated TypeScript API client", ["project-api-ts", "./runtime.js"]],
   ["Emit the generated HTTP server scaffold", ["project-api-server-ts", "./api.js", "./config.js", "./runtime.js"]],
+  ["Emit the generated worker scaffold", ["project-worker-ts", "./config.js", "./runtime.js"]],
   ["Validate the pilot seed fixture", ["project-seed-check", "pilot/seeds/smoke.json"]],
 ]) {
   run(step[0], process.execPath, [...cli, ...step[1]], env);

@@ -18,8 +18,10 @@ import { DlAggregateError } from "./errors.js";
 import {
   emitTypeScriptApi,
   emitTypeScriptApiServer,
+  emitTypeScriptWorker,
   TypeScriptApiOptions,
   TypeScriptApiServerOptions,
+  TypeScriptWorkerOptions,
 } from "./api-generator.js";
 
 export interface CompileResult {
@@ -127,6 +129,10 @@ export function emitApiClient(source: string, options?: TypeScriptApiOptions): s
 
 export function emitApiServer(source: string, options?: TypeScriptApiServerOptions): string {
   return emitTypeScriptApiServer(source, options);
+}
+
+export function emitWorker(source: string, options?: TypeScriptWorkerOptions): string {
+  return emitTypeScriptWorker(source, options);
 }
 
 export function transactionRetryAttempts(source: string, transactionName: string): number {

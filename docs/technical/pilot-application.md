@@ -25,6 +25,7 @@ The pilot intentionally stays inside the currently supported compiler/runtime su
 - embeddable outbox worker loop.
 - generated TypeScript API clients for pilot queries and transaction functions.
 - generated HTTP server scaffolds for exposing pilot queries and transaction functions.
+- generated worker scaffolds for pilot outbox events and after-commit hooks.
 
 Useful commands:
 
@@ -43,6 +44,7 @@ node dist/cli.js project-query-sql orderPayments
 node dist/cli.js project-query-sql accountOrderSummary
 node dist/cli.js project-api-ts ./runtime.js
 node dist/cli.js project-api-server-ts ./api.js ./config.js ./runtime.js
+node dist/cli.js project-worker-ts ./config.js ./runtime.js
 node dist/cli.js project-tx-sql capturePayment
 node dist/cli.js project-tx-sql markOrderPaid
 node dist/cli.js project-tx-sql creditAccount
