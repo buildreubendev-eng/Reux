@@ -172,5 +172,4 @@ Use `project-seed-delete pilot/seeds/smoke.json` to remove the fixture rows. Del
 Likely next language/runtime needs exposed by this pilot:
 
 - typed money/currency conventions;
-- broader transition checking for parameterized assignments;
 - richer seed reset modes for truncating or refreshing whole fixture groups.
