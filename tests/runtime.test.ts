@@ -837,6 +837,29 @@ COMMIT;`,
     });
   });
 
+  it("uses loaded transaction result fields in later statements", async () => {
+    const db = new FakeDb();
+
+    const result = await runTransactionSql(
+      db,
+      `BEGIN;
+-- bind result: order
+SELECT * FROM orders WHERE id = $1 FOR UPDATE;
+INSERT INTO payments (order_id, currency) VALUES ($1, :order.currency) RETURNING *;
+COMMIT;`,
+      ["order-1"],
+      1,
+    );
+
+    expect(result.bindings).toEqual({
+      order: { id: "order-1", currency: "USD" },
+    });
+    expect(db.queryCalls).toContainEqual({
+      sql: "INSERT INTO payments (order_id, currency) VALUES ($1, $2) RETURNING *;",
+      params: ["order-1", "USD"],
+    });
+  });
+
   it("parses and processes after commit hooks", async () => {
     expect(parseAfterCommitHook('sendRewardEmail(userRef, "welcome, ada")')).toEqual({
       call: 'sendRewardEmail(userRef, "welcome, ada")',
@@ -1325,6 +1348,18 @@ class FakeDb implements Database {
     if (sql.startsWith("INSERT INTO users") || sql.startsWith("INSERT INTO orders")) {
       return {
         rows: [{ id: `row-${this.queryCalls.filter((call) => call.sql.startsWith("INSERT INTO users") || call.sql.startsWith("INSERT INTO orders")).length}` }] as T[],
+        rowCount: 1,
+      };
+    }
+    if (sql.startsWith("SELECT * FROM orders WHERE id = $1 FOR UPDATE")) {
+      return {
+        rows: [{ id: params?.[0], currency: "USD" }] as T[],
+        rowCount: 1,
+      };
+    }
+    if (sql.startsWith("INSERT INTO payments")) {
+      return {
+        rows: [{ id: `payment-${this.queryCalls.filter((call) => call.sql.startsWith("INSERT INTO payments")).length}` }] as T[],
         rowCount: 1,
       };
     }

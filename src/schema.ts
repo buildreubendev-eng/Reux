@@ -541,7 +541,10 @@ function validateTransactionEffects(
     const load = line.match(/^let\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*load\s+([A-Za-z_][A-Za-z0-9_]*)\s+for\s+update$/);
     if (load) {
       const entity = parameterEntities.get(load[2]);
-      if (entity) loadedEntities.set(load[1], entity);
+      if (entity) {
+        loadedEntities.set(load[1], entity);
+        boundEntities.set(load[1], entity);
+      }
       continue;
     }
 

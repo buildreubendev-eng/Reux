@@ -264,7 +264,8 @@ class TransactionLowering {
       entity,
       sourceParameter: parameter.position,
     });
-    return `SELECT * FROM ${entity.tableName} WHERE id = $${parameter.position} FOR UPDATE;`;
+    this.boundInserts.set(target, entity);
+    return `-- bind result: ${target}\nSELECT * FROM ${entity.tableName} WHERE id = $${parameter.position} FOR UPDATE;`;
   }
 
   private lowerMutation(target: string, operator: "+=" | "-=" | "=", expression: string): string {

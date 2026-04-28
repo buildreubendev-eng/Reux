@@ -98,8 +98,9 @@ The generated `UPDATE` only succeeds when the current status is a declared prede
 
 ```dl
 transaction function capturePayment(orderRef: Order, amount: Decimal<12,2>) writes Payment retry 3 {
-  let payment = insert Payment { order: orderRef, amount: amount, status: Captured }
-  enqueue PaymentCaptured { payment: payment.id, order: orderRef, amount: amount }
+  let order = load orderRef for update
+  let payment = insert Payment { order: orderRef, amount: amount, currency: order.currency, status: Captured }
+  enqueue PaymentCaptured { payment: payment.id, order: orderRef, amount: amount, currency: order.currency }
   after commit sendReceipt(orderRef)
 }
 ```
@@ -169,7 +170,7 @@ Use `project-seed-dry-run pilot/seeds/smoke.json` to run the fixture against Pos
 
 Use `project-seed-delete pilot/seeds/smoke.json` to remove the fixture rows. Deletes run in reverse seed order, so `Payment` is removed before `Order`, and `Order` before `Account`. Use `project-seed-reset pilot/seeds/smoke.json` to truncate the fixture tables and reapply the fixture in one local development transaction.
 
-The pilot models money-like values as `Decimal<12,2>`, which compiles to PostgreSQL `numeric(12, 2)` and remains `number | string` in generated TypeScript APIs. Product prices, order totals, and payment amounts also carry a `CurrencyCode` field with a default `USD` value; Reux lowers this to `char(3)` with an uppercase three-letter check constraint.
+The pilot models money-like values as `Decimal<12,2>`, which compiles to PostgreSQL `numeric(12, 2)` and remains `number | string` in generated TypeScript APIs. Product prices, order totals, and payment amounts also carry a `CurrencyCode` field with a default `USD` value; Reux lowers this to `char(3)` with an uppercase three-letter check constraint. `capturePayment` locks the order and copies `order.currency` into the inserted payment and outbox payload, so captured payments inherit the order currency.
 
 Likely next language/runtime needs exposed by this pilot:
 

@@ -228,6 +228,7 @@ query users(): Query<User> =
   it("lowers the Reux pilot conflict transaction to PostgreSQL", () => {
     const sql = emitTransactionSql(readFileSync("examples/pilot_reux.dl", "utf8"), "creditAccount");
 
+    expect(sql).toContain("-- bind result: account");
     expect(sql).toContain("SELECT * FROM accounts WHERE id = $1 FOR UPDATE;");
     expect(sql).toContain("UPDATE accounts SET balance = balance + $2 WHERE id = $1;");
     expect(sql).toContain("INSERT INTO _dl_outbox (event_type, payload) VALUES ('AccountCredited', jsonb_build_object('account', $1::uuid, 'amount', $2::numeric(12, 2))) RETURNING id, event_type, payload;");
@@ -237,8 +238,10 @@ query users(): Query<User> =
   it("uses the bound Reux pilot payment row in outbox payloads", () => {
     const sql = emitTransactionSql(readFileSync("examples/pilot_reux.dl", "utf8"), "capturePayment");
 
+    expect(sql).toContain("-- bind result: order");
+    expect(sql).toContain("INSERT INTO payments (order_id, amount, currency, status) VALUES ($1, $2, :order.currency, 'Captured') RETURNING *;");
     expect(sql).toContain("-- bind result: payment");
-    expect(sql).toContain("jsonb_build_object('payment', :payment.id::uuid, 'order', $1::uuid, 'amount', $2::numeric(12, 2))");
+    expect(sql).toContain("jsonb_build_object('payment', :payment.id::uuid, 'order', $1::uuid, 'amount', $2::numeric(12, 2), 'currency', :order.currency::char(3))");
   });
 
   it("lowers the Reux pilot order transition transaction to guarded PostgreSQL", () => {
@@ -882,6 +885,35 @@ transaction function capture(accountRef: Account, amount: Decimal) writes Paymen
     expect(sql).toContain("INSERT INTO payments (account_id, amount) VALUES ($1, $2) RETURNING *;");
     expect(sql).toContain("INSERT INTO payment_audits (payment_id, amount) VALUES (:payment.id, $2) RETURNING *;");
     expect(sql).toContain("jsonb_build_object('payment', :payment.id::uuid, 'amount', $2::numeric)");
+  });
+
+  it("lowers loaded field references in later transaction statements", () => {
+    const sql = emitTransactionSql(
+      `module commerce
+
+entity Order {
+  id: Id<Order> primary generated
+  currency: CurrencyCode default USD
+}
+
+entity Payment {
+  id: Id<Payment> primary generated
+  order: Order required
+  currency: CurrencyCode
+}
+
+transaction function capture(orderRef: Order) writes Payment retry 3 {
+  let order = load orderRef for update
+  insert Payment { order: orderRef, currency: order.currency }
+  enqueue PaymentCaptured { order: orderRef, currency: order.currency }
+}
+`,
+      "capture",
+    );
+
+    expect(sql).toContain("-- bind result: order");
+    expect(sql).toContain("INSERT INTO payments (order_id, currency) VALUES ($1, :order.currency) RETURNING *;");
+    expect(sql).toContain("jsonb_build_object('order', $1::uuid, 'currency', :order.currency::char(3))");
   });
 
   it("rejects unknown bound insert fields", () => {
