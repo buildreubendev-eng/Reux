@@ -99,7 +99,7 @@ query accountOrderSummary(minTotal: Decimal): Query<{ email: String, orderCount:
 
 transaction function capturePayment(orderRef: Order, amount: Decimal) writes Payment retry 3 {
   let payment = insert Payment { order: orderRef, amount: amount, status: Captured }
-  enqueue PaymentCaptured { order: orderRef, amount: amount }
+  enqueue PaymentCaptured { payment: payment.id, order: orderRef, amount: amount }
   after commit sendReceipt(orderRef)
 }
 

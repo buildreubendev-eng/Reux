@@ -85,8 +85,13 @@ describeIntegration("pilot postgres smoke", () => {
       expect(captureResult.outboxEvents).toEqual([
         expect.objectContaining({
           event_type: "PaymentCaptured",
+          payload: expect.objectContaining({
+            payment: expect.any(String),
+            order: order.id,
+          }),
         }),
       ]);
+      expect(captureResult.bindings?.payment).toEqual(expect.objectContaining({ id: expect.any(String) }));
       expect(captureResult.afterCommit).toEqual(["sendReceipt(orderRef)"]);
 
       const markPaidResult = await runTransactionSql(

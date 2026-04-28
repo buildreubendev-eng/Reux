@@ -233,6 +233,13 @@ query users(): Query<User> =
     expect(sql).toContain("-- after commit: notifyAccountCredited(accountRef)");
   });
 
+  it("uses the bound Reux pilot payment row in outbox payloads", () => {
+    const sql = emitTransactionSql(readFileSync("examples/pilot_reux.dl", "utf8"), "capturePayment");
+
+    expect(sql).toContain("-- bind result: payment");
+    expect(sql).toContain("jsonb_build_object('payment', :payment.id::uuid, 'order', $1::uuid, 'amount', $2::numeric)");
+  });
+
   it("lowers the Reux pilot order transition transaction to guarded PostgreSQL", () => {
     const sql = emitTransactionSql(readFileSync("examples/pilot_reux.dl", "utf8"), "markOrderPaid");
 

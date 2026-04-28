@@ -19,6 +19,7 @@ The pilot intentionally stays inside the currently supported compiler/runtime su
 - entity references;
 - indexes;
 - transaction insert with a bound result for generated IDs;
+- bound insert references in later outbox payloads;
 - transaction row locks and retryable conflict handling;
 - durable outbox enqueue;
 - after-commit hook reporting;
@@ -93,6 +94,18 @@ The generated `UPDATE` only succeeds when the current status is a declared prede
 
 ## Transaction Conflict Slice
 
+`capturePayment` demonstrates a transaction-local generated ID flowing into durable outbox coordination:
+
+```dl
+transaction function capturePayment(orderRef: Order, amount: Decimal) writes Payment retry 3 {
+  let payment = insert Payment { order: orderRef, amount: amount, status: Captured }
+  enqueue PaymentCaptured { payment: payment.id, order: orderRef, amount: amount }
+  after commit sendReceipt(orderRef)
+}
+```
+
+The generated SQL binds the inserted `Payment` row and resolves `payment.id` when building the `PaymentCaptured` payload.
+
 `creditAccount` is the current pilot transaction for retryable write conflicts:
 
 ```dl
@@ -159,7 +172,5 @@ Use `project-seed-delete pilot/seeds/smoke.json` to remove the fixture rows. Del
 Likely next language/runtime needs exposed by this pilot:
 
 - typed money/currency conventions;
-- transaction-local generated IDs;
-- using bound insert results inside later transaction statements;
 - broader transition checking for parameterized assignments;
 - richer seed reset modes for truncating or refreshing whole fixture groups.
