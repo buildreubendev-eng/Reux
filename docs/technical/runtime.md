@@ -303,12 +303,15 @@ import { processAfterCommitHooks } from "./dist/runtime.js";
 const txResult = await runTransactionSql(db, sql, params, attempts);
 const hooks = await processAfterCommitHooks(txResult.afterCommit, {
   notifyAccountCredited: async (hook) => {
-    await notifyAccount(hook.args[0]);
+    await notifyAccount(hook.resolvedArgs?.[0]);
   },
+}, {
+  parameters: { accountRef: params[0], amount: params[1] },
+  bindings: txResult.bindings,
 });
 ```
 
-`processAfterCommitHooks` parses calls such as `notifyAccountCredited(accountRef)`, dispatches by function name, and returns `{ processed, failed }`. Arguments are returned as source-level strings because the prototype runtime does not yet bind transaction parameter names to application values.
+`processAfterCommitHooks` parses calls such as `notifyAccountCredited(accountRef)`, dispatches by function name, and returns `{ processed, failed }`. `hook.args` keeps the source-level argument strings. When callers provide parameter and binding context, `hook.resolvedArgs` contains application values for parameter names such as `accountRef`, bound fields such as `payment.id`, and simple literals.
 
 ## Outbox
 

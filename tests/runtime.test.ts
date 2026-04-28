@@ -742,24 +742,51 @@ COMMIT;`,
       name: "sendRewardEmail",
       args: ["userRef", '"welcome, ada"'],
     });
-    const handled: string[] = [];
+    const handled: unknown[] = [];
 
-    const result = await processAfterCommitHooks(["sendRewardEmail(userRef)", "missingHook(userRef)"], {
-      sendRewardEmail: (hook) => {
-        handled.push(hook.args[0]);
+    const result = await processAfterCommitHooks(
+      ["sendRewardEmail(userRef, \"welcome, ada\")", "missingHook(userRef)"],
+      {
+        sendRewardEmail: (hook) => {
+          handled.push(...(hook.resolvedArgs ?? hook.args));
+        },
       },
-    });
+      { parameters: { userRef: "user-id" } },
+    );
 
-    expect(handled).toEqual(["userRef"]);
+    expect(handled).toEqual(["user-id", "welcome, ada"]);
     expect(result).toEqual({
-      processed: [{ call: "sendRewardEmail(userRef)", name: "sendRewardEmail", args: ["userRef"] }],
+      processed: [
+        {
+          call: 'sendRewardEmail(userRef, "welcome, ada")',
+          name: "sendRewardEmail",
+          args: ["userRef", '"welcome, ada"'],
+          resolvedArgs: ["user-id", "welcome, ada"],
+        },
+      ],
       failed: [
         {
-          hook: { call: "missingHook(userRef)", name: "missingHook", args: ["userRef"] },
+          hook: { call: "missingHook(userRef)", name: "missingHook", args: ["userRef"], resolvedArgs: ["user-id"] },
           error: "no handler registered for after commit hook missingHook",
         },
       ],
     });
+  });
+
+  it("resolves after commit hook args from transaction bindings", async () => {
+    const handled: unknown[] = [];
+
+    await processAfterCommitHooks(
+      ["sendReceipt(payment.id, 2, true, null)"],
+      {
+        sendReceipt: (hook) => {
+          handled.push(...(hook.resolvedArgs ?? []));
+        },
+      },
+      { bindings: { payment: { id: "payment-id" } } },
+    );
+
+    expect(handled).toEqual(["payment-id", 2, true, null]);
   });
 
   it("retries transaction SQL on retryable database errors", async () => {

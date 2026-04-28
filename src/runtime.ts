@@ -81,9 +81,15 @@ export interface AfterCommitHook {
   call: string;
   name: string;
   args: string[];
+  resolvedArgs?: unknown[];
 }
 
 export type AfterCommitHandler = (hook: AfterCommitHook) => Promise<void> | void;
+
+export interface AfterCommitContext {
+  parameters?: Record<string, unknown>;
+  bindings?: Record<string, unknown>;
+}
 
 export interface AfterCommitProcessResult {
   processed: AfterCommitHook[];
@@ -352,12 +358,13 @@ export function parseAfterCommitHook(call: string): AfterCommitHook {
 export async function processAfterCommitHooks(
   calls: string[],
   handlers: Record<string, AfterCommitHandler>,
+  context: AfterCommitContext = {},
 ): Promise<AfterCommitProcessResult> {
   const processed: AfterCommitHook[] = [];
   const failed: AfterCommitFailure[] = [];
 
   for (const call of calls) {
-    const hook = parseAfterCommitHook(call);
+    const hook = resolveAfterCommitHook(parseAfterCommitHook(call), context);
     const handler = handlers[hook.name];
     if (!handler) {
       failed.push({ hook, error: `no handler registered for after commit hook ${hook.name}` });
@@ -372,6 +379,14 @@ export async function processAfterCommitHooks(
   }
 
   return { processed, failed };
+}
+
+function resolveAfterCommitHook(hook: AfterCommitHook, context: AfterCommitContext): AfterCommitHook {
+  if (!context.parameters && !context.bindings) return hook;
+  return {
+    ...hook,
+    resolvedArgs: hook.args.map((arg) => resolveAfterCommitArg(arg, context)),
+  };
 }
 
 export async function migrationStatus(db: Database, migrationsDir: string): Promise<MigrationStatus> {
@@ -608,6 +623,28 @@ function boundFieldValue(bindings: Record<string, unknown>, binding: string, fie
     throw new Error(`transaction result binding ${binding} has no field ${field}`);
   }
   return (value as Record<string, unknown>)[field];
+}
+
+function resolveAfterCommitArg(arg: string, context: AfterCommitContext): unknown {
+  const value = arg.trim();
+  if (context.parameters && value in context.parameters) {
+    return context.parameters[value];
+  }
+  const bindingMatch = value.match(/^([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)$/);
+  if (bindingMatch && context.bindings) {
+    return boundFieldValue(context.bindings, bindingMatch[1], bindingMatch[2]);
+  }
+  if (value === "true") return true;
+  if (value === "false") return false;
+  if (value === "null") return null;
+  if (/^-?\d+(\.\d+)?$/.test(value)) return Number(value);
+  if (value.startsWith("\"") && value.endsWith("\"")) {
+    return JSON.parse(value) as unknown;
+  }
+  if (value.startsWith("'") && value.endsWith("'")) {
+    return value.slice(1, -1).replaceAll("\\'", "'");
+  }
+  return arg;
 }
 
 function splitHookArgs(source: string): string[] {
