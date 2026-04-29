@@ -9,7 +9,7 @@ Reux is currently a data-native language prototype that compiles a focused schem
 Implemented today:
 
 - Schema declarations for modules, entities, enums, indexes, checks, generated IDs, references, transition rules, bounded decimals, and currency codes.
-- Query declarations with explicit joins, predicates, ordering, limits, record projections, and a narrow aggregation subset.
+- Query declarations with explicit joins, compound predicates, ordering, limits, record projections, and a narrow aggregation subset.
 - Transaction functions with row locking, mutations, inserts, retry metadata, transition guards, durable outbox events, and after-commit hooks.
 - PostgreSQL runtime helpers for migrations, compiled queries, transaction execution, seed resets, and outbox processing.
 - CLI workflows for checking, diagnosis, migration planning, migration safety checks, SQL inspection, API generation, worker generation, and seed validation.
@@ -35,7 +35,7 @@ These are the milestones that make the prototype usable by public testers and ea
 
 The next big engineering work should move in this order.
 
-1. Query expressiveness: add richer boolean expressions, reusable query fragments, safer pagination, nullable join behavior, and stronger result-shape inference.
+1. Query expressiveness: compound `where` predicates are in place; next slices are reusable query fragments, safer pagination, nullable join behavior, and stronger result-shape inference.
 2. Transaction language depth: support broader control flow, richer validation, explicit idempotency patterns, stronger event payload typing, and better generated handler contracts.
 3. Production worker semantics: add dead-letter queues, retry/backoff configuration, handler observability, poison-message protection, and clear operational docs.
 4. Migration authoring workflow: improve generated migration review, environment-specific safety gates, rollback guidance, and multi-schema deployment stories.
@@ -59,6 +59,6 @@ The prototype should not try to become a complete general-purpose language yet. 
 As of this document:
 
 - Demo readiness: roughly 90%. The commerce and logistics demos are public-UI ready; the remaining demo gap is mainly polish, monitoring, and hosted redeployment validation.
-- Full completion: roughly 45%. The foundation is real, but the language still needs broader query and transaction semantics, stronger operations, editor tooling, and packaging before it feels complete.
+- Full completion: roughly 47%. The foundation is real, and the first query-expressiveness slice is done, but the language still needs reusable query fragments, broader transaction semantics, stronger operations, editor tooling, and packaging before it feels complete.
 
 Use [Phase status](phase-status.md) for implementation-by-phase details and [Pilot demo deployment](demo-deployment.md) for hosted demo operations.

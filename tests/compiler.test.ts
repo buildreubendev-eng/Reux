@@ -540,6 +540,51 @@ query paidOrders(): Query<Order> =
     expect(sql).toBe('SELECT "order".*\nFROM orders AS "order"\nWHERE "order".status = \'Paid\';');
   });
 
+  it("lowers compound query predicates to PostgreSQL", () => {
+    const sql = emitQuerySql(
+      `module commerce
+
+entity User {
+  id: Id<User> primary generated
+  email: String?
+  balance: Decimal
+  active: Bool
+}
+
+query filteredUsers(min: Decimal, blockedEmail: String): Query<{ email: String?, balance: Decimal }> =
+  from user in User
+  where (user.balance >= min and user.email != blockedEmail) or user.active == true
+  select { email: user.email, balance: user.balance }
+`,
+      "filteredUsers",
+    );
+
+    expect(sql).toBe(
+      'SELECT "user".email AS email, "user".balance AS balance\nFROM users AS "user"\nWHERE ("user".balance >= $1 AND "user".email <> $2) OR "user".active = true;',
+    );
+  });
+
+  it("keeps query string literals separate from parameters", () => {
+    const sql = emitQuerySql(
+      `module commerce
+
+entity User {
+  id: Id<User> primary generated
+  email: String
+  balance: Decimal
+}
+
+query namedUsers(min: Decimal): Query<User> =
+  from user in User
+  where user.email != "min" and user.balance > min
+  select user
+`,
+      "namedUsers",
+    );
+
+    expect(sql).toBe('SELECT "user".*\nFROM users AS "user"\nWHERE "user".email <> \'min\' AND "user".balance > $1;');
+  });
+
   it("rejects invalid enum literals in query predicates", () => {
     expect(() =>
       emitQuerySql(
@@ -563,6 +608,26 @@ query refundedOrders(): Query<Order> =
         "refundedOrders",
       ),
     ).toThrow("query refundedOrders compares Order.status to invalid OrderStatus value Refunded");
+  });
+
+  it("rejects unknown bare values in query predicates", () => {
+    expect(() =>
+      emitQuerySql(
+        `module commerce
+
+entity User {
+  id: Id<User> primary generated
+  balance: Decimal
+}
+
+query users(): Query<User> =
+  from user in User
+  where user.balance > missingMinimum
+  select user
+`,
+        "users",
+      ),
+    ).toThrow("query users where predicate references unknown value missingMinimum");
   });
 
   it("emits explicit Query IR", () => {

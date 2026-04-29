@@ -122,6 +122,14 @@ query topUsers(maxRows: Int): Query<{ email: String, balance: Decimal<12,2> }> =
   select { email: user.email, balance: user.balance }
 ```
 
+`where` predicates support comparisons joined with `and` / `or`, plus parentheses for grouping:
+
+```dl
+where (user.balance >= min and user.email != blockedEmail) or user.active == true
+```
+
+Supported comparison operators are `==`, `!=`, `>`, `>=`, `<`, and `<=`. Predicate operands may be entity field references, query parameters, string literals, numeric literals, boolean literals, `null`, joined range aliases, or enum literals when compared with enum-typed fields. Query lowering validates bare predicate values so misspelled parameter names fail before SQL execution.
+
 Enum fields can be compared with bare enum literals in query predicates. For example, `order.status == Paid` lowers to a PostgreSQL enum literal comparison, and invalid values are rejected during query lowering.
 
 Record projections must match the declared `Query<{ ... }>` result shape: projected fields must be declared, declared fields must be projected, declared result field types must be valid Reux types, duplicate projected field names are rejected, and simple field optionality must match.

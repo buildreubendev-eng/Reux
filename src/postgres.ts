@@ -190,8 +190,13 @@ function projectionSql(projection: ProjectionIr): string {
 }
 
 function expressionSql(expression: ExpressionIr): string {
-  let sql = expression.source;
+  return expressionSegments(expression.source)
+    .map((segment) => (segment.kind === "string" ? quoteLiteral(segment.value) : expressionSegmentSql(segment.source, expression)))
+    .join("");
+}
 
+function expressionSegmentSql(source: string, expression: ExpressionIr): string {
+  let sql = source;
   for (const field of expression.fields) {
     sql = sql.replaceAll(field.source, `${quoteIdentifier(field.alias)}.${field.column}`);
   }
@@ -209,9 +214,69 @@ function expressionSql(expression: ExpressionIr): string {
   }
 
   sql = sql.replace(/\bcount\(\s*\)/g, "count(*)");
+  sql = sql.replace(/\band\b/g, "AND").replace(/\bor\b/g, "OR");
+  sql = sql.replaceAll("!=", "<>");
 
   return sql.replaceAll("==", "=");
 }
+
+function expressionSegments(source: string): ExpressionSegment[] {
+  const segments: ExpressionSegment[] = [];
+  let index = 0;
+  let segmentStart = 0;
+
+  while (index < source.length) {
+    const char = source[index];
+    if (char !== "'" && char !== "\"") {
+      index += 1;
+      continue;
+    }
+
+    if (segmentStart < index) {
+      segments.push({ kind: "source", source: source.slice(segmentStart, index) });
+    }
+
+    const parsed = readSqlStringSegment(source, index);
+    segments.push({ kind: "string", value: parsed.value });
+    index = parsed.nextIndex;
+    segmentStart = index;
+  }
+
+  if (segmentStart < source.length) {
+    segments.push({ kind: "source", source: source.slice(segmentStart) });
+  }
+  return segments;
+}
+
+function readSqlStringSegment(source: string, start: number): { value: string; nextIndex: number } {
+  const quote = source[start];
+  let value = "";
+  let index = start + 1;
+
+  while (index < source.length) {
+    const char = source[index];
+    if (char === quote) {
+      if (source[index + 1] === quote) {
+        value += quote;
+        index += 2;
+        continue;
+      }
+      return {
+        value,
+        nextIndex: index + 1,
+      };
+    }
+    value += char;
+    index += 1;
+  }
+
+  return {
+    value: source.slice(start + 1),
+    nextIndex: source.length,
+  };
+}
+
+type ExpressionSegment = { kind: "source"; source: string } | { kind: "string"; value: string };
 
 export function transactionIrToPostgres(schema: SchemaIr, transaction: TransactionIr): string {
   const lowered = new TransactionLowering(schema, transaction);
