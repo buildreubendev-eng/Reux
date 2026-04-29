@@ -433,6 +433,7 @@ function parseSimulation(lines: SourceLine[], start: number): { declaration: Sim
   const assumptions: SimulationDeclaration["assumptions"] = [];
   const formulas: SimulationDeclaration["formulas"] = [];
   const scenarios: SimulationDeclaration["scenarios"] = [];
+  const changes: SimulationDeclaration["changes"] = [];
   let forecast: SimulationDeclaration["forecast"] | undefined;
   let index = start + 1;
   while (index < lines.length) {
@@ -453,6 +454,7 @@ function parseSimulation(lines: SourceLine[], start: number): { declaration: Sim
           assumptions,
           formulas,
           scenarios,
+          changes,
           forecast,
         },
         nextIndex: index + 1,
@@ -476,6 +478,13 @@ function parseSimulation(lines: SourceLine[], start: number): { declaration: Sim
       continue;
     }
 
+    if (text.startsWith("change at ")) {
+      const parsed = parseSimulationChange(lines, index);
+      changes.push(parsed.change);
+      index = parsed.nextIndex;
+      continue;
+    }
+
     if (text.startsWith("scenario ")) {
       const parsed = parseSimulationScenario(lines, index);
       scenarios.push(parsed.scenario);
@@ -492,13 +501,38 @@ function parseSimulation(lines: SourceLine[], start: number): { declaration: Sim
 
     const assignment = text.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+)$/);
     if (!assignment) {
-      throw new DlError(`line ${line.number}: expected simulation assignment, formula, scenario, or forecast`);
+      throw new DlError(`line ${line.number}: expected simulation assignment, formula, scenario, change, or forecast`);
     }
     assumptions.push({ name: assignment[1], value: assignment[2].trim() });
     index += 1;
   }
 
   throw new DlError(`line ${lines[start].number}: simulation '${match[1]}' is missing a closing brace`);
+}
+
+function parseSimulationChange(
+  lines: SourceLine[],
+  start: number,
+): { change: SimulationDeclaration["changes"][number]; nextIndex: number } {
+  const header = lines[start].text.trim();
+  const match = header.match(/^change\s+at\s+(\d+)\s+(days?|weeks?|months?|quarters?|years?)\s*\{$/);
+  if (!match) {
+    throw new DlError(`line ${lines[start].number}: expected 'change at N periods {'`);
+  }
+  const period = Number.parseInt(match[1], 10);
+  if (period < 1) {
+    throw new DlError(`line ${lines[start].number}: change period must be greater than zero`);
+  }
+
+  const parsed = parseSimulationAssignmentBlock(lines, start + 1, "change");
+  return {
+    change: {
+      period,
+      unit: singularForecastUnit(match[2]),
+      overrides: parsed.assignments,
+    },
+    nextIndex: parsed.nextIndex,
+  };
 }
 
 function parseSimulationScenario(
@@ -511,8 +545,23 @@ function parseSimulationScenario(
     throw new DlError(`line ${lines[start].number}: expected 'scenario name {'`);
   }
 
-  const overrides: SimulationDeclaration["assumptions"] = [];
-  let index = start + 1;
+  const parsed = parseSimulationAssignmentBlock(lines, start + 1, "scenario");
+  return {
+    scenario: {
+      name: match[1],
+      overrides: parsed.assignments,
+    },
+    nextIndex: parsed.nextIndex,
+  };
+}
+
+function parseSimulationAssignmentBlock(
+  lines: SourceLine[],
+  start: number,
+  label: "change" | "scenario",
+): { assignments: SimulationDeclaration["assumptions"]; nextIndex: number } {
+  const assignments: SimulationDeclaration["assumptions"] = [];
+  let index = start;
   while (index < lines.length) {
     const line = lines[index];
     const text = line.text.trim();
@@ -522,22 +571,19 @@ function parseSimulationScenario(
     }
     if (text === "}") {
       return {
-        scenario: {
-          name: match[1],
-          overrides,
-        },
+        assignments,
         nextIndex: index + 1,
       };
     }
     const assignment = text.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+)$/);
     if (!assignment) {
-      throw new DlError(`line ${line.number}: expected scenario override assignment`);
+      throw new DlError(`line ${line.number}: expected ${label} override assignment`);
     }
-    overrides.push({ name: assignment[1], value: assignment[2].trim() });
+    assignments.push({ name: assignment[1], value: assignment[2].trim() });
     index += 1;
   }
 
-  throw new DlError(`line ${lines[start].number}: scenario '${match[1]}' is missing a closing brace`);
+  throw new DlError(`line ${lines[start - 1].number}: ${label} is missing a closing brace`);
 }
 
 function parseQuery(lines: SourceLine[], start: number): { declaration: QueryDeclaration; nextIndex: number } {

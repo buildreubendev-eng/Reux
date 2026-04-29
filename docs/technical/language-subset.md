@@ -99,6 +99,10 @@ simulate personal_finance {
   formula cash_flow = income - rent - debt_payment
   formula annual_surplus = cash_flow * 12
 
+  change at 7 months {
+    rent = 1600 USD
+  }
+
   scenario lower_rent {
     rent = 1200 USD
   }
@@ -117,6 +121,10 @@ simulate workforce_change {
   formula productivity_index = 100 * (1 + productivity_gain)
   formula operating_relief = productivity_gain + overtime_reduction
 
+  change at 4 months {
+    productivity_gain = 10 percent
+  }
+
   scenario stronger_training {
     productivity_gain = 12 percent
   }
@@ -132,6 +140,7 @@ Supported simulation statements:
 - `name = true | false`
 - `name = "quoted string"`
 - `formula name = expression`
+- `change at N days|weeks|months|quarters|years { ... }`
 - `scenario name { ... }`
 - `forecast N days|weeks|months|quarters|years`
 
@@ -141,7 +150,9 @@ Formula expressions support numeric literals, assumptions, earlier formulas, par
 
 Scenarios declare alternate assumption values against the same formulas and forecast window. Scenario overrides must reference existing assumptions and keep the same primitive type and unit as the baseline value.
 
-The compiler emits Simulation IR and can run a prototype formula forecast. The runner repeats the declared assumptions for each period, emits formula results as metrics with `metricUnits` when known, and compares final-period scenario metrics against the baseline. If a simulation has no formulas, the runner still derives a small set of early prototype metrics:
+Changes declare time-varying assumption values that take effect at a forecast period and continue for later periods. Change blocks must use the same forecast unit, must occur inside the forecast window, and must keep the same primitive type and unit as the baseline assumption.
+
+The compiler emits Simulation IR and can run a prototype formula forecast. The runner repeats the declared assumptions for each period, applies any scheduled changes, emits formula results as metrics with `metricUnits` when known, and compares final-period scenario metrics against the baseline. If a simulation has no formulas, the runner still derives a small set of early prototype metrics:
 
 - `netCashFlow` and `cumulativeNetCashFlow` when an `income` assumption is present;
 - `changeRate` and `projectedIndex` when rate-like assumptions such as `productivity_gain` or `overtime_reduction` are present.

@@ -80,6 +80,7 @@ export interface SimulationDeclaration {
   assumptions: SimulationAssumption[];
   formulas: SimulationFormula[];
   scenarios: SimulationScenario[];
+  changes: SimulationChange[];
   forecast: SimulationForecast;
 }
 
@@ -95,6 +96,12 @@ export interface SimulationFormula {
 
 export interface SimulationScenario {
   name: string;
+  overrides: SimulationAssumption[];
+}
+
+export interface SimulationChange {
+  period: number;
+  unit: "day" | "week" | "month" | "quarter" | "year";
   overrides: SimulationAssumption[];
 }
 

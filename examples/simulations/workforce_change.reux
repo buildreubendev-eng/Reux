@@ -7,6 +7,10 @@ simulate workforce_change {
   formula productivity_index = 100 * (1 + productivity_gain)
   formula operating_relief = productivity_gain + overtime_reduction
 
+  change at 4 months {
+    productivity_gain = 10 percent
+  }
+
   scenario stronger_training {
     productivity_gain = 12 percent
   }

@@ -7,6 +7,10 @@ simulate personal_finance {
   formula cash_flow = income - rent - debt_payment
   formula annual_surplus = cash_flow * 12
 
+  change at 7 months {
+    rent = 1600 USD
+  }
+
   scenario lower_rent {
     rent = 1200 USD
   }

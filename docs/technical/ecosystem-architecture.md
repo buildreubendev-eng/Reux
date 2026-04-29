@@ -49,6 +49,10 @@ simulate personal_finance {
   debt_payment = 500 USD
   formula cash_flow = income - rent - debt_payment
 
+  change at 7 months {
+    rent = 1600 USD
+  }
+
   scenario lower_rent {
     rent = 1200 USD
   }
@@ -61,7 +65,7 @@ This compiles to Simulation IR and can run a prototype formula forecast with sce
 
 - richer dimensional analysis;
 - richer comparison reports;
-- time-varying assumptions;
+- scenario-specific timelines;
 - reusable domain templates;
 - connections between simulation inputs and Reux entities/queries;
 - generated TypeScript types for simulation inputs and outputs.

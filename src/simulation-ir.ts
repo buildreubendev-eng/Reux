@@ -6,6 +6,7 @@ export interface SimulationIr {
   assumptions: SimulationAssumptionIr[];
   formulas: SimulationFormulaIr[];
   scenarios: SimulationScenarioIr[];
+  changes: SimulationChangeIr[];
   forecast: {
     periods: number;
     unit: SimulationDeclaration["forecast"]["unit"];
@@ -30,6 +31,12 @@ export interface SimulationScenarioIr {
   overrides: SimulationAssumptionIr[];
 }
 
+export interface SimulationChangeIr {
+  period: number;
+  unit: SimulationDeclaration["forecast"]["unit"];
+  overrides: SimulationAssumptionIr[];
+}
+
 export interface SimulationRunResult {
   name: string;
   model: "prototype-formula-forecast";
@@ -44,6 +51,7 @@ export interface SimulationPeriodResult {
   label: string;
   assumptions: Record<string, boolean | number | string>;
   assumptionUnits: Record<string, string>;
+  appliedChanges: Array<{ period: number; unit: SimulationDeclaration["forecast"]["unit"] }>;
   metrics: Record<string, number>;
   metricUnits: Record<string, string>;
 }
@@ -128,12 +136,14 @@ function buildSimulationIr(simulation: SimulationDeclaration, diagnostics: strin
   }));
   const formulas = buildFormulaIr(simulation, assumptions, diagnostics);
   const scenarios = buildScenarioIr(simulation, assumptions, diagnostics);
+  const changes = buildChangeIr(simulation, assumptions, diagnostics);
 
   return {
     name: simulation.name,
     assumptions,
     formulas,
     scenarios,
+    changes,
     forecast: simulation.forecast,
   };
 }
@@ -221,16 +231,7 @@ function buildScenarioIr(
         name: override.name,
         ...parseSimulationValue(`${simulation.name} scenario ${scenario.name}`, override, diagnostics),
       };
-      const base = assumptionsByName.get(override.name);
-      if (!base) {
-        diagnostics.push(`simulation ${simulation.name} scenario ${scenario.name} overrides unknown assumption ${override.name}`);
-      } else if (base.type !== parsed.type) {
-        diagnostics.push(`simulation ${simulation.name} scenario ${scenario.name} override ${override.name} changes type from ${base.type} to ${parsed.type}`);
-      } else if (base.unit !== parsed.unit) {
-        diagnostics.push(
-          `simulation ${simulation.name} scenario ${scenario.name} override ${override.name} changes unit from ${base.unit ?? "unitless"} to ${parsed.unit ?? "unitless"}`,
-        );
-      }
+      validateOverride(simulation.name, `scenario ${scenario.name}`, parsed, assumptionsByName, diagnostics);
       return parsed;
     });
     return {
@@ -240,22 +241,78 @@ function buildScenarioIr(
   });
 }
 
+function buildChangeIr(
+  simulation: SimulationDeclaration,
+  assumptions: SimulationAssumptionIr[],
+  diagnostics: string[],
+): SimulationChangeIr[] {
+  const assumptionsByName = new Map(assumptions.map((assumption) => [assumption.name, assumption]));
+  const changeKeys = simulation.changes.map((change) => `${change.period}.${change.unit}`);
+  for (const duplicate of duplicates(changeKeys)) {
+    diagnostics.push(`simulation ${simulation.name} declares duplicate change at ${duplicate}`);
+  }
+
+  return simulation.changes.map((change) => {
+    if (change.unit !== simulation.forecast.unit) {
+      diagnostics.push(`simulation ${simulation.name} change at ${change.period} ${change.unit}s does not match forecast unit ${simulation.forecast.unit}`);
+    }
+    if (change.period > simulation.forecast.periods) {
+      diagnostics.push(`simulation ${simulation.name} change at ${change.period} ${change.unit}s is after the forecast ends`);
+    }
+    for (const duplicate of duplicates(change.overrides.map((override) => override.name))) {
+      diagnostics.push(`simulation ${simulation.name} change at ${change.period} ${change.unit}s declares duplicate override ${duplicate}`);
+    }
+    return {
+      period: change.period,
+      unit: change.unit,
+      overrides: change.overrides.map((override) => {
+        const parsed: SimulationAssumptionIr = {
+          name: override.name,
+          ...parseSimulationValue(`${simulation.name} change at ${change.period} ${change.unit}s`, override, diagnostics),
+        };
+        validateOverride(simulation.name, `change at ${change.period} ${change.unit}s`, parsed, assumptionsByName, diagnostics);
+        return parsed;
+      }),
+    };
+  });
+}
+
+function validateOverride(
+  simulationName: string,
+  source: string,
+  override: SimulationAssumptionIr,
+  assumptionsByName: Map<string, SimulationAssumptionIr>,
+  diagnostics: string[],
+): void {
+  const base = assumptionsByName.get(override.name);
+  if (!base) {
+    diagnostics.push(`simulation ${simulationName} ${source} overrides unknown assumption ${override.name}`);
+  } else if (base.type !== override.type) {
+    diagnostics.push(`simulation ${simulationName} ${source} override ${override.name} changes type from ${base.type} to ${override.type}`);
+  } else if (base.unit !== override.unit) {
+    diagnostics.push(
+      `simulation ${simulationName} ${source} override ${override.name} changes unit from ${base.unit ?? "unitless"} to ${override.unit ?? "unitless"}`,
+    );
+  }
+}
+
 function runScenarioPeriods(
   simulation: SimulationIr,
   assumptions: Record<string, boolean | number | string>,
   assumptionUnits: Record<string, string>,
 ): SimulationPeriodResult[] {
-  const formulaResult = evaluateFormulas(simulation, assumptions, assumptionUnits);
-  const assumptionList = Object.entries(assumptions).map(([name, value]) => ({
-    name,
-    type: typeof value === "number" ? "number" as const : typeof value === "boolean" ? "boolean" as const : "string" as const,
-    value,
-    unit: assumptionUnits[name],
-  }));
-  const metrics = simulation.formulas.length > 0 ? {} : derivedMetrics(assumptionList);
   const periods: SimulationPeriodResult[] = [];
 
   for (let period = 1; period <= simulation.forecast.periods; period += 1) {
+    const periodState = applyChangesForPeriod(simulation.changes, assumptions, assumptionUnits, period);
+    const formulaResult = evaluateFormulas(simulation, periodState.assumptions, periodState.assumptionUnits);
+    const assumptionList = Object.entries(periodState.assumptions).map(([name, value]) => ({
+      name,
+      type: typeof value === "number" ? "number" as const : typeof value === "boolean" ? "boolean" as const : "string" as const,
+      value,
+      unit: periodState.assumptionUnits[name],
+    }));
+    const metrics = simulation.formulas.length > 0 ? {} : derivedMetrics(assumptionList);
     const periodMetrics: Record<string, number> = { ...formulaResult.values };
     const metricUnits: Record<string, string> = { ...formulaResult.units };
     if (metrics.netCashFlow !== undefined) {
@@ -276,13 +333,32 @@ function runScenarioPeriods(
     periods.push({
       period,
       label: `${period} ${pluralize(simulation.forecast.unit, period)}`,
-      assumptions,
-      assumptionUnits,
+      assumptions: periodState.assumptions,
+      assumptionUnits: periodState.assumptionUnits,
+      appliedChanges: periodState.appliedChanges,
       metrics: periodMetrics,
       metricUnits,
     });
   }
   return periods;
+}
+
+function applyChangesForPeriod(
+  changes: SimulationChangeIr[],
+  assumptions: Record<string, boolean | number | string>,
+  assumptionUnits: Record<string, string>,
+  period: number,
+): {
+  assumptions: Record<string, boolean | number | string>;
+  assumptionUnits: Record<string, string>;
+  appliedChanges: Array<{ period: number; unit: SimulationDeclaration["forecast"]["unit"] }>;
+} {
+  const applicable = [...changes].sort((left, right) => left.period - right.period).filter((change) => change.period <= period);
+  return {
+    assumptions: applicable.reduce((current, change) => mergeAssumptions(current, change.overrides), assumptions),
+    assumptionUnits: applicable.reduce((current, change) => mergeAssumptionUnits(current, change.overrides), assumptionUnits),
+    appliedChanges: applicable.map((change) => ({ period: change.period, unit: change.unit })),
+  };
 }
 
 function mergeAssumptions(

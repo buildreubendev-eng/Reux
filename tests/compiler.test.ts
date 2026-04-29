@@ -416,6 +416,7 @@ simulate personal_finance {
         { name: "annual_surplus", expression: "cash_flow * 12", references: ["cash_flow"] },
       ],
       scenarios: [{ name: "lower_rent", overrides: [{ name: "rent", type: "number", value: 1200, unit: "USD" }] }],
+      changes: [],
       forecast: { periods: 12, unit: "month" },
     });
     expect(run.model).toBe("prototype-formula-forecast");
@@ -438,6 +439,28 @@ simulate personal_finance {
     expect(run.periods[0].metrics.operating_relief).toBe(0.18);
     expect(run.periods[0].metricUnits).toEqual({ operating_relief: "percent" });
     expect(run.comparison.scenarios.map((scenario: { name: string }) => scenario.name)).toEqual(["stronger_training", "no_overtime_change"]);
+  });
+
+  it("applies simulation assumption changes by forecast period", () => {
+    const run = JSON.parse(
+      emitSimulationRun(`module personal_life
+
+simulate rent_change {
+  income = 5000 USD
+  rent = 1500 USD
+  formula cash_flow = income - rent
+  change at 7 months {
+    rent = 1600 USD
+  }
+  forecast 12 months
+}
+`),
+    );
+
+    expect(run.periods[0].metrics.cash_flow).toBe(3500);
+    expect(run.periods[6].metrics.cash_flow).toBe(3400);
+    expect(run.periods[6].assumptions.rent).toBe(1600);
+    expect(run.periods[6].appliedChanges).toEqual([{ period: 7, unit: "month" }]);
   });
 
   it("validates simulation duplicate assumptions and values", () => {
@@ -496,6 +519,22 @@ simulate bad {
     income = 5000 EUR
   }
   forecast 1 month
+}
+`),
+    ).toThrow(DlAggregateError);
+  });
+
+  it("validates simulation change periods and units", () => {
+    expect(() =>
+      compileSource(`module broken
+
+simulate bad {
+  income = 5000 USD
+  formula cash_flow = income
+  change at 2 weeks {
+    income = 5500 USD
+  }
+  forecast 3 months
 }
 `),
     ).toThrow(DlAggregateError);
