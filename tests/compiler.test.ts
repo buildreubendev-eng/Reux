@@ -428,6 +428,12 @@ simulate personal_finance {
     expect(run.scenarios[1].periods[0].metrics.cash_flow).toBe(3300);
     expect(run.comparison.scenarios[0].metricDeltas).toEqual({ cash_flow: 300, annual_surplus: 3600 });
     expect(run.comparison.scenarios[0].metricUnits).toEqual({ cash_flow: "USD", annual_surplus: "USD" });
+    expect(run.comparison.scenarios[0].firstDivergence).toMatchObject({
+      period: 1,
+      label: "1 month",
+      metricDeltas: { cash_flow: 300, annual_surplus: 3600 },
+    });
+    expect(run.comparison.scenarios[0].periodDeltas).toHaveLength(12);
   });
 
   it("emits prototype index metrics for rate-based simulations", () => {
@@ -442,6 +448,8 @@ simulate personal_finance {
     expect(run.scenarios[1].periods[3].metrics.productivity_index).toBe(114);
     expect(run.scenarios[1].periods[3].metrics.operating_relief).toBe(0.24);
     expect(run.comparison.scenarios[0].metricDeltas).toEqual({ productivity_index: 4, operating_relief: 0.04 });
+    expect(run.comparison.scenarios[0].periodDeltas[0].metricDeltas).toEqual({ productivity_index: 4, operating_relief: 0.04 });
+    expect(run.comparison.scenarios[0].periodDeltas[3].metricDeltas).toEqual({ productivity_index: 4, operating_relief: 0.04 });
   });
 
   it("applies simulation assumption changes by forecast period", () => {

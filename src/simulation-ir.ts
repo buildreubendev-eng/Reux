@@ -69,7 +69,16 @@ export interface SimulationComparisonResult {
     name: string;
     metricDeltas: Record<string, number>;
     metricUnits: Record<string, string>;
+    firstDivergence?: SimulationPeriodDelta;
+    periodDeltas: SimulationPeriodDelta[];
   }>;
+}
+
+export interface SimulationPeriodDelta {
+  period: number;
+  label: string;
+  metricDeltas: Record<string, number>;
+  metricUnits: Record<string, string>;
 }
 
 export function buildSimulationCatalog(program: Program): SimulationIr[] {
@@ -413,22 +422,57 @@ function compareScenarios(scenarios: SimulationScenarioRunResult[]): SimulationC
     scenarios: scenarios.slice(1).map((scenario) => {
       const finalMetrics = scenario.periods.at(-1)?.metrics ?? {};
       const finalUnits = scenario.periods.at(-1)?.metricUnits ?? {};
+      const periodDeltas = scenario.periods.map((period, index) => comparePeriodMetrics(baseline.periods[index], period));
       return {
         name: scenario.name,
-        metricDeltas: Object.fromEntries(
-          Object.keys({ ...baselineFinal, ...finalMetrics }).map((metric) => [
-            metric,
-            Number(((finalMetrics[metric] ?? 0) - (baselineFinal[metric] ?? 0)).toFixed(6)),
-          ]),
-        ),
-        metricUnits: Object.fromEntries(
-          Object.keys({ ...baselineFinal, ...finalMetrics })
-            .map((metric) => [metric, finalUnits[metric] ?? baselineUnits[metric]])
-            .filter((entry): entry is [string, string] => Boolean(entry[1])),
-        ),
+        metricDeltas: compareMetricDeltas(baselineFinal, finalMetrics),
+        metricUnits: compareMetricUnits(baselineFinal, finalMetrics, baselineUnits, finalUnits),
+        firstDivergence: periodDeltas.find((delta) => hasMetricDelta(delta.metricDeltas)),
+        periodDeltas,
       };
     }),
   };
+}
+
+function comparePeriodMetrics(
+  baseline: SimulationPeriodResult | undefined,
+  scenario: SimulationPeriodResult,
+): SimulationPeriodDelta {
+  return {
+    period: scenario.period,
+    label: scenario.label,
+    metricDeltas: compareMetricDeltas(baseline?.metrics ?? {}, scenario.metrics),
+    metricUnits: compareMetricUnits(baseline?.metrics ?? {}, scenario.metrics, baseline?.metricUnits ?? {}, scenario.metricUnits),
+  };
+}
+
+function compareMetricDeltas(
+  baselineMetrics: Record<string, number>,
+  scenarioMetrics: Record<string, number>,
+): Record<string, number> {
+  return Object.fromEntries(
+    Object.keys({ ...baselineMetrics, ...scenarioMetrics }).map((metric) => [
+      metric,
+      Number(((scenarioMetrics[metric] ?? 0) - (baselineMetrics[metric] ?? 0)).toFixed(6)),
+    ]),
+  );
+}
+
+function compareMetricUnits(
+  baselineMetrics: Record<string, number>,
+  scenarioMetrics: Record<string, number>,
+  baselineUnits: Record<string, string>,
+  scenarioUnits: Record<string, string>,
+): Record<string, string> {
+  return Object.fromEntries(
+    Object.keys({ ...baselineMetrics, ...scenarioMetrics })
+      .map((metric) => [metric, scenarioUnits[metric] ?? baselineUnits[metric]])
+      .filter((entry): entry is [string, string] => Boolean(entry[1])),
+  );
+}
+
+function hasMetricDelta(metricDeltas: Record<string, number>): boolean {
+  return Object.values(metricDeltas).some((delta) => delta !== 0);
 }
 
 function evaluateFormulas(

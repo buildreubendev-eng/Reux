@@ -160,7 +160,15 @@ Scenarios declare alternate assumption values against the same formulas and fore
 
 Changes declare time-varying assumption values that take effect at a forecast period and continue for later periods. Change blocks must use the same forecast unit, must occur inside the forecast window, and must keep the same primitive type and unit as the baseline assumption.
 
-The compiler emits Simulation IR and can run a prototype formula forecast. The runner repeats the declared assumptions for each period, applies any scheduled changes, emits formula results as metrics with `metricUnits` when known, and compares final-period scenario metrics against the baseline. If a simulation has no formulas, the runner still derives a small set of early prototype metrics:
+The compiler emits Simulation IR and can run a prototype formula forecast. The runner repeats the declared assumptions for each period, applies any scheduled changes, emits formula results as metrics with `metricUnits` when known, and compares scenarios against the baseline.
+
+Scenario comparison reports include:
+
+- final-period `metricDeltas` for quick summaries;
+- `periodDeltas` for every forecast period;
+- `firstDivergence`, which points to the first period where any metric differs from baseline.
+
+If a simulation has no formulas, the runner still derives a small set of early prototype metrics:
 
 - `netCashFlow` and `cumulativeNetCashFlow` when an `income` assumption is present;
 - `changeRate` and `projectedIndex` when rate-like assumptions such as `productivity_gain` or `overtime_reduction` are present.
