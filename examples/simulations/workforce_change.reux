@@ -13,6 +13,10 @@ simulate workforce_change {
 
   scenario stronger_training {
     productivity_gain = 12 percent
+
+    change at 4 months {
+      productivity_gain = 14 percent
+    }
   }
 
   scenario no_overtime_change {

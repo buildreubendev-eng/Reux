@@ -415,7 +415,7 @@ simulate personal_finance {
         { name: "cash_flow", expression: "income - rent - debt_payment", references: ["debt_payment", "income", "rent"] },
         { name: "annual_surplus", expression: "cash_flow * 12", references: ["cash_flow"] },
       ],
-      scenarios: [{ name: "lower_rent", overrides: [{ name: "rent", type: "number", value: 1200, unit: "USD" }] }],
+      scenarios: [{ name: "lower_rent", overrides: [{ name: "rent", type: "number", value: 1200, unit: "USD" }], changes: [] }],
       changes: [],
       forecast: { periods: 12, unit: "month" },
     });
@@ -439,6 +439,9 @@ simulate personal_finance {
     expect(run.periods[0].metrics.operating_relief).toBe(0.18);
     expect(run.periods[0].metricUnits).toEqual({ operating_relief: "percent" });
     expect(run.comparison.scenarios.map((scenario: { name: string }) => scenario.name)).toEqual(["stronger_training", "no_overtime_change"]);
+    expect(run.scenarios[1].periods[3].metrics.productivity_index).toBe(114);
+    expect(run.scenarios[1].periods[3].metrics.operating_relief).toBe(0.24);
+    expect(run.comparison.scenarios[0].metricDeltas).toEqual({ productivity_index: 4, operating_relief: 0.04 });
   });
 
   it("applies simulation assumption changes by forecast period", () => {
@@ -533,6 +536,24 @@ simulate bad {
   formula cash_flow = income
   change at 2 weeks {
     income = 5500 USD
+  }
+  forecast 3 months
+}
+`),
+    ).toThrow(DlAggregateError);
+  });
+
+  it("validates simulation scenario-specific change periods and units", () => {
+    expect(() =>
+      compileSource(`module broken
+
+simulate bad {
+  income = 5000 USD
+  formula cash_flow = income
+  scenario upside {
+    change at 2 weeks {
+      income = 5500 USD
+    }
   }
   forecast 3 months
 }

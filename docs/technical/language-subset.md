@@ -105,6 +105,10 @@ simulate personal_finance {
 
   scenario lower_rent {
     rent = 1200 USD
+
+    change at 7 months {
+      rent = 1300 USD
+    }
   }
 
   scenario debt_free {
@@ -127,6 +131,10 @@ simulate workforce_change {
 
   scenario stronger_training {
     productivity_gain = 12 percent
+
+    change at 4 months {
+      productivity_gain = 14 percent
+    }
   }
 
   forecast 6 months
@@ -148,7 +156,7 @@ Unit quantities attach a lightweight unit label to numeric assumptions. `percent
 
 Formula expressions support numeric literals, assumptions, earlier formulas, parentheses, and `+`, `-`, `*`, `/`. The compiler validates that referenced values exist and that formulas only use numeric assumptions or earlier formulas. Formula results carry a unit when the expression is unit-compatible, such as adding/subtracting `USD` values or multiplying one unit value by a scalar.
 
-Scenarios declare alternate assumption values against the same formulas and forecast window. Scenario overrides must reference existing assumptions and keep the same primitive type and unit as the baseline value.
+Scenarios declare alternate assumption values against the same formulas and forecast window. Scenario overrides must reference existing assumptions and keep the same primitive type and unit as the baseline value. Scenarios may also declare their own `change at` blocks. Scenario-specific changes are applied after the shared baseline changes for that scenario only, which lets a model compare paths such as "baseline training improves in month 4" against "stronger training improves more in month 4."
 
 Changes declare time-varying assumption values that take effect at a forecast period and continue for later periods. Change blocks must use the same forecast unit, must occur inside the forecast window, and must keep the same primitive type and unit as the baseline assumption.
 
@@ -164,7 +172,7 @@ node dist/cli.js simulation-ir examples/simulations/personal_finance.reux
 node dist/cli.js simulation-run examples/simulations/workforce_change.reux
 ```
 
-This is not yet the full simulation language. The next layers are richer dimensional analysis, domain packs for PLOS/business use cases, time-varying assumptions, richer comparison reports, and eventually integration with Reux data modules.
+This is not yet the full simulation language. The next layers are richer dimensional analysis, domain packs for PLOS/business use cases, richer comparison reports, generated TypeScript contracts, and eventually integration with Reux data modules.
 
 ## Transition Rules
 

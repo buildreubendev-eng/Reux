@@ -29,6 +29,7 @@ export interface SimulationFormulaIr {
 export interface SimulationScenarioIr {
   name: string;
   overrides: SimulationAssumptionIr[];
+  changes: SimulationChangeIr[];
 }
 
 export interface SimulationChangeIr {
@@ -99,6 +100,7 @@ export function runSimulationIr(simulation: SimulationIr): SimulationRunResult {
             simulation,
             mergeAssumptions(assumptions, scenario.overrides),
             mergeAssumptionUnits(assumptionUnits, scenario.overrides),
+            scenario.changes,
           ),
         })),
       ]
@@ -136,7 +138,11 @@ function buildSimulationIr(simulation: SimulationDeclaration, diagnostics: strin
   }));
   const formulas = buildFormulaIr(simulation, assumptions, diagnostics);
   const scenarios = buildScenarioIr(simulation, assumptions, diagnostics);
-  const changes = buildChangeIr(simulation, assumptions, diagnostics);
+  const changes = buildChangeIr(simulation, assumptions, diagnostics, {
+    duplicateSource: `simulation ${simulation.name}`,
+    valueSource: (change) => `${simulation.name} change at ${change.period} ${change.unit}s`,
+    validationSource: (change) => `change at ${change.period} ${change.unit}s`,
+  });
 
   return {
     name: simulation.name,
@@ -234,9 +240,16 @@ function buildScenarioIr(
       validateOverride(simulation.name, `scenario ${scenario.name}`, parsed, assumptionsByName, diagnostics);
       return parsed;
     });
+    const changes = buildChangeIr(simulation, assumptions, diagnostics, {
+      changes: scenario.changes,
+      duplicateSource: `simulation ${simulation.name} scenario ${scenario.name}`,
+      valueSource: (change) => `${simulation.name} scenario ${scenario.name} change at ${change.period} ${change.unit}s`,
+      validationSource: (change) => `scenario ${scenario.name} change at ${change.period} ${change.unit}s`,
+    });
     return {
       name: scenario.name,
       overrides,
+      changes,
     };
   });
 }
@@ -245,22 +258,29 @@ function buildChangeIr(
   simulation: SimulationDeclaration,
   assumptions: SimulationAssumptionIr[],
   diagnostics: string[],
+  options: {
+    changes?: SimulationDeclaration["changes"];
+    duplicateSource: string;
+    valueSource: (change: SimulationDeclaration["changes"][number]) => string;
+    validationSource: (change: SimulationDeclaration["changes"][number]) => string;
+  },
 ): SimulationChangeIr[] {
   const assumptionsByName = new Map(assumptions.map((assumption) => [assumption.name, assumption]));
-  const changeKeys = simulation.changes.map((change) => `${change.period}.${change.unit}`);
+  const changes = options.changes ?? simulation.changes;
+  const changeKeys = changes.map((change) => `${change.period}.${change.unit}`);
   for (const duplicate of duplicates(changeKeys)) {
-    diagnostics.push(`simulation ${simulation.name} declares duplicate change at ${duplicate}`);
+    diagnostics.push(`${options.duplicateSource} declares duplicate change at ${duplicate}`);
   }
 
-  return simulation.changes.map((change) => {
+  return changes.map((change) => {
     if (change.unit !== simulation.forecast.unit) {
-      diagnostics.push(`simulation ${simulation.name} change at ${change.period} ${change.unit}s does not match forecast unit ${simulation.forecast.unit}`);
+      diagnostics.push(`${options.duplicateSource} change at ${change.period} ${change.unit}s does not match forecast unit ${simulation.forecast.unit}`);
     }
     if (change.period > simulation.forecast.periods) {
-      diagnostics.push(`simulation ${simulation.name} change at ${change.period} ${change.unit}s is after the forecast ends`);
+      diagnostics.push(`${options.duplicateSource} change at ${change.period} ${change.unit}s is after the forecast ends`);
     }
     for (const duplicate of duplicates(change.overrides.map((override) => override.name))) {
-      diagnostics.push(`simulation ${simulation.name} change at ${change.period} ${change.unit}s declares duplicate override ${duplicate}`);
+      diagnostics.push(`${options.duplicateSource} change at ${change.period} ${change.unit}s declares duplicate override ${duplicate}`);
     }
     return {
       period: change.period,
@@ -268,9 +288,9 @@ function buildChangeIr(
       overrides: change.overrides.map((override) => {
         const parsed: SimulationAssumptionIr = {
           name: override.name,
-          ...parseSimulationValue(`${simulation.name} change at ${change.period} ${change.unit}s`, override, diagnostics),
+          ...parseSimulationValue(options.valueSource(change), override, diagnostics),
         };
-        validateOverride(simulation.name, `change at ${change.period} ${change.unit}s`, parsed, assumptionsByName, diagnostics);
+        validateOverride(simulation.name, options.validationSource(change), parsed, assumptionsByName, diagnostics);
         return parsed;
       }),
     };
@@ -300,11 +320,13 @@ function runScenarioPeriods(
   simulation: SimulationIr,
   assumptions: Record<string, boolean | number | string>,
   assumptionUnits: Record<string, string>,
+  scenarioChanges: SimulationChangeIr[] = [],
 ): SimulationPeriodResult[] {
   const periods: SimulationPeriodResult[] = [];
+  const changes = [...simulation.changes, ...scenarioChanges];
 
   for (let period = 1; period <= simulation.forecast.periods; period += 1) {
-    const periodState = applyChangesForPeriod(simulation.changes, assumptions, assumptionUnits, period);
+    const periodState = applyChangesForPeriod(changes, assumptions, assumptionUnits, period);
     const formulaResult = evaluateFormulas(simulation, periodState.assumptions, periodState.assumptionUnits);
     const assumptionList = Object.entries(periodState.assumptions).map(([name, value]) => ({
       name,

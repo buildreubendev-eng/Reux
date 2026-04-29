@@ -97,6 +97,7 @@ export interface SimulationFormula {
 export interface SimulationScenario {
   name: string;
   overrides: SimulationAssumption[];
+  changes: SimulationChange[];
 }
 
 export interface SimulationChange {

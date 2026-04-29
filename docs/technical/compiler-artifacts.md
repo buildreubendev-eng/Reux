@@ -78,7 +78,7 @@ node dist/cli.js simulation-ir examples/simulations/personal_finance.reux
 node dist/cli.js simulation-run examples/simulations/workforce_change.reux
 ```
 
-The current runner is a prototype formula forecast. It repeats declared assumptions over the forecast window, applies scheduled assumption changes, and emits formula results as period metrics with `metricUnits` when the formula is unit-compatible. Formula expressions support numeric literals, assumptions, earlier formulas, parentheses, and basic arithmetic. When scenarios are declared, the runner validates override units, evaluates each scenario's assumption overrides plus shared scheduled changes, and emits final-period metric deltas against baseline.
+The current runner is a prototype formula forecast. It repeats declared assumptions over the forecast window, applies scheduled assumption changes, and emits formula results as period metrics with `metricUnits` when the formula is unit-compatible. Formula expressions support numeric literals, assumptions, earlier formulas, parentheses, and basic arithmetic. When scenarios are declared, the runner validates override units, evaluates each scenario's assumption overrides plus shared scheduled changes and scenario-specific scheduled changes, and emits final-period metric deltas against baseline.
 
 ## PostgreSQL SQL
 

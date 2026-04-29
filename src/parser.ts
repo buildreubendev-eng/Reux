@@ -545,20 +545,47 @@ function parseSimulationScenario(
     throw new DlError(`line ${lines[start].number}: expected 'scenario name {'`);
   }
 
-  const parsed = parseSimulationAssignmentBlock(lines, start + 1, "scenario");
-  return {
-    scenario: {
-      name: match[1],
-      overrides: parsed.assignments,
-    },
-    nextIndex: parsed.nextIndex,
-  };
+  const overrides: SimulationDeclaration["assumptions"] = [];
+  const changes: SimulationDeclaration["changes"] = [];
+  let index = start + 1;
+  while (index < lines.length) {
+    const line = lines[index];
+    const text = line.text.trim();
+    if (!text) {
+      index += 1;
+      continue;
+    }
+    if (text === "}") {
+      return {
+        scenario: {
+          name: match[1],
+          overrides,
+          changes,
+        },
+        nextIndex: index + 1,
+      };
+    }
+    if (text.startsWith("change at ")) {
+      const parsed = parseSimulationChange(lines, index);
+      changes.push(parsed.change);
+      index = parsed.nextIndex;
+      continue;
+    }
+    const assignment = text.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+)$/);
+    if (!assignment) {
+      throw new DlError(`line ${line.number}: expected scenario override assignment or change`);
+    }
+    overrides.push({ name: assignment[1], value: assignment[2].trim() });
+    index += 1;
+  }
+
+  throw new DlError(`line ${lines[start].number}: scenario '${match[1]}' is missing a closing brace`);
 }
 
 function parseSimulationAssignmentBlock(
   lines: SourceLine[],
   start: number,
-  label: "change" | "scenario",
+  label: "change",
 ): { assignments: SimulationDeclaration["assumptions"]; nextIndex: number } {
   const assignments: SimulationDeclaration["assumptions"] = [];
   let index = start;
