@@ -62,11 +62,12 @@ The pilot is activated through `pilot/dl.json`, `pilot/.dl/schema-manifest.json`
 
 ## Browser Demo App
 
-`demo/pilot-app` is the first end-to-end app built on the pilot. It serves a small browser console at `http://127.0.0.1:4173` and uses the Reux compiler/runtime artifacts directly:
+`demo/pilot-app` is the first end-to-end app built on the pilot. It serves a small browser console at `http://127.0.0.1:4173` and uses the Reux compiler/runtime artifacts directly. The console now has Commerce and Logistics tabs; pass `?domain=logistics` to open the logistics tab directly.
 
-- `Apply Migrations + Reset Seed` applies `pilot/migrations/` and refreshes `pilot/seeds/smoke.json`;
+- `Apply Schema + Reset Seed` applies the active domain schema and refreshes its seed fixture;
 - the dashboard panels run the pilot queries (`accountOrders`, `accountBalances`, `orderPayments`, `accountOrderSummary`, and `openOrders`);
 - the transaction buttons run `capturePayment`, `markOrderPaid`, and `creditAccount` against PostgreSQL;
+- the logistics tab runs `activeShipments`, `driverManifest`, `shipmentStatusSummary`, `startShipment`, `markDelivered`, and `creditDriver`;
 - outbox rows are read from `_dl_outbox` so transaction side effects are visible immediately;
 - `Process Outbox` runs the embeddable outbox processor with demo handlers and marks pending events as processed.
 

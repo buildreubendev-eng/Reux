@@ -10,19 +10,25 @@
     <header class="topbar">
       <div>
         <p class="eyebrow">Reux Pilot</p>
-        <h1>Commerce Console</h1>
+        <h1 id="consoleTitle">Commerce Console</h1>
         <p class="session-line">Session <span id="sessionLabel">starting</span></p>
       </div>
-      <div class="actions">
-        <button id="refreshButton" type="button">Refresh</button>
-        <button id="resetSessionButton" type="button">Reset My Session</button>
-        <details id="adminTools" class="admin-tools">
-          <summary>Admin</summary>
-          <div class="admin-menu">
-            <input id="setupToken" class="token-input" autocomplete="off" placeholder="Admin token">
-            <button id="setupButton" type="button">Apply Migrations + Reset Seed</button>
-          </div>
-        </details>
+      <div class="header-tools">
+        <nav class="domain-tabs" aria-label="Pilot domain">
+          <button class="domain-tab active" data-domain="commerce" type="button">Commerce</button>
+          <button class="domain-tab" data-domain="logistics" type="button">Logistics</button>
+        </nav>
+        <div class="actions">
+          <button id="refreshButton" type="button">Refresh</button>
+          <button id="resetSessionButton" type="button">Reset My Session</button>
+          <details id="adminTools" class="admin-tools">
+            <summary>Admin</summary>
+            <div class="admin-menu">
+              <input id="setupToken" class="token-input" autocomplete="off" placeholder="Admin token">
+              <button id="setupButton" type="button">Apply Schema + Reset Seed</button>
+            </div>
+          </details>
+        </div>
       </div>
     </header>
 
@@ -33,20 +39,20 @@
 
       <section class="status-grid" aria-label="Status">
         <div class="metric">
-          <span>Applied Migrations</span>
-          <strong id="migrationCount">-</strong>
+          <span id="metricOneLabel">Applied Migrations</span>
+          <strong id="metricOneCount">-</strong>
         </div>
         <div class="metric">
-          <span>Pending Migrations</span>
-          <strong id="pendingCount">-</strong>
+          <span id="metricTwoLabel">Pending Migrations</span>
+          <strong id="metricTwoCount">-</strong>
         </div>
         <div class="metric">
-          <span>Open Orders</span>
-          <strong id="openOrderCount">-</strong>
+          <span id="metricThreeLabel">Open Orders</span>
+          <strong id="metricThreeCount">-</strong>
         </div>
         <div class="metric">
-          <span>Outbox Events</span>
-          <strong id="outboxCount">-</strong>
+          <span id="metricFourLabel">Outbox Events</span>
+          <strong id="metricFourCount">-</strong>
         </div>
       </section>
 
@@ -59,64 +65,91 @@
           <div id="actionSummary" class="action-summary">
             Run an action to see the generated transaction or outbox result.
           </div>
-          <div class="form-grid">
-            <label>
-              <span>Order ID</span>
-              <input id="orderId" autocomplete="off">
-            </label>
-            <label>
-              <span>Payment Amount</span>
-              <input id="paymentAmount" inputmode="decimal" value="250">
-            </label>
-            <label>
-              <span>Account ID</span>
-              <input id="accountId" autocomplete="off">
-            </label>
-            <label>
-              <span>Credit Amount</span>
-              <input id="creditAmount" inputmode="decimal" value="25">
-            </label>
+
+          <div id="commerceControls" class="domain-controls">
+            <div class="form-grid">
+              <label>
+                <span>Order ID</span>
+                <input id="orderId" autocomplete="off">
+              </label>
+              <label>
+                <span>Payment Amount</span>
+                <input id="paymentAmount" inputmode="decimal" value="250">
+              </label>
+              <label>
+                <span>Account ID</span>
+                <input id="accountId" autocomplete="off">
+              </label>
+              <label>
+                <span>Credit Amount</span>
+                <input id="creditAmount" inputmode="decimal" value="25">
+              </label>
+            </div>
+            <div class="button-row">
+              <button data-action="capture" data-domain-action="commerce" type="button">Capture Payment</button>
+              <button data-action="markPaid" data-domain-action="commerce" type="button">Mark Order Paid</button>
+              <button data-action="credit" data-domain-action="commerce" type="button">Credit Account</button>
+              <button data-action="processOutbox" data-domain-action="commerce" type="button">Process Outbox</button>
+            </div>
           </div>
-          <div class="button-row">
-            <button data-action="capture" type="button">Capture Payment</button>
-            <button data-action="markPaid" type="button">Mark Order Paid</button>
-            <button data-action="credit" type="button">Credit Account</button>
-            <button data-action="processOutbox" type="button">Process Outbox</button>
+
+          <div id="logisticsControls" class="domain-controls" hidden>
+            <div class="form-grid">
+              <label>
+                <span>Shipment ID</span>
+                <input id="shipmentId" autocomplete="off">
+              </label>
+              <label>
+                <span>Driver ID</span>
+                <input id="driverId" autocomplete="off">
+              </label>
+              <label>
+                <span>Driver Credit</span>
+                <input id="driverCreditAmount" inputmode="decimal" value="40">
+              </label>
+            </div>
+            <div class="button-row">
+              <button data-action="startShipment" data-domain-action="logistics" type="button">Start Shipment</button>
+              <button data-action="markDelivered" data-domain-action="logistics" type="button">Mark Delivered</button>
+              <button data-action="creditDriver" data-domain-action="logistics" type="button">Credit Driver</button>
+              <button data-action="processOutbox" data-domain-action="logistics" type="button">Process Outbox</button>
+            </div>
           </div>
+
           <pre id="actionResult" class="log" aria-live="polite"></pre>
         </div>
 
         <div class="panel">
           <div class="panel-heading">
-            <h2>Account Summary</h2>
+            <h2 id="summaryTitle">Account Summary</h2>
           </div>
           <div id="summaryTable" class="table"></div>
         </div>
       </section>
 
       <section class="data-grid">
-        <div class="panel">
+        <div id="dataOnePanel" class="panel">
           <div class="panel-heading">
-            <h2>Orders</h2>
+            <h2 id="dataOneTitle">Orders</h2>
           </div>
-          <div id="ordersTable" class="table"></div>
+          <div id="dataOneTable" class="table"></div>
         </div>
 
-        <div class="panel">
+        <div id="dataTwoPanel" class="panel">
           <div class="panel-heading">
-            <h2>Payments</h2>
+            <h2 id="dataTwoTitle">Payments</h2>
           </div>
-          <div id="paymentsTable" class="table"></div>
+          <div id="dataTwoTable" class="table"></div>
         </div>
 
-        <div class="panel">
+        <div id="dataThreePanel" class="panel">
           <div class="panel-heading">
-            <h2>Balances</h2>
+            <h2 id="dataThreeTitle">Balances</h2>
           </div>
-          <div id="balancesTable" class="table"></div>
+          <div id="dataThreeTable" class="table"></div>
         </div>
 
-        <div class="panel">
+        <div id="outboxPanel" class="panel">
           <div class="panel-heading">
             <h2>Outbox</h2>
           </div>

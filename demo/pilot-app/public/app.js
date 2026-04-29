@@ -1,13 +1,106 @@
 const state = {
+  currentDomain: requestedDomain() ?? window.localStorage.getItem("reuxDemoDomain") ?? "commerce",
   sessionId: loadSessionId(),
   setupRequired: false,
-  ids: {
-    account: "",
-    order: "",
+};
+
+const domains = {
+  commerce: {
+    title: "Commerce Console",
+    dashboardUrl: "/api/dashboard",
+    setupUrl: "/api/setup",
+    resetUrl: "/api/session/reset",
+    controls: "#commerceControls",
+    metrics: [
+      ["Applied Migrations", (dashboard) => dashboard.migrations.applied],
+      ["Pending Migrations", (dashboard) => dashboard.migrations.pending.length],
+      ["Open Orders", (dashboard) => dashboard.openOrders.length],
+      ["Outbox Events", (dashboard) => dashboard.outbox.length],
+    ],
+    actions: {
+      capture: {
+        label: "capturePayment",
+        url: "/api/actions/capture-payment",
+        payload: () => ({ orderId: elements.orderId.value, amount: elements.paymentAmount.value }),
+      },
+      markPaid: {
+        label: "markOrderPaid",
+        url: "/api/actions/mark-paid",
+        payload: () => ({ orderId: elements.orderId.value }),
+      },
+      credit: {
+        label: "creditAccount",
+        url: "/api/actions/credit-account",
+        payload: () => ({ accountId: elements.accountId.value, amount: elements.creditAmount.value }),
+      },
+      processOutbox: {
+        label: "processOutbox",
+        url: "/api/actions/process-outbox",
+        payload: () => ({}),
+      },
+    },
+    hydrateInputs(dashboard) {
+      elements.accountId.value ||= dashboard.ids.account;
+      elements.orderId.value ||= dashboard.ids.order;
+    },
+    tables: {
+      summary: ["Account Summary", "summary", ["email", "ordercount", "totalspend"]],
+      dataOne: ["Orders", "orders", ["email", "total", "status"]],
+      dataTwo: ["Payments", "payments", ["total", "paymentamount", "paymentstatus"]],
+      dataThree: ["Balances", "balances", ["email", "balance"]],
+      outbox: ["Outbox", "outbox", ["event_type", "status", "attempts", "payload"]],
+    },
+  },
+  logistics: {
+    title: "Logistics Dispatch",
+    dashboardUrl: "/api/logistics/dashboard",
+    setupUrl: "/api/logistics/setup",
+    resetUrl: "/api/logistics/session/reset",
+    controls: "#logisticsControls",
+    metrics: [
+      ["Schema State", (dashboard) => (dashboard.setupRequired ? "Pending" : "Ready")],
+      ["Pending Setup", (dashboard) => dashboard.migrations.pending.length],
+      ["Active Shipments", (dashboard) => dashboard.activeShipments.length],
+      ["Outbox Events", (dashboard) => dashboard.outbox.length],
+    ],
+    actions: {
+      startShipment: {
+        label: "startShipment",
+        url: "/api/logistics/actions/start-shipment",
+        payload: () => ({ shipmentId: elements.shipmentId.value }),
+      },
+      markDelivered: {
+        label: "markDelivered",
+        url: "/api/logistics/actions/mark-delivered",
+        payload: () => ({ shipmentId: elements.shipmentId.value }),
+      },
+      creditDriver: {
+        label: "creditDriver",
+        url: "/api/logistics/actions/credit-driver",
+        payload: () => ({ driverId: elements.driverId.value, amount: elements.driverCreditAmount.value }),
+      },
+      processOutbox: {
+        label: "processOutbox",
+        url: "/api/logistics/actions/process-outbox",
+        payload: () => ({}),
+      },
+    },
+    hydrateInputs(dashboard) {
+      elements.shipmentId.value ||= dashboard.ids.shipment;
+      elements.driverId.value ||= dashboard.ids.driver;
+    },
+    tables: {
+      summary: ["Shipment Status", "statusSummary", ["status", "shipmentcount", "totalweight"]],
+      dataOne: ["Active Shipments", "activeShipments", ["trackingnumber", "destination", "status"]],
+      dataTwo: ["Driver Manifest", "driverManifest", ["email", "trackingnumber", "destination", "weight"]],
+      dataThree: null,
+      outbox: ["Outbox", "outbox", ["event_type", "status", "attempts", "payload"]],
+    },
   },
 };
 
 const elements = {
+  consoleTitle: document.querySelector("#consoleTitle"),
   adminTools: document.querySelector("#adminTools"),
   setupButton: document.querySelector("#setupButton"),
   setupToken: document.querySelector("#setupToken"),
@@ -19,21 +112,38 @@ const elements = {
   paymentAmount: document.querySelector("#paymentAmount"),
   accountId: document.querySelector("#accountId"),
   creditAmount: document.querySelector("#creditAmount"),
+  shipmentId: document.querySelector("#shipmentId"),
+  driverId: document.querySelector("#driverId"),
+  driverCreditAmount: document.querySelector("#driverCreditAmount"),
   actionResult: document.querySelector("#actionResult"),
   actionSummary: document.querySelector("#actionSummary"),
   lastAction: document.querySelector("#lastAction"),
   toast: document.querySelector("#toast"),
-  migrationCount: document.querySelector("#migrationCount"),
-  pendingCount: document.querySelector("#pendingCount"),
-  openOrderCount: document.querySelector("#openOrderCount"),
-  outboxCount: document.querySelector("#outboxCount"),
-  ordersTable: document.querySelector("#ordersTable"),
-  paymentsTable: document.querySelector("#paymentsTable"),
-  balancesTable: document.querySelector("#balancesTable"),
+  metricLabels: [
+    document.querySelector("#metricOneLabel"),
+    document.querySelector("#metricTwoLabel"),
+    document.querySelector("#metricThreeLabel"),
+    document.querySelector("#metricFourLabel"),
+  ],
+  metricCounts: [
+    document.querySelector("#metricOneCount"),
+    document.querySelector("#metricTwoCount"),
+    document.querySelector("#metricThreeCount"),
+    document.querySelector("#metricFourCount"),
+  ],
+  summaryTitle: document.querySelector("#summaryTitle"),
   summaryTable: document.querySelector("#summaryTable"),
+  dataOnePanel: document.querySelector("#dataOnePanel"),
+  dataOneTitle: document.querySelector("#dataOneTitle"),
+  dataOneTable: document.querySelector("#dataOneTable"),
+  dataTwoPanel: document.querySelector("#dataTwoPanel"),
+  dataTwoTitle: document.querySelector("#dataTwoTitle"),
+  dataTwoTable: document.querySelector("#dataTwoTable"),
+  dataThreePanel: document.querySelector("#dataThreePanel"),
+  dataThreeTitle: document.querySelector("#dataThreeTitle"),
+  dataThreeTable: document.querySelector("#dataThreeTable"),
   outboxTable: document.querySelector("#outboxTable"),
 };
-const demoActionButtons = [...document.querySelectorAll("[data-action]")];
 
 const displayLabels = {
   event_type: "Event Type",
@@ -41,16 +151,23 @@ const displayLabels = {
   paymentamount: "Payment Amount",
   paymentstatus: "Payment Status",
   totalspend: "Total Spend",
+  shipmentcount: "Shipment Count",
+  totalweight: "Total Weight",
+  trackingnumber: "Tracking Number",
 };
+
+const domainTabs = [...document.querySelectorAll("[data-domain]")];
+const demoActionButtons = [...document.querySelectorAll("[data-action]")];
 
 elements.setupButton.addEventListener("click", async () => {
   await withBusy(elements.setupButton, async () => {
-    const result = await postJson("/api/setup", {
+    const config = activeDomain();
+    const result = await postJson(config.setupUrl, {
       setupToken: elements.setupToken.value,
     });
     elements.actionResult.textContent = JSON.stringify(result, null, 2);
     elements.adminTools.open = false;
-    notify("Database migrated and pilot seed reset");
+    notify(`${config.title} schema and seed reset`);
     await refresh();
   });
 });
@@ -58,72 +175,94 @@ elements.setupButton.addEventListener("click", async () => {
 elements.refreshButton.addEventListener("click", () => withBusy(elements.refreshButton, refresh));
 elements.resetSessionButton.addEventListener("click", async () => {
   await withBusy(elements.resetSessionButton, async () => {
-    const result = await postJson("/api/session/reset", {});
+    const config = activeDomain();
+    const result = await postJson(config.resetUrl, {});
     elements.actionResult.textContent = JSON.stringify(result, null, 2);
-    elements.actionSummary.textContent = "Your isolated demo session was reset with fresh seed data.";
+    elements.actionSummary.textContent = `Your isolated ${config.title.toLowerCase()} session was reset with fresh seed data.`;
     notify("Session reset with fresh demo data");
     await refresh();
   });
 });
 
-document.querySelector('[data-action="capture"]').addEventListener("click", async () => {
-  await runAction("capturePayment", "/api/actions/capture-payment", {
-    orderId: elements.orderId.value,
-    amount: elements.paymentAmount.value,
+domainTabs.forEach((tab) => {
+  tab.addEventListener("click", async () => {
+    state.currentDomain = tab.dataset.domain;
+    window.localStorage.setItem("reuxDemoDomain", state.currentDomain);
+    elements.actionResult.textContent = "";
+    elements.actionSummary.textContent = "Run an action to see the generated transaction or outbox result.";
+    elements.lastAction.textContent = "Idle";
+    await refresh();
   });
 });
 
-document.querySelector('[data-action="markPaid"]').addEventListener("click", async () => {
-  await runAction("markOrderPaid", "/api/actions/mark-paid", {
-    orderId: elements.orderId.value,
+demoActionButtons.forEach((button) => {
+  button.addEventListener("click", async () => {
+    const config = activeDomain();
+    const action = config.actions[button.dataset.action];
+    if (!action) return;
+    await withBusy(button, () => runAction(action));
   });
-});
-
-document.querySelector('[data-action="credit"]').addEventListener("click", async () => {
-  await runAction("creditAccount", "/api/actions/credit-account", {
-    accountId: elements.accountId.value,
-    amount: elements.creditAmount.value,
-  });
-});
-
-document.querySelector('[data-action="processOutbox"]').addEventListener("click", async () => {
-  await runAction("processOutbox", "/api/actions/process-outbox", {});
 });
 
 refresh().catch((error) => {
   notify(error.message, true);
 });
 
-async function runAction(label, url, payload) {
-  elements.lastAction.textContent = label;
-  const result = await postJson(url, payload);
+async function runAction(action) {
+  elements.lastAction.textContent = action.label;
+  const result = await postJson(action.url, action.payload());
   elements.actionResult.textContent = JSON.stringify(result, null, 2);
-  elements.actionSummary.textContent = summarizeAction(label, result);
-  notify(`${label} complete`);
+  elements.actionSummary.textContent = summarizeAction(action.label, result);
+  notify(`${action.label} complete`);
   await refresh();
 }
 
 async function refresh() {
-  const dashboard = await getJson("/api/dashboard");
+  const config = activeDomain();
+  syncDomainChrome(config);
+  const dashboard = await getJson(config.dashboardUrl);
   state.setupRequired = Boolean(dashboard.setupRequired);
   elements.sessionLabel.textContent = dashboard.session?.id ? dashboard.session.id.slice(0, 8) : "shared";
   elements.setupNotice.hidden = !dashboard.setupRequired;
-  state.ids.account = dashboard.ids.account;
-  state.ids.order = dashboard.ids.order;
-  elements.accountId.value ||= dashboard.ids.account;
-  elements.orderId.value ||= dashboard.ids.order;
+  config.hydrateInputs(dashboard);
 
-  elements.migrationCount.textContent = String(dashboard.migrations.applied);
-  elements.pendingCount.textContent = String(dashboard.migrations.pending.length);
-  elements.openOrderCount.textContent = String(dashboard.openOrders.length);
-  elements.outboxCount.textContent = String(dashboard.outbox.length);
+  config.metrics.forEach(([labelText, count], index) => {
+    elements.metricLabels[index].textContent = labelText;
+    elements.metricCounts[index].textContent = String(count(dashboard));
+  });
 
-  renderTable(elements.ordersTable, dashboard.orders, ["email", "total", "status"]);
-  renderTable(elements.paymentsTable, dashboard.payments, ["total", "paymentamount", "paymentstatus"]);
-  renderTable(elements.balancesTable, dashboard.balances, ["email", "balance"]);
-  renderTable(elements.summaryTable, dashboard.summary, ["email", "ordercount", "totalspend"]);
-  renderTable(elements.outboxTable, dashboard.outbox, ["event_type", "status", "attempts", "payload"]);
+  renderDomainTables(config, dashboard);
   setActionAvailability();
+}
+
+function syncDomainChrome(config) {
+  elements.consoleTitle.textContent = config.title;
+  domainTabs.forEach((tab) => {
+    tab.classList.toggle("active", tab.dataset.domain === state.currentDomain);
+  });
+  document.querySelectorAll(".domain-controls").forEach((controls) => {
+    controls.hidden = controls !== document.querySelector(config.controls);
+  });
+}
+
+function renderDomainTables(config, dashboard) {
+  renderConfiguredTable(config.tables.summary, elements.summaryTitle, elements.summaryTable, dashboard);
+  renderConfiguredTable(config.tables.dataOne, elements.dataOneTitle, elements.dataOneTable, dashboard, elements.dataOnePanel);
+  renderConfiguredTable(config.tables.dataTwo, elements.dataTwoTitle, elements.dataTwoTable, dashboard, elements.dataTwoPanel);
+  renderConfiguredTable(config.tables.dataThree, elements.dataThreeTitle, elements.dataThreeTable, dashboard, elements.dataThreePanel);
+  renderConfiguredTable(config.tables.outbox, null, elements.outboxTable, dashboard);
+}
+
+function renderConfiguredTable(tableConfig, titleTarget, tableTarget, dashboard, panelTarget) {
+  if (!tableConfig) {
+    if (panelTarget) panelTarget.hidden = true;
+    tableTarget.innerHTML = "";
+    return;
+  }
+  if (panelTarget) panelTarget.hidden = false;
+  const [title, key, columns] = tableConfig;
+  if (titleTarget) titleTarget.textContent = title;
+  renderTable(tableTarget, dashboard[key] ?? [], columns);
 }
 
 function renderTable(target, rows, preferredColumns) {
@@ -198,12 +337,21 @@ async function withBusy(button, task) {
 
 function setActionAvailability() {
   demoActionButtons.forEach((button) => {
-    button.disabled = state.setupRequired;
+    button.disabled = state.setupRequired || button.dataset.domainAction !== state.currentDomain;
   });
 }
 
 function sessionHeaders() {
   return { "x-reux-demo-session": state.sessionId };
+}
+
+function activeDomain() {
+  return domains[state.currentDomain] ?? domains.commerce;
+}
+
+function requestedDomain() {
+  const domain = new URLSearchParams(window.location.search).get("domain");
+  return domain && domain in domains ? domain : undefined;
 }
 
 function loadSessionId() {
@@ -217,13 +365,13 @@ function loadSessionId() {
   return generated;
 }
 
-function summarizeAction(label, result) {
-  if (label === "processOutbox") {
+function summarizeAction(labelText, result) {
+  if (labelText === "processOutbox") {
     return `Processed ${result.processed} outbox event(s); ${result.failed} failed.`;
   }
   const events = result.outboxEvents?.length ?? 0;
   const hooks = result.afterCommit?.length ?? 0;
-  return `${label} ran in ${result.attempts} attempt(s), wrote ${events} outbox event(s), and returned ${hooks} after-commit hook(s).`;
+  return `${labelText} ran in ${result.attempts} attempt(s), wrote ${events} outbox event(s), and returned ${hooks} after-commit hook(s).`;
 }
 
 function friendlyError(message) {

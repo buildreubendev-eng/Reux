@@ -2,7 +2,7 @@ import { createReadStream, existsSync, readFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { extname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { emitQuerySql, emitTransactionSql, transactionRetryAttempts } from "../../dist/compiler.js";
+import { emitPostgresSchema, emitQuerySql, emitTransactionSql, transactionRetryAttempts } from "../../dist/compiler.js";
 import { loadConfig } from "../../dist/config.js";
 import {
   applyMigrations,
@@ -24,11 +24,7 @@ import {
 
 const rootDir = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 const publicDir = join(rootDir, "demo", "pilot-app", "public");
-const sourcePath = join(rootDir, "examples", "pilot_reux.dl");
-const seedPath = join(rootDir, "pilot", "seeds", "smoke.json");
 const config = loadConfig(rootDir, "pilot/dl.json");
-const source = readFileSync(sourcePath, "utf8");
-const seed = parseSeedSpec(`@${seedPath}`);
 const demoSchema = process.env.REUX_DEMO_SCHEMA ?? "reux_demo";
 const setupToken = process.env.REUX_DEMO_SETUP_TOKEN ?? "";
 const host = process.env.HOST ?? "0.0.0.0";
@@ -42,11 +38,46 @@ if (!baseDatabaseUrl) {
   throw new Error(`database URL environment variable ${config.databaseUrlEnv} is not set`);
 }
 
-const demoIds = {
-  account: "00000000-0000-4000-8000-000000000001",
-  product: "00000000-0000-4000-8000-000000000002",
-  order: "00000000-0000-4000-8000-000000000003",
-  payment: "00000000-0000-4000-8000-000000000004",
+const commerceSource = readFileSync(join(rootDir, "examples", "pilot_reux.dl"), "utf8");
+const logisticsSource = readFileSync(join(rootDir, "examples", "logistics_reux.dl"), "utf8");
+
+const domains = {
+  commerce: {
+    key: "commerce",
+    title: "Commerce Console",
+    source: commerceSource,
+    seed: parseSeedSpec(`@${join(rootDir, "pilot", "seeds", "smoke.json")}`),
+    migrationsDir: config.migrationsDir,
+    ids: {
+      account: "00000000-0000-4000-8000-000000000001",
+      product: "00000000-0000-4000-8000-000000000002",
+      order: "00000000-0000-4000-8000-000000000003",
+      payment: "00000000-0000-4000-8000-000000000004",
+    },
+    outboxHandlers: {
+      AccountCredited: () => undefined,
+      OrderPaid: () => undefined,
+      PaymentCaptured: () => undefined,
+    },
+  },
+  logistics: {
+    key: "logistics",
+    title: "Logistics Dispatch",
+    source: logisticsSource,
+    seed: parseSeedSpec(`@${join(rootDir, "examples", "seeds", "logistics_smoke.json")}`),
+    schemaSql: emitPostgresSchema(logisticsSource),
+    readyTable: "shipments",
+    ids: {
+      driver: "00000000-0000-4000-8000-200000000001",
+      vehicle: "00000000-0000-4000-8000-200000000002",
+      shipment: "00000000-0000-4000-8000-200000000003",
+    },
+    outboxHandlers: {
+      ShipmentStarted: () => undefined,
+      ShipmentDelivered: () => undefined,
+      DriverCredited: () => undefined,
+    },
+  },
 };
 
 const server = createServer(async (request, response) => {
@@ -75,47 +106,87 @@ async function route(request, response) {
   const url = new URL(request.url ?? "/", `http://127.0.0.1:${port}`);
 
   if (url.pathname === "/api/health") {
-    sendJson(response, 200, { ok: true, module: "pilot", databaseUrlEnv: config.databaseUrlEnv, schema: demoSchema, sessionMode });
+    sendJson(response, 200, { ok: true, module: "pilot", databaseUrlEnv: config.databaseUrlEnv, schema: demoSchema, sessionMode, domains: Object.keys(domains) });
     return;
   }
 
   if (url.pathname === "/api/setup" && method === "POST") {
     const body = await readJson(request);
     assertSetupAllowed(request, body);
-    sendJson(response, 200, await setupDemo(request));
+    sendJson(response, 200, await setupDemo(request, domains.commerce));
     return;
   }
 
   if (url.pathname === "/api/session/reset" && method === "POST") {
-    sendJson(response, 200, await setupDemo(request));
+    sendJson(response, 200, await setupDemo(request, domains.commerce));
     return;
   }
 
   if (url.pathname === "/api/dashboard" && method === "GET") {
-    sendJson(response, 200, await dashboard(request));
+    sendJson(response, 200, await commerceDashboard(request));
     return;
   }
 
   if (url.pathname === "/api/actions/capture-payment" && method === "POST") {
     const body = await readJson(request);
-    sendJson(response, 200, await runTransaction(request, "capturePayment", [body.orderId ?? demoIds.order, body.amount ?? "250"]));
+    sendJson(response, 200, await runTransaction(request, domains.commerce, "capturePayment", [body.orderId ?? domains.commerce.ids.order, body.amount ?? "250"]));
     return;
   }
 
   if (url.pathname === "/api/actions/mark-paid" && method === "POST") {
     const body = await readJson(request);
-    sendJson(response, 200, await runTransaction(request, "markOrderPaid", [body.orderId ?? demoIds.order]));
+    sendJson(response, 200, await runTransaction(request, domains.commerce, "markOrderPaid", [body.orderId ?? domains.commerce.ids.order]));
     return;
   }
 
   if (url.pathname === "/api/actions/credit-account" && method === "POST") {
     const body = await readJson(request);
-    sendJson(response, 200, await runTransaction(request, "creditAccount", [body.accountId ?? demoIds.account, body.amount ?? "25"]));
+    sendJson(response, 200, await runTransaction(request, domains.commerce, "creditAccount", [body.accountId ?? domains.commerce.ids.account, body.amount ?? "25"]));
     return;
   }
 
   if (url.pathname === "/api/actions/process-outbox" && method === "POST") {
-    sendJson(response, 200, await processDemoOutbox(request));
+    sendJson(response, 200, await processDemoOutbox(request, domains.commerce));
+    return;
+  }
+
+  if (url.pathname === "/api/logistics/setup" && method === "POST") {
+    const body = await readJson(request);
+    assertSetupAllowed(request, body);
+    sendJson(response, 200, await setupDemo(request, domains.logistics));
+    return;
+  }
+
+  if (url.pathname === "/api/logistics/session/reset" && method === "POST") {
+    sendJson(response, 200, await setupDemo(request, domains.logistics));
+    return;
+  }
+
+  if (url.pathname === "/api/logistics/dashboard" && method === "GET") {
+    sendJson(response, 200, await logisticsDashboard(request));
+    return;
+  }
+
+  if (url.pathname === "/api/logistics/actions/start-shipment" && method === "POST") {
+    const body = await readJson(request);
+    sendJson(response, 200, await runTransaction(request, domains.logistics, "startShipment", [body.shipmentId ?? domains.logistics.ids.shipment]));
+    return;
+  }
+
+  if (url.pathname === "/api/logistics/actions/mark-delivered" && method === "POST") {
+    const body = await readJson(request);
+    sendJson(response, 200, await runTransaction(request, domains.logistics, "markDelivered", [body.shipmentId ?? domains.logistics.ids.shipment]));
+    return;
+  }
+
+  if (url.pathname === "/api/logistics/actions/credit-driver" && method === "POST") {
+    const body = await readJson(request);
+    sendJson(response, 200, await runTransaction(request, domains.logistics, "creditDriver", [body.driverId ?? domains.logistics.ids.driver, body.amount ?? "40"]));
+    return;
+  }
+
+  if (url.pathname === "/api/logistics/actions/process-outbox" && method === "POST") {
+    sendJson(response, 200, await processDemoOutbox(request, domains.logistics));
     return;
   }
 
@@ -127,44 +198,45 @@ async function route(request, response) {
   serveStatic(url.pathname, response);
 }
 
-async function setupDemo(request) {
+async function setupDemo(request, domain) {
   const context = requestContext(request);
   await ensureDemoSchema(context);
-  await applyMigrations(context.db, config.migrationsDir);
+  await ensureDomainStore(context, domain);
   await ensureDemoOutboxTable(context);
-  const reset = await resetSeed(context.db, source, seed);
-  return { ok: true, reset, session: sessionInfo(context) };
+  const reset = await resetSeed(context.db, domain.source, domain.seed);
+  return { ok: true, domain: domain.key, reset, session: sessionInfo(context) };
 }
 
-async function dashboard(request) {
+async function commerceDashboard(request) {
   const context = requestContext(request);
   await ensureDemoSchema(context);
   await ensureDemoOutboxTable(context);
-  const status = await migrationStatus(context.db, config.migrationsDir);
+  const status = await domainStatus(context, domains.commerce);
   let queryResults;
   try {
     queryResults = await Promise.all([
-      runSqlQuery(context.db, emitQuerySql(source, "accountOrders"), ["0"]),
-      runSqlQuery(context.db, emitQuerySql(source, "accountBalances"), ["0"]),
-      runSqlQuery(context.db, emitQuerySql(source, "orderPayments"), ["0"]),
-      runSqlQuery(context.db, emitQuerySql(source, "accountOrderSummary"), ["0"]),
-      runSqlQuery(context.db, emitQuerySql(source, "openOrders"), ["0"]),
+      runSqlQuery(context.db, emitQuerySql(domains.commerce.source, "accountOrders"), ["0"]),
+      runSqlQuery(context.db, emitQuerySql(domains.commerce.source, "accountBalances"), ["0"]),
+      runSqlQuery(context.db, emitQuerySql(domains.commerce.source, "orderPayments"), ["0"]),
+      runSqlQuery(context.db, emitQuerySql(domains.commerce.source, "accountOrderSummary"), ["0"]),
+      runSqlQuery(context.db, emitQuerySql(domains.commerce.source, "openOrders"), ["0"]),
       runSqlQuery(
       context.db,
-      `SELECT id, event_type, payload, status, attempts, created_at FROM ${context.outboxTable} ORDER BY created_at DESC LIMIT 10;`,
+      `SELECT id, event_type, payload, status, attempts, created_at FROM ${context.outboxTable} WHERE event_type IN ('AccountCredited', 'OrderPaid', 'PaymentCaptured') ORDER BY created_at DESC LIMIT 10;`,
       [],
     ),
     ]);
   } catch (error) {
     if (isMissingRelation(error)) {
-      return emptyDashboard(status, context);
+      return emptyDashboard(domains.commerce, status, context);
     }
     throw error;
   }
   const [orders, balances, payments, summary, openOrders, outbox] = queryResults;
 
   return {
-    ids: demoIds,
+    domain: domains.commerce.key,
+    ids: domains.commerce.ids,
     session: sessionInfo(context),
     setupRequired: false,
     migrations: {
@@ -180,36 +252,90 @@ async function dashboard(request) {
   };
 }
 
-function emptyDashboard(status, context) {
+async function logisticsDashboard(request) {
+  const context = requestContext(request);
+  await ensureDemoSchema(context);
+  await ensureDemoOutboxTable(context);
+  const status = await domainStatus(context, domains.logistics);
+  let queryResults;
+  try {
+    queryResults = await Promise.all([
+      runSqlQuery(context.db, emitQuerySql(domains.logistics.source, "activeShipments"), ["0"]),
+      runSqlQuery(context.db, emitQuerySql(domains.logistics.source, "driverManifest"), ["0"]),
+      runSqlQuery(context.db, emitQuerySql(domains.logistics.source, "shipmentStatusSummary"), ["0"]),
+      runSqlQuery(
+        context.db,
+        `SELECT id, event_type, payload, status, attempts, created_at FROM ${context.outboxTable} WHERE event_type IN ('ShipmentStarted', 'ShipmentDelivered', 'DriverCredited') ORDER BY created_at DESC LIMIT 10;`,
+        [],
+      ),
+    ]);
+  } catch (error) {
+    if (isMissingRelation(error)) {
+      return emptyDashboard(domains.logistics, status, context);
+    }
+    throw error;
+  }
+  const [activeShipments, driverManifest, statusSummary, outbox] = queryResults;
+
   return {
-    ids: demoIds,
+    domain: domains.logistics.key,
+    ids: domains.logistics.ids,
+    session: sessionInfo(context),
+    setupRequired: false,
+    migrations: {
+      applied: status.applied.length,
+      pending: status.pending.map((migration) => migration.filename),
+    },
+    activeShipments: activeShipments.rows,
+    driverManifest: driverManifest.rows,
+    statusSummary: statusSummary.rows,
+    outbox: outbox.rows,
+  };
+}
+
+function emptyDashboard(domain, status, context) {
+  const common = {
+    domain: domain.key,
+    ids: domain.ids,
     session: sessionInfo(context),
     setupRequired: true,
     migrations: {
       applied: status.applied.length,
       pending: status.pending.map((migration) => migration.filename),
     },
+    outbox: [],
+  };
+  if (domain.key === "logistics") {
+    return {
+      ...common,
+      activeShipments: [],
+      driverManifest: [],
+      statusSummary: [],
+    };
+  }
+  return {
+    ...common,
     orders: [],
     balances: [],
     payments: [],
     summary: [],
     openOrders: [],
-    outbox: [],
   };
 }
 
-async function runTransaction(request, name, params) {
+async function runTransaction(request, domain, name, params) {
   const context = requestContext(request);
   await ensureDemoSchema(context);
   await ensureDemoOutboxTable(context);
   const result = await runTransactionSql(
     context.db,
-    emitTransactionSql(source, name),
+    emitTransactionSql(domain.source, name),
     params,
-    transactionRetryAttempts(source, name),
+    transactionRetryAttempts(domain.source, name),
   );
   return {
     ok: true,
+    domain: domain.key,
     name,
     attempts: result.attempts,
     statements: result.statements,
@@ -221,21 +347,21 @@ async function runTransaction(request, name, params) {
   };
 }
 
-async function processDemoOutbox(request) {
+async function processDemoOutbox(request, domain) {
   const context = requestContext(request);
   await ensureDemoSchema(context);
   await ensureDemoOutboxTable(context);
   const result = await processOutboxEvents(
     context.db,
     {
-      AccountCredited: () => undefined,
-      OrderPaid: () => undefined,
-      PaymentCaptured: () => undefined,
+      ...domains.commerce.outboxHandlers,
+      ...domains.logistics.outboxHandlers,
     },
     10,
   );
   return {
     ok: true,
+    domain: domain.key,
     processed: result.processed.length,
     failed: result.failed.length,
     events: {
@@ -348,6 +474,33 @@ function schemaContext(schema, sessionId) {
 
 async function ensureDemoSchema(context) {
   await context.db.query(`CREATE SCHEMA IF NOT EXISTS ${context.quotedSchema};`);
+}
+
+async function ensureDomainStore(context, domain) {
+  if (domain.migrationsDir) {
+    await applyMigrations(context.db, domain.migrationsDir);
+    return;
+  }
+  if (domain.readyTable && (await tableExists(context.db, domain.readyTable))) {
+    return;
+  }
+  await context.db.query(domain.schemaSql);
+}
+
+async function domainStatus(context, domain) {
+  if (domain.migrationsDir) {
+    return migrationStatus(context.db, domain.migrationsDir);
+  }
+  const ready = domain.readyTable ? await tableExists(context.db, domain.readyTable) : false;
+  return {
+    applied: ready ? [{ filename: "generated schema", hash: "", appliedAt: "" }] : [],
+    pending: ready ? [] : [{ filename: "generated schema", hash: "", path: "", sql: "" }],
+  };
+}
+
+async function tableExists(db, tableName) {
+  const result = await db.query("SELECT to_regclass($1) AS name;", [tableName]);
+  return Boolean(result.rows[0]?.name);
 }
 
 async function ensureDemoOutboxTable(context) {

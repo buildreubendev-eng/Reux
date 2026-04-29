@@ -55,11 +55,12 @@ After deployment:
 1. Open the deployed demo URL.
 2. Click `Reset My Session` to create a fresh isolated visitor schema.
 3. Confirm `/api/dashboard` returns seeded orders, payments, balances, and outbox events.
-4. For admin/shared setup, open the collapsed `Admin` menu, enter the private token if `REUX_DEMO_SETUP_TOKEN` is set, and click `Apply Migrations + Reset Seed`.
+4. Switch to the `Logistics` tab, click `Reset My Session`, and confirm `/api/logistics/dashboard` returns seeded shipments, driver manifest rows, status summary rows, and logistics outbox events.
+5. For admin/shared setup, open the collapsed `Admin` menu, enter the private token if `REUX_DEMO_SETUP_TOKEN` is set, and click `Apply Schema + Reset Seed`.
 
 Regular visitors can reset only their own session and use the dashboard and transaction buttons after setup. Keep the token private so the shared/admin demo database cannot be reset by everyone visiting the public site.
 
-The public UI keeps setup/reset inside a collapsed `Admin` menu. The dashboard can still load before setup and will show a setup-required state instead of failing with a database error. Public visitors do not need the token after the seeded data has been initialized. The `Process Outbox` button runs demo event handlers over pending outbox rows so visitors can see transaction events move from `pending` to `processed`. The app creates and queries `_dl_outbox` inside `REUX_DEMO_SCHEMA`, avoiding accidental reads from another schema in a shared database.
+The public UI keeps admin setup inside a collapsed `Admin` menu and exposes `Reset My Session` for each tab. The dashboard can still load before setup and will show a setup-required state instead of failing with a database error. Public visitors do not need the token after the seeded data has been initialized. The `Process Outbox` button runs demo event handlers over pending outbox rows so visitors can see transaction events move from `pending` to `processed`. The app creates and queries `_dl_outbox` inside `REUX_DEMO_SCHEMA`, avoiding accidental reads from another schema in a shared database.
 
 For a separate worker process, deploy the same repo with:
 
@@ -78,3 +79,5 @@ NEXT_PUBLIC_REUX_DEMO_URL=https://your-demo-host.example.com
 ```
 
 Use a normal link for the safest launch path. An iframe also works because the demo app does not set frame-blocking headers, but a full-page link is easier to debug across hosting providers.
+
+Use `?domain=logistics` to open the logistics tab directly, or `?domain=commerce` for the commerce tab.

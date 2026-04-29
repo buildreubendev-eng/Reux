@@ -133,6 +133,47 @@ describe("compiler prototype", () => {
     expect(sql).toContain('ORDER BY sum("order".total) DESC');
   });
 
+  it("compiles the logistics pilot source", () => {
+    const result = compileSource(readFileSync("examples/logistics_reux.dl", "utf8"));
+
+    expect(result.schema.entities.map((entity) => entity.name)).toEqual(["Driver", "Vehicle", "Shipment"]);
+    expect(result.schema.enums[0]).toEqual({
+      name: "ShipmentStatus",
+      values: ["Scheduled", "InTransit", "Delivered", "Exception"],
+    });
+    expect(result.schema.transitions).toHaveLength(4);
+    expect(result.program.declarations.some((declaration) => declaration.kind === "transaction" && declaration.name === "startShipment")).toBe(true);
+    expect(result.program.declarations.some((declaration) => declaration.kind === "transaction" && declaration.name === "markDelivered")).toBe(true);
+    expect(result.program.declarations.some((declaration) => declaration.kind === "transaction" && declaration.name === "creditDriver")).toBe(true);
+  });
+
+  it("lowers logistics pilot joins and aggregations to PostgreSQL", () => {
+    const source = readFileSync("examples/logistics_reux.dl", "utf8");
+    const manifestSql = emitQuerySql(source, "driverManifest");
+    const summarySql = emitQuerySql(source, "shipmentStatusSummary");
+
+    expect(manifestSql).toContain('JOIN drivers AS "driver" ON "shipment".driver_id = "driver".id');
+    expect(manifestSql).toContain('SELECT "driver".email AS email, "shipment".tracking_number AS trackingNumber');
+    expect(summarySql).toContain('SELECT "shipment".status AS status, count(*) AS shipmentCount, sum("shipment".weight) AS totalWeight');
+    expect(summarySql).toContain('GROUP BY "shipment".status');
+  });
+
+  it("lowers logistics pilot transitions and outbox events to guarded PostgreSQL", () => {
+    const source = readFileSync("examples/logistics_reux.dl", "utf8");
+    const startSql = emitTransactionSql(source, "startShipment");
+    const deliveredSql = emitTransactionSql(source, "markDelivered");
+    const creditSql = emitTransactionSql(source, "creditDriver");
+
+    expect(startSql).toContain("-- transition guard: Shipment.status -> InTransit");
+    expect(startSql).toContain("UPDATE shipments SET status = 'InTransit' WHERE id = $1 AND status IN ('Scheduled', 'Exception');");
+    expect(startSql).toContain("INSERT INTO _dl_outbox (event_type, payload) VALUES ('ShipmentStarted'");
+    expect(deliveredSql).toContain("-- transition guard: Shipment.status -> Delivered");
+    expect(deliveredSql).toContain("UPDATE shipments SET status = 'Delivered' WHERE id = $1 AND status IN ('InTransit');");
+    expect(deliveredSql).toContain("INSERT INTO _dl_outbox (event_type, payload) VALUES ('ShipmentDelivered'");
+    expect(creditSql).toContain("UPDATE drivers SET payout_balance = payout_balance + $2 WHERE id = $1;");
+    expect(creditSql).toContain("INSERT INTO _dl_outbox (event_type, payload) VALUES ('DriverCredited'");
+  });
+
   it("lowers broader grouped aggregate functions to PostgreSQL", () => {
     const sql = emitQuerySql(
       `module commerce

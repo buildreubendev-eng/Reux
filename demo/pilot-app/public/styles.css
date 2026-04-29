@@ -151,6 +151,35 @@ input {
   gap: 10px;
 }
 
+.header-tools {
+  display: grid;
+  justify-items: end;
+  gap: 12px;
+}
+
+.domain-tabs {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.domain-tab {
+  min-height: 34px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  padding: 0 12px;
+}
+
+.domain-tab:hover,
+.domain-tab.active {
+  background: var(--blue);
+  color: #fff;
+}
+
 .status-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -339,5 +368,17 @@ td code {
   .topbar {
     align-items: stretch;
     display: grid;
+  }
+
+  .header-tools {
+    justify-items: stretch;
+  }
+
+  .domain-tabs {
+    width: 100%;
+  }
+
+  .domain-tab {
+    flex: 1;
   }
 }
