@@ -69,7 +69,7 @@ node dist/cli.js project-explain highValueUsers
 
 ## Simulation IR
 
-Simulation IR records static assumptions, formulas, and forecast windows from `simulate` declarations. It is intentionally separate from Schema IR because simulations are product/domain behavior rather than durable database shape.
+Simulation IR records static assumptions, formulas, scenarios, and forecast windows from `simulate` declarations. It is intentionally separate from Schema IR because simulations are product/domain behavior rather than durable database shape.
 
 Inspect and run a simulation:
 
@@ -78,7 +78,7 @@ node dist/cli.js simulation-ir examples/simulations/personal_finance.reux
 node dist/cli.js simulation-run examples/simulations/workforce_change.reux
 ```
 
-The current runner is a prototype formula forecast. It repeats declared assumptions over the forecast window and emits formula results as period metrics. Formula expressions support numeric literals, assumptions, earlier formulas, parentheses, and basic arithmetic.
+The current runner is a prototype formula forecast. It repeats declared assumptions over the forecast window and emits formula results as period metrics. Formula expressions support numeric literals, assumptions, earlier formulas, parentheses, and basic arithmetic. When scenarios are declared, the runner evaluates each scenario's assumption overrides and emits final-period metric deltas against baseline.
 
 ## PostgreSQL SQL
 

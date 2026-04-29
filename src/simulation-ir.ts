@@ -5,6 +5,7 @@ export interface SimulationIr {
   name: string;
   assumptions: SimulationAssumptionIr[];
   formulas: SimulationFormulaIr[];
+  scenarios: SimulationScenarioIr[];
   forecast: {
     periods: number;
     unit: SimulationDeclaration["forecast"]["unit"];
@@ -23,11 +24,18 @@ export interface SimulationFormulaIr {
   references: string[];
 }
 
+export interface SimulationScenarioIr {
+  name: string;
+  overrides: SimulationAssumptionIr[];
+}
+
 export interface SimulationRunResult {
   name: string;
   model: "prototype-formula-forecast";
   forecast: SimulationIr["forecast"];
   periods: SimulationPeriodResult[];
+  scenarios?: SimulationScenarioRunResult[];
+  comparison?: SimulationComparisonResult;
 }
 
 export interface SimulationPeriodResult {
@@ -35,6 +43,20 @@ export interface SimulationPeriodResult {
   label: string;
   assumptions: Record<string, boolean | number | string>;
   metrics: Record<string, number>;
+}
+
+export interface SimulationScenarioRunResult {
+  name: string;
+  periods: SimulationPeriodResult[];
+}
+
+export interface SimulationComparisonResult {
+  baseline: string;
+  finalPeriod: number;
+  scenarios: Array<{
+    name: string;
+    metricDeltas: Record<string, number>;
+  }>;
 }
 
 export function buildSimulationCatalog(program: Program): SimulationIr[] {
@@ -54,34 +76,23 @@ export function buildSimulationCatalog(program: Program): SimulationIr[] {
 
 export function runSimulationIr(simulation: SimulationIr): SimulationRunResult {
   const assumptions = Object.fromEntries(simulation.assumptions.map((assumption) => [assumption.name, assumption.value]));
-  const formulaMetrics = evaluateFormulas(simulation, assumptions);
-  const metrics = simulation.formulas.length > 0 ? {} : derivedMetrics(simulation.assumptions);
-  const periods: SimulationPeriodResult[] = [];
-
-  for (let period = 1; period <= simulation.forecast.periods; period += 1) {
-    const periodMetrics: Record<string, number> = { ...formulaMetrics };
-    if (metrics.netCashFlow !== undefined) {
-      periodMetrics.netCashFlow = metrics.netCashFlow;
-      periodMetrics.cumulativeNetCashFlow = metrics.netCashFlow * period;
-    }
-    if (metrics.changeRate !== undefined) {
-      periodMetrics.changeRate = metrics.changeRate;
-      periodMetrics.projectedIndex = Number((100 * Math.pow(1 + metrics.changeRate, period)).toFixed(4));
-    }
-
-    periods.push({
-      period,
-      label: `${period} ${pluralize(simulation.forecast.unit, period)}`,
-      assumptions,
-      metrics: periodMetrics,
-    });
-  }
+  const periods = runScenarioPeriods(simulation, assumptions);
+  const scenarios = simulation.scenarios.length > 0
+    ? [
+        { name: "baseline", periods },
+        ...simulation.scenarios.map((scenario) => ({
+          name: scenario.name,
+          periods: runScenarioPeriods(simulation, mergeAssumptions(assumptions, scenario.overrides)),
+        })),
+      ]
+    : undefined;
 
   return {
     name: simulation.name,
     model: "prototype-formula-forecast",
     forecast: simulation.forecast,
     periods,
+    ...(scenarios ? { scenarios, comparison: compareScenarios(scenarios) } : {}),
   };
 }
 
@@ -91,6 +102,9 @@ function buildSimulationIr(simulation: SimulationDeclaration, diagnostics: strin
   }
   for (const duplicate of duplicates(simulation.formulas.map((formula) => formula.name))) {
     diagnostics.push(`simulation ${simulation.name} declares duplicate formula ${duplicate}`);
+  }
+  for (const duplicate of duplicates(simulation.scenarios.map((scenario) => scenario.name))) {
+    diagnostics.push(`simulation ${simulation.name} declares duplicate scenario ${duplicate}`);
   }
   const assumptionNames = new Set(simulation.assumptions.map((assumption) => assumption.name));
   for (const formula of simulation.formulas) {
@@ -104,11 +118,13 @@ function buildSimulationIr(simulation: SimulationDeclaration, diagnostics: strin
     ...parseSimulationValue(simulation.name, assumption, diagnostics),
   }));
   const formulas = buildFormulaIr(simulation, assumptions, diagnostics);
+  const scenarios = buildScenarioIr(simulation, assumptions, diagnostics);
 
   return {
     name: simulation.name,
     assumptions,
     formulas,
+    scenarios,
     forecast: simulation.forecast,
   };
 }
@@ -174,6 +190,101 @@ function buildFormulaIr(
   }
 
   return formulas;
+}
+
+function buildScenarioIr(
+  simulation: SimulationDeclaration,
+  assumptions: SimulationAssumptionIr[],
+  diagnostics: string[],
+): SimulationScenarioIr[] {
+  const assumptionsByName = new Map(assumptions.map((assumption) => [assumption.name, assumption]));
+  return simulation.scenarios.map((scenario) => {
+    for (const duplicate of duplicates(scenario.overrides.map((override) => override.name))) {
+      diagnostics.push(`simulation ${simulation.name} scenario ${scenario.name} declares duplicate override ${duplicate}`);
+    }
+    const overrides = scenario.overrides.map((override) => {
+      const parsed = {
+        name: override.name,
+        ...parseSimulationValue(`${simulation.name} scenario ${scenario.name}`, override, diagnostics),
+      };
+      const base = assumptionsByName.get(override.name);
+      if (!base) {
+        diagnostics.push(`simulation ${simulation.name} scenario ${scenario.name} overrides unknown assumption ${override.name}`);
+      } else if (base.type !== parsed.type) {
+        diagnostics.push(`simulation ${simulation.name} scenario ${scenario.name} override ${override.name} changes type from ${base.type} to ${parsed.type}`);
+      }
+      return parsed;
+    });
+    return {
+      name: scenario.name,
+      overrides,
+    };
+  });
+}
+
+function runScenarioPeriods(
+  simulation: SimulationIr,
+  assumptions: Record<string, boolean | number | string>,
+): SimulationPeriodResult[] {
+  const formulaMetrics = evaluateFormulas(simulation, assumptions);
+  const assumptionList = Object.entries(assumptions).map(([name, value]) => ({
+    name,
+    type: typeof value === "number" ? "number" as const : typeof value === "boolean" ? "boolean" as const : "string" as const,
+    value,
+  }));
+  const metrics = simulation.formulas.length > 0 ? {} : derivedMetrics(assumptionList);
+  const periods: SimulationPeriodResult[] = [];
+
+  for (let period = 1; period <= simulation.forecast.periods; period += 1) {
+    const periodMetrics: Record<string, number> = { ...formulaMetrics };
+    if (metrics.netCashFlow !== undefined) {
+      periodMetrics.netCashFlow = metrics.netCashFlow;
+      periodMetrics.cumulativeNetCashFlow = metrics.netCashFlow * period;
+    }
+    if (metrics.changeRate !== undefined) {
+      periodMetrics.changeRate = metrics.changeRate;
+      periodMetrics.projectedIndex = Number((100 * Math.pow(1 + metrics.changeRate, period)).toFixed(4));
+    }
+
+    periods.push({
+      period,
+      label: `${period} ${pluralize(simulation.forecast.unit, period)}`,
+      assumptions,
+      metrics: periodMetrics,
+    });
+  }
+  return periods;
+}
+
+function mergeAssumptions(
+  assumptions: Record<string, boolean | number | string>,
+  overrides: SimulationAssumptionIr[],
+): Record<string, boolean | number | string> {
+  return {
+    ...assumptions,
+    ...Object.fromEntries(overrides.map((override) => [override.name, override.value])),
+  };
+}
+
+function compareScenarios(scenarios: SimulationScenarioRunResult[]): SimulationComparisonResult {
+  const baseline = scenarios[0];
+  const baselineFinal = baseline.periods.at(-1)?.metrics ?? {};
+  return {
+    baseline: baseline.name,
+    finalPeriod: baseline.periods.at(-1)?.period ?? 0,
+    scenarios: scenarios.slice(1).map((scenario) => {
+      const finalMetrics = scenario.periods.at(-1)?.metrics ?? {};
+      return {
+        name: scenario.name,
+        metricDeltas: Object.fromEntries(
+          Object.keys({ ...baselineFinal, ...finalMetrics }).map((metric) => [
+            metric,
+            Number(((finalMetrics[metric] ?? 0) - (baselineFinal[metric] ?? 0)).toFixed(6)),
+          ]),
+        ),
+      };
+    }),
+  };
 }
 
 function evaluateFormulas(simulation: SimulationIr, assumptions: Record<string, boolean | number | string>): Record<string, number> {

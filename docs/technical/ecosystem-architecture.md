@@ -48,14 +48,20 @@ simulate personal_finance {
   rent = 1500
   debt_payment = 500
   formula cash_flow = income - rent - debt_payment
+
+  scenario lower_rent {
+    rent = 1200
+  }
+
   forecast 12 months
 }
 ```
 
-This compiles to Simulation IR and can run a prototype formula forecast. The next language steps are:
+This compiles to Simulation IR and can run a prototype formula forecast with scenario comparison. The next language steps are:
 
-- scenario comparison;
 - typed units and currencies;
+- richer comparison reports;
+- time-varying assumptions;
 - reusable domain templates;
 - connections between simulation inputs and Reux entities/queries;
 - generated TypeScript types for simulation inputs and outputs.

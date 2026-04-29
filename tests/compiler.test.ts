@@ -393,6 +393,11 @@ simulate personal_finance {
   debt_payment = 500
   formula cash_flow = income - rent - debt_payment
   formula annual_surplus = cash_flow * 12
+
+  scenario lower_rent {
+    rent = 1200
+  }
+
   forecast 12 months
 }
 `;
@@ -410,12 +415,16 @@ simulate personal_finance {
         { name: "cash_flow", expression: "income - rent - debt_payment", references: ["debt_payment", "income", "rent"] },
         { name: "annual_surplus", expression: "cash_flow * 12", references: ["cash_flow"] },
       ],
+      scenarios: [{ name: "lower_rent", overrides: [{ name: "rent", type: "number", value: 1200 }] }],
       forecast: { periods: 12, unit: "month" },
     });
     expect(run.model).toBe("prototype-formula-forecast");
     expect(run.periods).toHaveLength(12);
     expect(run.periods[0].metrics.cash_flow).toBe(3000);
     expect(run.periods[0].metrics.annual_surplus).toBe(36000);
+    expect(run.scenarios).toHaveLength(2);
+    expect(run.scenarios[1].periods[0].metrics.cash_flow).toBe(3300);
+    expect(run.comparison.scenarios[0].metricDeltas).toEqual({ cash_flow: 300, annual_surplus: 3600 });
   });
 
   it("emits prototype index metrics for rate-based simulations", () => {
@@ -425,6 +434,7 @@ simulate personal_finance {
     expect(run.forecast).toEqual({ periods: 6, unit: "month" });
     expect(run.periods[0].metrics.productivity_index).toBe(108);
     expect(run.periods[0].metrics.operating_relief).toBe(0.18);
+    expect(run.comparison.scenarios.map((scenario: { name: string }) => scenario.name)).toEqual(["stronger_training", "no_overtime_change"]);
   });
 
   it("validates simulation duplicate assumptions and values", () => {
@@ -449,6 +459,23 @@ simulate bad {
   label = "personal"
   formula cash_flow = income - rent
   formula invalid = label * 2
+  forecast 1 month
+}
+`),
+    ).toThrow(DlAggregateError);
+  });
+
+  it("validates simulation scenario overrides", () => {
+    expect(() =>
+      compileSource(`module broken
+
+simulate bad {
+  income = 5000
+  formula cash_flow = income - rent
+  scenario upside {
+    rent = 1200
+    income = "high"
+  }
   forecast 1 month
 }
 `),

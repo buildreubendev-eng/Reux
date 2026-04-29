@@ -432,6 +432,7 @@ function parseSimulation(lines: SourceLine[], start: number): { declaration: Sim
 
   const assumptions: SimulationDeclaration["assumptions"] = [];
   const formulas: SimulationDeclaration["formulas"] = [];
+  const scenarios: SimulationDeclaration["scenarios"] = [];
   let forecast: SimulationDeclaration["forecast"] | undefined;
   let index = start + 1;
   while (index < lines.length) {
@@ -451,6 +452,7 @@ function parseSimulation(lines: SourceLine[], start: number): { declaration: Sim
           name: match[1],
           assumptions,
           formulas,
+          scenarios,
           forecast,
         },
         nextIndex: index + 1,
@@ -474,6 +476,13 @@ function parseSimulation(lines: SourceLine[], start: number): { declaration: Sim
       continue;
     }
 
+    if (text.startsWith("scenario ")) {
+      const parsed = parseSimulationScenario(lines, index);
+      scenarios.push(parsed.scenario);
+      index = parsed.nextIndex;
+      continue;
+    }
+
     const formula = text.match(/^formula\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+)$/);
     if (formula) {
       formulas.push({ name: formula[1], expression: formula[2].trim() });
@@ -483,13 +492,52 @@ function parseSimulation(lines: SourceLine[], start: number): { declaration: Sim
 
     const assignment = text.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+)$/);
     if (!assignment) {
-      throw new DlError(`line ${line.number}: expected simulation assignment, formula, or forecast`);
+      throw new DlError(`line ${line.number}: expected simulation assignment, formula, scenario, or forecast`);
     }
     assumptions.push({ name: assignment[1], value: assignment[2].trim() });
     index += 1;
   }
 
   throw new DlError(`line ${lines[start].number}: simulation '${match[1]}' is missing a closing brace`);
+}
+
+function parseSimulationScenario(
+  lines: SourceLine[],
+  start: number,
+): { scenario: SimulationDeclaration["scenarios"][number]; nextIndex: number } {
+  const header = lines[start].text.trim();
+  const match = header.match(/^scenario\s+([A-Za-z_][A-Za-z0-9_]*)\s*\{$/);
+  if (!match) {
+    throw new DlError(`line ${lines[start].number}: expected 'scenario name {'`);
+  }
+
+  const overrides: SimulationDeclaration["assumptions"] = [];
+  let index = start + 1;
+  while (index < lines.length) {
+    const line = lines[index];
+    const text = line.text.trim();
+    if (!text) {
+      index += 1;
+      continue;
+    }
+    if (text === "}") {
+      return {
+        scenario: {
+          name: match[1],
+          overrides,
+        },
+        nextIndex: index + 1,
+      };
+    }
+    const assignment = text.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+)$/);
+    if (!assignment) {
+      throw new DlError(`line ${line.number}: expected scenario override assignment`);
+    }
+    overrides.push({ name: assignment[1], value: assignment[2].trim() });
+    index += 1;
+  }
+
+  throw new DlError(`line ${lines[start].number}: scenario '${match[1]}' is missing a closing brace`);
 }
 
 function parseQuery(lines: SourceLine[], start: number): { declaration: QueryDeclaration; nextIndex: number } {

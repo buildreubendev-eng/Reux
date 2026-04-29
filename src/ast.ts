@@ -79,6 +79,7 @@ export interface SimulationDeclaration {
   name: string;
   assumptions: SimulationAssumption[];
   formulas: SimulationFormula[];
+  scenarios: SimulationScenario[];
   forecast: SimulationForecast;
 }
 
@@ -90,6 +91,11 @@ export interface SimulationAssumption {
 export interface SimulationFormula {
   name: string;
   expression: string;
+}
+
+export interface SimulationScenario {
+  name: string;
+  overrides: SimulationAssumption[];
 }
 
 export interface SimulationForecast {

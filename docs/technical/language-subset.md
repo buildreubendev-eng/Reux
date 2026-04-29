@@ -98,6 +98,15 @@ simulate personal_finance {
   debt_payment = 500
   formula cash_flow = income - rent - debt_payment
   formula annual_surplus = cash_flow * 12
+
+  scenario lower_rent {
+    rent = 1200
+  }
+
+  scenario debt_free {
+    debt_payment = 0
+  }
+
   forecast 12 months
 }
 
@@ -107,6 +116,11 @@ simulate workforce_change {
   overtime_reduction = 0.10
   formula productivity_index = 100 * (1 + productivity_gain)
   formula operating_relief = productivity_gain + overtime_reduction
+
+  scenario stronger_training {
+    productivity_gain = 0.12
+  }
+
   forecast 6 months
 }
 ```
@@ -117,11 +131,14 @@ Supported simulation statements:
 - `name = true | false`
 - `name = "quoted string"`
 - `formula name = expression`
+- `scenario name { ... }`
 - `forecast N days|weeks|months|quarters|years`
 
 Formula expressions support numeric literals, assumptions, earlier formulas, parentheses, and `+`, `-`, `*`, `/`. The compiler validates that referenced values exist and that formulas only use numeric assumptions or earlier formulas.
 
-The compiler emits Simulation IR and can run a prototype formula forecast. The runner repeats the declared assumptions for each period and emits formula results as metrics. If a simulation has no formulas, the runner still derives a small set of early prototype metrics:
+Scenarios declare alternate assumption values against the same formulas and forecast window. Scenario overrides must reference existing assumptions and keep the same primitive type as the baseline value.
+
+The compiler emits Simulation IR and can run a prototype formula forecast. The runner repeats the declared assumptions for each period, emits formula results as metrics, and compares final-period scenario metrics against the baseline. If a simulation has no formulas, the runner still derives a small set of early prototype metrics:
 
 - `netCashFlow` and `cumulativeNetCashFlow` when an `income` assumption is present;
 - `changeRate` and `projectedIndex` when rate-like assumptions such as `productivity_gain` or `overtime_reduction` are present.
@@ -133,7 +150,7 @@ node dist/cli.js simulation-ir examples/simulations/personal_finance.reux
 node dist/cli.js simulation-run examples/simulations/workforce_change.reux
 ```
 
-This is not yet the full simulation language. The next layers are scenario comparison, typed units, domain packs for PLOS/business use cases, and eventually integration with Reux data modules.
+This is not yet the full simulation language. The next layers are typed units, domain packs for PLOS/business use cases, time-varying assumptions, richer comparison reports, and eventually integration with Reux data modules.
 
 ## Transition Rules
 
