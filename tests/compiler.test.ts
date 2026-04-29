@@ -393,6 +393,8 @@ simulate personal_finance {
   debt_payment = 500 USD
   formula cash_flow = income - rent - debt_payment
   formula annual_surplus = cash_flow * 12
+  objective maximize cash_flow
+  objective maximize annual_surplus
 
   scenario lower_rent {
     rent = 1200 USD
@@ -415,11 +417,19 @@ simulate personal_finance {
         { name: "cash_flow", expression: "income - rent - debt_payment", references: ["debt_payment", "income", "rent"] },
         { name: "annual_surplus", expression: "cash_flow * 12", references: ["cash_flow"] },
       ],
+      objectives: [
+        { metric: "cash_flow", direction: "maximize" },
+        { metric: "annual_surplus", direction: "maximize" },
+      ],
       scenarios: [{ name: "lower_rent", overrides: [{ name: "rent", type: "number", value: 1200, unit: "USD" }], changes: [] }],
       changes: [],
       forecast: { periods: 12, unit: "month" },
     });
     expect(run.model).toBe("prototype-formula-forecast");
+    expect(run.objectives).toEqual([
+      { metric: "cash_flow", direction: "maximize" },
+      { metric: "annual_surplus", direction: "maximize" },
+    ]);
     expect(run.periods).toHaveLength(12);
     expect(run.periods[0].metrics.cash_flow).toBe(3000);
     expect(run.periods[0].metrics.annual_surplus).toBe(36000);
@@ -438,12 +448,14 @@ simulate personal_finance {
       {
         metric: "annual_surplus",
         unit: "USD",
+        objective: "maximize",
         direction: "descending_delta",
         scenarios: [{ name: "lower_rent", delta: 3600, rank: 1 }],
       },
       {
         metric: "cash_flow",
         unit: "USD",
+        objective: "maximize",
         direction: "descending_delta",
         scenarios: [{ name: "lower_rent", delta: 300, rank: 1 }],
       },
@@ -467,12 +479,50 @@ simulate personal_finance {
     expect(run.comparison.metricRankings.find((ranking: { metric: string }) => ranking.metric === "operating_relief")).toEqual({
       metric: "operating_relief",
       unit: "percent",
+      objective: "maximize",
       direction: "descending_delta",
       scenarios: [
         { name: "stronger_training", delta: 0.04, rank: 1 },
         { name: "no_overtime_change", delta: -0.1, rank: 2 },
       ],
     });
+  });
+
+  it("ranks minimize simulation objectives by lower final deltas", () => {
+    const run = JSON.parse(
+      emitSimulationRun(`module ops
+
+simulate support_cost {
+  software_cost = 300 USD
+  labor_cost = 700 USD
+  formula total_cost = software_cost + labor_cost
+  objective minimize total_cost
+
+  scenario automation {
+    labor_cost = 500 USD
+  }
+
+  scenario manual_growth {
+    labor_cost = 900 USD
+  }
+
+  forecast 1 month
+}
+`),
+    );
+
+    expect(run.comparison.metricRankings).toEqual([
+      {
+        metric: "total_cost",
+        unit: "USD",
+        objective: "minimize",
+        direction: "ascending_delta",
+        scenarios: [
+          { name: "automation", delta: -200, rank: 1 },
+          { name: "manual_growth", delta: 200, rank: 2 },
+        ],
+      },
+    ]);
   });
 
   it("applies simulation assumption changes by forecast period", () => {
@@ -519,6 +569,22 @@ simulate bad {
   label = "personal"
   formula cash_flow = income - rent
   formula invalid = label * 2
+  forecast 1 month
+}
+`),
+    ).toThrow(DlAggregateError);
+  });
+
+  it("validates simulation objective metrics", () => {
+    expect(() =>
+      compileSource(`module broken
+
+simulate bad {
+  income = 5000 USD
+  formula cash_flow = income
+  objective maximize missing_metric
+  objective minimize cash_flow
+  objective maximize cash_flow
   forecast 1 month
 }
 `),

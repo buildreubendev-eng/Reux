@@ -98,6 +98,8 @@ simulate personal_finance {
   debt_payment = 500 USD
   formula cash_flow = income - rent - debt_payment
   formula annual_surplus = cash_flow * 12
+  objective maximize cash_flow
+  objective maximize annual_surplus
 
   change at 7 months {
     rent = 1600 USD
@@ -124,6 +126,8 @@ simulate workforce_change {
   overtime_reduction = 10 percent
   formula productivity_index = 100 * (1 + productivity_gain)
   formula operating_relief = productivity_gain + overtime_reduction
+  objective maximize productivity_index
+  objective maximize operating_relief
 
   change at 4 months {
     productivity_gain = 10 percent
@@ -148,6 +152,8 @@ Supported simulation statements:
 - `name = true | false`
 - `name = "quoted string"`
 - `formula name = expression`
+- `objective maximize metric_name`
+- `objective minimize metric_name`
 - `change at N days|weeks|months|quarters|years { ... }`
 - `scenario name { ... }`
 - `forecast N days|weeks|months|quarters|years`
@@ -155,6 +161,8 @@ Supported simulation statements:
 Unit quantities attach a lightweight unit label to numeric assumptions. `percent` and `%` normalize to a decimal value plus `percent` unit, so `8 percent` evaluates as `0.08`. Uppercase currency labels such as `USD` are preserved. Common count labels normalize to `count`.
 
 Formula expressions support numeric literals, assumptions, earlier formulas, parentheses, and `+`, `-`, `*`, `/`. The compiler validates that referenced values exist and that formulas only use numeric assumptions or earlier formulas. Formula results carry a unit when the expression is unit-compatible, such as adding/subtracting `USD` values or multiplying one unit value by a scalar.
+
+Objectives declare whether a metric should be maximized or minimized. Objective metrics must reference formula output metrics or known derived metrics such as `netCashFlow`, `cumulativeNetCashFlow`, `changeRate`, or `projectedIndex`. Rankings use objectives when present: maximize sorts by largest final delta, while minimize sorts by smallest final delta.
 
 Scenarios declare alternate assumption values against the same formulas and forecast window. Scenario overrides must reference existing assumptions and keep the same primitive type and unit as the baseline value. Scenarios may also declare their own `change at` blocks. Scenario-specific changes are applied after the shared baseline changes for that scenario only, which lets a model compare paths such as "baseline training improves in month 4" against "stronger training improves more in month 4."
 
@@ -167,9 +175,7 @@ Scenario comparison reports include:
 - final-period `metricDeltas` for quick summaries;
 - `periodDeltas` for every forecast period;
 - `firstDivergence`, which points to the first period where any metric differs from baseline.
-- `metricRankings`, which ranks scenarios by final-period delta for each metric.
-
-Current rankings are neutral: they sort by largest final delta and do not yet know whether a domain wants a metric higher or lower. Future objective declarations will let Reux say which scenario is preferable for cost, risk, savings, productivity, or other domain-specific goals.
+- `metricRankings`, which ranks scenarios by final-period delta for each metric and uses declared objectives when present.
 
 If a simulation has no formulas, the runner still derives a small set of early prototype metrics:
 
@@ -183,7 +189,7 @@ node dist/cli.js simulation-ir examples/simulations/personal_finance.reux
 node dist/cli.js simulation-run examples/simulations/workforce_change.reux
 ```
 
-This is not yet the full simulation language. The next layers are richer dimensional analysis, domain packs for PLOS/business use cases, objective-aware recommendation summaries, generated TypeScript contracts, and eventually integration with Reux data modules.
+This is not yet the full simulation language. The next layers are richer dimensional analysis, domain packs for PLOS/business use cases, explanation summaries, generated TypeScript contracts, and eventually integration with Reux data modules.
 
 ## Transition Rules
 

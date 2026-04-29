@@ -48,6 +48,7 @@ simulate personal_finance {
   rent = 1500 USD
   debt_payment = 500 USD
   formula cash_flow = income - rent - debt_payment
+  objective maximize cash_flow
 
   change at 7 months {
     rent = 1600 USD
@@ -65,10 +66,10 @@ simulate personal_finance {
 }
 ```
 
-This compiles to Simulation IR and can run a prototype formula forecast with shared scheduled changes, scenario-specific scheduled changes, final-period scenario comparison, period-by-period deltas, first-divergence reporting, and neutral per-metric scenario rankings. The next language steps are:
+This compiles to Simulation IR and can run a prototype formula forecast with shared scheduled changes, scenario-specific scheduled changes, declared objectives, final-period scenario comparison, period-by-period deltas, first-divergence reporting, and objective-aware per-metric scenario rankings. The next language steps are:
 
 - richer dimensional analysis;
-- objective-aware scenario explanations;
+- scenario explanation summaries;
 - reusable domain templates;
 - connections between simulation inputs and Reux entities/queries;
 - generated TypeScript types for simulation inputs and outputs.

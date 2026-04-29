@@ -432,6 +432,7 @@ function parseSimulation(lines: SourceLine[], start: number): { declaration: Sim
 
   const assumptions: SimulationDeclaration["assumptions"] = [];
   const formulas: SimulationDeclaration["formulas"] = [];
+  const objectives: SimulationDeclaration["objectives"] = [];
   const scenarios: SimulationDeclaration["scenarios"] = [];
   const changes: SimulationDeclaration["changes"] = [];
   let forecast: SimulationDeclaration["forecast"] | undefined;
@@ -453,6 +454,7 @@ function parseSimulation(lines: SourceLine[], start: number): { declaration: Sim
           name: match[1],
           assumptions,
           formulas,
+          objectives,
           scenarios,
           changes,
           forecast,
@@ -499,9 +501,16 @@ function parseSimulation(lines: SourceLine[], start: number): { declaration: Sim
       continue;
     }
 
+    const objective = text.match(/^objective\s+(maximize|minimize)\s+([A-Za-z_][A-Za-z0-9_]*)$/);
+    if (objective) {
+      objectives.push({ direction: objective[1] as "maximize" | "minimize", metric: objective[2] });
+      index += 1;
+      continue;
+    }
+
     const assignment = text.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+)$/);
     if (!assignment) {
-      throw new DlError(`line ${line.number}: expected simulation assignment, formula, scenario, change, or forecast`);
+      throw new DlError(`line ${line.number}: expected simulation assignment, formula, objective, scenario, change, or forecast`);
     }
     assumptions.push({ name: assignment[1], value: assignment[2].trim() });
     index += 1;

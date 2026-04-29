@@ -6,6 +6,8 @@ simulate personal_finance {
   debt_payment = 500 USD
   formula cash_flow = income - rent - debt_payment
   formula annual_surplus = cash_flow * 12
+  objective maximize cash_flow
+  objective maximize annual_surplus
 
   change at 7 months {
     rent = 1600 USD

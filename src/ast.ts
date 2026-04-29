@@ -79,6 +79,7 @@ export interface SimulationDeclaration {
   name: string;
   assumptions: SimulationAssumption[];
   formulas: SimulationFormula[];
+  objectives: SimulationObjective[];
   scenarios: SimulationScenario[];
   changes: SimulationChange[];
   forecast: SimulationForecast;
@@ -92,6 +93,11 @@ export interface SimulationAssumption {
 export interface SimulationFormula {
   name: string;
   expression: string;
+}
+
+export interface SimulationObjective {
+  metric: string;
+  direction: "maximize" | "minimize";
 }
 
 export interface SimulationScenario {

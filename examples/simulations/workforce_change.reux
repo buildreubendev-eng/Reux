@@ -6,6 +6,8 @@ simulate workforce_change {
   overtime_reduction = 10 percent
   formula productivity_index = 100 * (1 + productivity_gain)
   formula operating_relief = productivity_gain + overtime_reduction
+  objective maximize productivity_index
+  objective maximize operating_relief
 
   change at 4 months {
     productivity_gain = 10 percent

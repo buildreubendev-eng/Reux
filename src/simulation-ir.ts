@@ -5,6 +5,7 @@ export interface SimulationIr {
   name: string;
   assumptions: SimulationAssumptionIr[];
   formulas: SimulationFormulaIr[];
+  objectives: SimulationObjectiveIr[];
   scenarios: SimulationScenarioIr[];
   changes: SimulationChangeIr[];
   forecast: {
@@ -26,6 +27,11 @@ export interface SimulationFormulaIr {
   references: string[];
 }
 
+export interface SimulationObjectiveIr {
+  metric: string;
+  direction: "maximize" | "minimize";
+}
+
 export interface SimulationScenarioIr {
   name: string;
   overrides: SimulationAssumptionIr[];
@@ -42,6 +48,7 @@ export interface SimulationRunResult {
   name: string;
   model: "prototype-formula-forecast";
   forecast: SimulationIr["forecast"];
+  objectives: SimulationObjectiveIr[];
   periods: SimulationPeriodResult[];
   scenarios?: SimulationScenarioRunResult[];
   comparison?: SimulationComparisonResult;
@@ -85,7 +92,8 @@ export interface SimulationPeriodDelta {
 export interface SimulationMetricRanking {
   metric: string;
   unit?: string;
-  direction: "descending_delta";
+  objective?: "maximize" | "minimize";
+  direction: "descending_delta" | "ascending_delta";
   scenarios: Array<{
     name: string;
     delta: number;
@@ -131,8 +139,9 @@ export function runSimulationIr(simulation: SimulationIr): SimulationRunResult {
     name: simulation.name,
     model: "prototype-formula-forecast",
     forecast: simulation.forecast,
+    objectives: simulation.objectives,
     periods,
-    ...(scenarios ? { scenarios, comparison: compareScenarios(scenarios) } : {}),
+    ...(scenarios ? { scenarios, comparison: compareScenarios(scenarios, simulation.objectives) } : {}),
   };
 }
 
@@ -158,6 +167,7 @@ function buildSimulationIr(simulation: SimulationDeclaration, diagnostics: strin
     ...parseSimulationValue(simulation.name, assumption, diagnostics),
   }));
   const formulas = buildFormulaIr(simulation, assumptions, diagnostics);
+  const objectives = buildObjectiveIr(simulation, formulas, diagnostics);
   const scenarios = buildScenarioIr(simulation, assumptions, diagnostics);
   const changes = buildChangeIr(simulation, assumptions, diagnostics, {
     duplicateSource: `simulation ${simulation.name}`,
@@ -169,6 +179,7 @@ function buildSimulationIr(simulation: SimulationDeclaration, diagnostics: strin
     name: simulation.name,
     assumptions,
     formulas,
+    objectives,
     scenarios,
     changes,
     forecast: simulation.forecast,
@@ -241,6 +252,26 @@ function buildFormulaIr(
   }
 
   return formulas;
+}
+
+function buildObjectiveIr(
+  simulation: SimulationDeclaration,
+  formulas: SimulationFormulaIr[],
+  diagnostics: string[],
+): SimulationObjectiveIr[] {
+  for (const duplicate of duplicates(simulation.objectives.map((objective) => objective.metric))) {
+    diagnostics.push(`simulation ${simulation.name} declares duplicate objective for ${duplicate}`);
+  }
+  const knownMetrics = new Set([...formulas.map((formula) => formula.name), ...derivedMetricNames]);
+  return simulation.objectives.map((objective) => {
+    if (!knownMetrics.has(objective.metric)) {
+      diagnostics.push(`simulation ${simulation.name} objective references unknown metric ${objective.metric}`);
+    }
+    return {
+      metric: objective.metric,
+      direction: objective.direction,
+    };
+  });
 }
 
 function buildScenarioIr(
@@ -424,7 +455,10 @@ function mergeAssumptionUnits(
   };
 }
 
-function compareScenarios(scenarios: SimulationScenarioRunResult[]): SimulationComparisonResult {
+function compareScenarios(
+  scenarios: SimulationScenarioRunResult[],
+  objectives: SimulationObjectiveIr[],
+): SimulationComparisonResult {
   const baseline = scenarios[0];
   const baselineFinal = baseline.periods.at(-1)?.metrics ?? {};
   const baselineUnits = baseline.periods.at(-1)?.metricUnits ?? {};
@@ -445,26 +479,34 @@ function compareScenarios(scenarios: SimulationScenarioRunResult[]): SimulationC
     baseline: baseline.name,
     finalPeriod: baseline.periods.at(-1)?.period ?? 0,
     scenarios: scenarioComparisons,
-    metricRankings: rankScenarioMetrics(scenarioComparisons),
+    metricRankings: rankScenarioMetrics(scenarioComparisons, objectives),
   };
 }
 
 function rankScenarioMetrics(
   scenarios: SimulationComparisonResult["scenarios"],
+  objectives: SimulationObjectiveIr[],
 ): SimulationMetricRanking[] {
   const metrics = [...new Set(scenarios.flatMap((scenario) => Object.keys(scenario.metricDeltas)))].sort();
+  const objectivesByMetric = new Map(objectives.map((objective) => [objective.metric, objective.direction]));
   return metrics.map((metric) => {
+    const objective = objectivesByMetric.get(metric);
+    const direction = objective === "minimize" ? "ascending_delta" : "descending_delta";
     const ranked = scenarios
       .map((scenario) => ({
         name: scenario.name,
         delta: scenario.metricDeltas[metric] ?? 0,
       }))
-      .sort((left, right) => right.delta - left.delta || left.name.localeCompare(right.name));
+      .sort((left, right) => {
+        const deltaOrder = direction === "ascending_delta" ? left.delta - right.delta : right.delta - left.delta;
+        return deltaOrder || left.name.localeCompare(right.name);
+      });
 
     return {
       metric,
       unit: scenarios.find((scenario) => scenario.metricUnits[metric])?.metricUnits[metric],
-      direction: "descending_delta" as const,
+      ...(objective ? { objective } : {}),
+      direction,
       scenarios: ranked.map((scenario, index) => ({
         ...scenario,
         rank: index + 1,
@@ -652,6 +694,8 @@ function normalizeUnit(unit: string): string {
   if (lowered === "count" || lowered === "counts") return "count";
   return unit.toUpperCase() === unit ? unit : lowered;
 }
+
+const derivedMetricNames = ["netCashFlow", "cumulativeNetCashFlow", "changeRate", "projectedIndex"];
 
 function isRateAssumption(name: string): boolean {
   return /(?:rate|gain|reduction|growth|lift|improvement)$/i.test(name);
