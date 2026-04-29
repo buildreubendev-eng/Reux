@@ -23,6 +23,7 @@ Supported compiler/runtime features exercised:
 Useful commands:
 
 ```powershell
+npm run demo:logistics
 node dist/cli.js check examples/logistics_reux.dl
 node dist/cli.js query-sql examples/logistics_reux.dl activeShipments
 node dist/cli.js query-sql examples/logistics_reux.dl driverManifest
@@ -32,5 +33,7 @@ node dist/cli.js tx-sql examples/logistics_reux.dl markDelivered
 node dist/cli.js tx-sql examples/logistics_reux.dl creditDriver
 node dist/cli.js seed-check examples/logistics_reux.dl examples/seeds/logistics_smoke.json
 ```
+
+`npm run demo:logistics` is the fastest end-to-end walkthrough for the current logistics slice. It rebuilds the CLI, diagnoses the source, emits the important query and transaction SQL, emits generated TypeScript API/server/worker scaffolds, and validates the smoke seed without requiring a database.
 
 The smoke seed in `examples/seeds/logistics_smoke.json` creates one driver, one vehicle, and one scheduled shipment. It is intentionally small so it can serve as a focused fixture for query, transition, and transaction compiler coverage.

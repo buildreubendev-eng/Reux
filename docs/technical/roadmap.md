@@ -27,7 +27,8 @@ These are the milestones that make the prototype usable by public testers and ea
 | Website embed/link | Complete | The Reuben website exposes the live Reux demo and links to the project. |
 | Session isolation tests | Complete | Fast unit coverage now protects browser session ID normalization and schema derivation. |
 | Logistics pilot source | Complete | `examples/logistics_reux.dl` validates that Reux can model dispatch workflows. |
-| Logistics browser demo | Not started | The source and seed exist; a dedicated UI still needs to be built. |
+| Logistics executable walkthrough | Complete | `npm run demo:logistics` shows diagnostics, SQL, generated scaffolds, and seed validation without a database. |
+| Logistics browser demo | Not started | The source, seed, and CLI walkthrough exist; a dedicated UI still needs to be built. |
 | Production monitoring | Not started | Hosted health exists, but logs, alerting, uptime tracking, and DB maintenance are still manual. |
 
 ## Full-Completion Priorities
@@ -57,7 +58,7 @@ The prototype should not try to become a complete general-purpose language yet. 
 
 As of this document:
 
-- Demo readiness: roughly 85%. The commerce demo is public and usable; the remaining demo gap is mainly polish, monitoring, and a second browser pilot.
+- Demo readiness: roughly 87%. The commerce demo is public and usable, and logistics now has an executable walkthrough; the remaining demo gap is mainly polish, monitoring, and a second browser pilot.
 - Full completion: roughly 45%. The foundation is real, but the language still needs broader query and transaction semantics, stronger operations, editor tooling, and packaging before it feels complete.
 
 Use [Phase status](phase-status.md) for implementation-by-phase details and [Pilot demo deployment](demo-deployment.md) for hosted demo operations.
