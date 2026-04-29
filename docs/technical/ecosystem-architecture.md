@@ -44,13 +44,13 @@ The first simulation syntax supports static forecast declarations:
 
 ```dl
 simulate personal_finance {
-  income = 5000
-  rent = 1500
-  debt_payment = 500
+  income = 5000 USD
+  rent = 1500 USD
+  debt_payment = 500 USD
   formula cash_flow = income - rent - debt_payment
 
   scenario lower_rent {
-    rent = 1200
+    rent = 1200 USD
   }
 
   forecast 12 months
@@ -59,7 +59,7 @@ simulate personal_finance {
 
 This compiles to Simulation IR and can run a prototype formula forecast with scenario comparison. The next language steps are:
 
-- typed units and currencies;
+- richer dimensional analysis;
 - richer comparison reports;
 - time-varying assumptions;
 - reusable domain templates;

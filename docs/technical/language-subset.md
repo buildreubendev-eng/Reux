@@ -93,32 +93,32 @@ The first simulation slice is intentionally small. It exists to prove the Reux e
 
 ```dl
 simulate personal_finance {
-  income = 5000
-  rent = 1500
-  debt_payment = 500
+  income = 5000 USD
+  rent = 1500 USD
+  debt_payment = 500 USD
   formula cash_flow = income - rent - debt_payment
   formula annual_surplus = cash_flow * 12
 
   scenario lower_rent {
-    rent = 1200
+    rent = 1200 USD
   }
 
   scenario debt_free {
-    debt_payment = 0
+    debt_payment = 0 USD
   }
 
   forecast 12 months
 }
 
 simulate workforce_change {
-  employees = 50
-  productivity_gain = 0.08
-  overtime_reduction = 0.10
+  employees = 50 count
+  productivity_gain = 8 percent
+  overtime_reduction = 10 percent
   formula productivity_index = 100 * (1 + productivity_gain)
   formula operating_relief = productivity_gain + overtime_reduction
 
   scenario stronger_training {
-    productivity_gain = 0.12
+    productivity_gain = 12 percent
   }
 
   forecast 6 months
@@ -128,17 +128,20 @@ simulate workforce_change {
 Supported simulation statements:
 
 - `name = number`
+- `name = number unit`
 - `name = true | false`
 - `name = "quoted string"`
 - `formula name = expression`
 - `scenario name { ... }`
 - `forecast N days|weeks|months|quarters|years`
 
-Formula expressions support numeric literals, assumptions, earlier formulas, parentheses, and `+`, `-`, `*`, `/`. The compiler validates that referenced values exist and that formulas only use numeric assumptions or earlier formulas.
+Unit quantities attach a lightweight unit label to numeric assumptions. `percent` and `%` normalize to a decimal value plus `percent` unit, so `8 percent` evaluates as `0.08`. Uppercase currency labels such as `USD` are preserved. Common count labels normalize to `count`.
 
-Scenarios declare alternate assumption values against the same formulas and forecast window. Scenario overrides must reference existing assumptions and keep the same primitive type as the baseline value.
+Formula expressions support numeric literals, assumptions, earlier formulas, parentheses, and `+`, `-`, `*`, `/`. The compiler validates that referenced values exist and that formulas only use numeric assumptions or earlier formulas. Formula results carry a unit when the expression is unit-compatible, such as adding/subtracting `USD` values or multiplying one unit value by a scalar.
 
-The compiler emits Simulation IR and can run a prototype formula forecast. The runner repeats the declared assumptions for each period, emits formula results as metrics, and compares final-period scenario metrics against the baseline. If a simulation has no formulas, the runner still derives a small set of early prototype metrics:
+Scenarios declare alternate assumption values against the same formulas and forecast window. Scenario overrides must reference existing assumptions and keep the same primitive type and unit as the baseline value.
+
+The compiler emits Simulation IR and can run a prototype formula forecast. The runner repeats the declared assumptions for each period, emits formula results as metrics with `metricUnits` when known, and compares final-period scenario metrics against the baseline. If a simulation has no formulas, the runner still derives a small set of early prototype metrics:
 
 - `netCashFlow` and `cumulativeNetCashFlow` when an `income` assumption is present;
 - `changeRate` and `projectedIndex` when rate-like assumptions such as `productivity_gain` or `overtime_reduction` are present.
@@ -150,7 +153,7 @@ node dist/cli.js simulation-ir examples/simulations/personal_finance.reux
 node dist/cli.js simulation-run examples/simulations/workforce_change.reux
 ```
 
-This is not yet the full simulation language. The next layers are typed units, domain packs for PLOS/business use cases, time-varying assumptions, richer comparison reports, and eventually integration with Reux data modules.
+This is not yet the full simulation language. The next layers are richer dimensional analysis, domain packs for PLOS/business use cases, time-varying assumptions, richer comparison reports, and eventually integration with Reux data modules.
 
 ## Transition Rules
 

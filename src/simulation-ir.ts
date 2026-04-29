@@ -16,6 +16,7 @@ export interface SimulationAssumptionIr {
   name: string;
   type: "boolean" | "number" | "string";
   value: boolean | number | string;
+  unit?: string;
 }
 
 export interface SimulationFormulaIr {
@@ -42,7 +43,9 @@ export interface SimulationPeriodResult {
   period: number;
   label: string;
   assumptions: Record<string, boolean | number | string>;
+  assumptionUnits: Record<string, string>;
   metrics: Record<string, number>;
+  metricUnits: Record<string, string>;
 }
 
 export interface SimulationScenarioRunResult {
@@ -56,6 +59,7 @@ export interface SimulationComparisonResult {
   scenarios: Array<{
     name: string;
     metricDeltas: Record<string, number>;
+    metricUnits: Record<string, string>;
   }>;
 }
 
@@ -76,13 +80,18 @@ export function buildSimulationCatalog(program: Program): SimulationIr[] {
 
 export function runSimulationIr(simulation: SimulationIr): SimulationRunResult {
   const assumptions = Object.fromEntries(simulation.assumptions.map((assumption) => [assumption.name, assumption.value]));
-  const periods = runScenarioPeriods(simulation, assumptions);
+  const assumptionUnits = Object.fromEntries(simulation.assumptions.filter((assumption) => assumption.unit).map((assumption) => [assumption.name, assumption.unit as string]));
+  const periods = runScenarioPeriods(simulation, assumptions, assumptionUnits);
   const scenarios = simulation.scenarios.length > 0
     ? [
         { name: "baseline", periods },
         ...simulation.scenarios.map((scenario) => ({
           name: scenario.name,
-          periods: runScenarioPeriods(simulation, mergeAssumptions(assumptions, scenario.overrides)),
+          periods: runScenarioPeriods(
+            simulation,
+            mergeAssumptions(assumptions, scenario.overrides),
+            mergeAssumptionUnits(assumptionUnits, scenario.overrides),
+          ),
         })),
       ]
     : undefined;
@@ -133,7 +142,7 @@ function parseSimulationValue(
   simulationName: string,
   assumption: SimulationDeclaration["assumptions"][number],
   diagnostics: string[],
-): Pick<SimulationAssumptionIr, "type" | "value"> {
+): Pick<SimulationAssumptionIr, "type" | "value" | "unit"> {
   const value = assumption.value.trim();
   if (value === "true" || value === "false") {
     return { type: "boolean", value: value === "true" };
@@ -144,7 +153,12 @@ function parseSimulationValue(
   if ((value.startsWith("\"") && value.endsWith("\"")) || (value.startsWith("'") && value.endsWith("'"))) {
     return { type: "string", value: value.slice(1, -1) };
   }
-  diagnostics.push(`simulation ${simulationName} assumption ${assumption.name} must be a number, boolean, or quoted string`);
+  const unitValue = value.match(/^(-?\d+(?:\.\d+)?)\s+([A-Za-z][A-Za-z0-9_%/$]*)$/);
+  if (unitValue) {
+    const unit = normalizeUnit(unitValue[2]);
+    return { type: "number", value: unit === "percent" ? Number(unitValue[1]) / 100 : Number(unitValue[1]), unit };
+  }
+  diagnostics.push(`simulation ${simulationName} assumption ${assumption.name} must be a number, unit quantity, boolean, or quoted string`);
   return { type: "string", value };
 }
 
@@ -203,7 +217,7 @@ function buildScenarioIr(
       diagnostics.push(`simulation ${simulation.name} scenario ${scenario.name} declares duplicate override ${duplicate}`);
     }
     const overrides = scenario.overrides.map((override) => {
-      const parsed = {
+      const parsed: SimulationAssumptionIr = {
         name: override.name,
         ...parseSimulationValue(`${simulation.name} scenario ${scenario.name}`, override, diagnostics),
       };
@@ -212,6 +226,10 @@ function buildScenarioIr(
         diagnostics.push(`simulation ${simulation.name} scenario ${scenario.name} overrides unknown assumption ${override.name}`);
       } else if (base.type !== parsed.type) {
         diagnostics.push(`simulation ${simulation.name} scenario ${scenario.name} override ${override.name} changes type from ${base.type} to ${parsed.type}`);
+      } else if (base.unit !== parsed.unit) {
+        diagnostics.push(
+          `simulation ${simulation.name} scenario ${scenario.name} override ${override.name} changes unit from ${base.unit ?? "unitless"} to ${parsed.unit ?? "unitless"}`,
+        );
       }
       return parsed;
     });
@@ -225,32 +243,43 @@ function buildScenarioIr(
 function runScenarioPeriods(
   simulation: SimulationIr,
   assumptions: Record<string, boolean | number | string>,
+  assumptionUnits: Record<string, string>,
 ): SimulationPeriodResult[] {
-  const formulaMetrics = evaluateFormulas(simulation, assumptions);
+  const formulaResult = evaluateFormulas(simulation, assumptions, assumptionUnits);
   const assumptionList = Object.entries(assumptions).map(([name, value]) => ({
     name,
     type: typeof value === "number" ? "number" as const : typeof value === "boolean" ? "boolean" as const : "string" as const,
     value,
+    unit: assumptionUnits[name],
   }));
   const metrics = simulation.formulas.length > 0 ? {} : derivedMetrics(assumptionList);
   const periods: SimulationPeriodResult[] = [];
 
   for (let period = 1; period <= simulation.forecast.periods; period += 1) {
-    const periodMetrics: Record<string, number> = { ...formulaMetrics };
+    const periodMetrics: Record<string, number> = { ...formulaResult.values };
+    const metricUnits: Record<string, string> = { ...formulaResult.units };
     if (metrics.netCashFlow !== undefined) {
       periodMetrics.netCashFlow = metrics.netCashFlow;
       periodMetrics.cumulativeNetCashFlow = metrics.netCashFlow * period;
+      const cashUnit = assumptionUnits.income;
+      if (cashUnit) {
+        metricUnits.netCashFlow = cashUnit;
+        metricUnits.cumulativeNetCashFlow = cashUnit;
+      }
     }
     if (metrics.changeRate !== undefined) {
       periodMetrics.changeRate = metrics.changeRate;
       periodMetrics.projectedIndex = Number((100 * Math.pow(1 + metrics.changeRate, period)).toFixed(4));
+      metricUnits.changeRate = "percent";
     }
 
     periods.push({
       period,
       label: `${period} ${pluralize(simulation.forecast.unit, period)}`,
       assumptions,
+      assumptionUnits,
       metrics: periodMetrics,
+      metricUnits,
     });
   }
   return periods;
@@ -266,14 +295,26 @@ function mergeAssumptions(
   };
 }
 
+function mergeAssumptionUnits(
+  assumptionUnits: Record<string, string>,
+  overrides: SimulationAssumptionIr[],
+): Record<string, string> {
+  return {
+    ...assumptionUnits,
+    ...Object.fromEntries(overrides.filter((override) => override.unit).map((override) => [override.name, override.unit as string])),
+  };
+}
+
 function compareScenarios(scenarios: SimulationScenarioRunResult[]): SimulationComparisonResult {
   const baseline = scenarios[0];
   const baselineFinal = baseline.periods.at(-1)?.metrics ?? {};
+  const baselineUnits = baseline.periods.at(-1)?.metricUnits ?? {};
   return {
     baseline: baseline.name,
     finalPeriod: baseline.periods.at(-1)?.period ?? 0,
     scenarios: scenarios.slice(1).map((scenario) => {
       const finalMetrics = scenario.periods.at(-1)?.metrics ?? {};
+      const finalUnits = scenario.periods.at(-1)?.metricUnits ?? {};
       return {
         name: scenario.name,
         metricDeltas: Object.fromEntries(
@@ -282,20 +323,38 @@ function compareScenarios(scenarios: SimulationScenarioRunResult[]): SimulationC
             Number(((finalMetrics[metric] ?? 0) - (baselineFinal[metric] ?? 0)).toFixed(6)),
           ]),
         ),
+        metricUnits: Object.fromEntries(
+          Object.keys({ ...baselineFinal, ...finalMetrics })
+            .map((metric) => [metric, finalUnits[metric] ?? baselineUnits[metric]])
+            .filter((entry): entry is [string, string] => Boolean(entry[1])),
+        ),
       };
     }),
   };
 }
 
-function evaluateFormulas(simulation: SimulationIr, assumptions: Record<string, boolean | number | string>): Record<string, number> {
+function evaluateFormulas(
+  simulation: SimulationIr,
+  assumptions: Record<string, boolean | number | string>,
+  assumptionUnits: Record<string, string>,
+): { values: Record<string, number>; units: Record<string, string> } {
   const values = new Map<string, number>();
+  const units = new Map<string, string>();
   for (const [name, value] of Object.entries(assumptions)) {
     if (typeof value === "number") values.set(name, value);
   }
+  for (const [name, unit] of Object.entries(assumptionUnits)) {
+    units.set(name, unit);
+  }
   for (const formula of simulation.formulas) {
     values.set(formula.name, evaluateNumericExpression(formula.expression, values));
+    const unit = inferExpressionUnit(formula.expression, units);
+    if (unit) units.set(formula.name, unit);
   }
-  return Object.fromEntries(simulation.formulas.map((formula) => [formula.name, values.get(formula.name) ?? 0]));
+  return {
+    values: Object.fromEntries(simulation.formulas.map((formula) => [formula.name, values.get(formula.name) ?? 0])),
+    units: Object.fromEntries(simulation.formulas.map((formula) => [formula.name, units.get(formula.name)]).filter((entry): entry is [string, string] => Boolean(entry[1]))),
+  };
 }
 
 function evaluateNumericExpression(expression: string, values: Map<string, number>): number {
@@ -356,12 +415,61 @@ function tokenizeExpression(expression: string): string[] {
   return tokens;
 }
 
+function inferExpressionUnit(expression: string, units: Map<string, string>): string | undefined {
+  const tokens = tokenizeExpression(expression);
+  let index = 0;
+
+  function parseExpression(): string | undefined {
+    let unit = parseTerm();
+    while (tokens[index] === "+" || tokens[index] === "-") {
+      index += 1;
+      const right = parseTerm();
+      unit = unit && right === unit ? unit : undefined;
+    }
+    return unit;
+  }
+
+  function parseTerm(): string | undefined {
+    let unit = parseFactor();
+    while (tokens[index] === "*" || tokens[index] === "/") {
+      const operator = tokens[index++];
+      const right = parseFactor();
+      unit = operator === "*"
+        ? unit && right ? undefined : unit ?? right
+        : unit && !right ? unit : undefined;
+    }
+    return unit;
+  }
+
+  function parseFactor(): string | undefined {
+    const token = tokens[index++];
+    if (!token) return undefined;
+    if (token === "(") {
+      const unit = parseExpression();
+      index += tokens[index] === ")" ? 1 : 0;
+      return unit;
+    }
+    if (token === "-") return parseFactor();
+    if (/^-?\d+(?:\.\d+)?$/.test(token)) return undefined;
+    return units.get(token);
+  }
+
+  return parseExpression();
+}
+
 function expressionReferences(expression: string): string[] {
   const references = new Set<string>();
   for (const match of expression.matchAll(/\b[A-Za-z_][A-Za-z0-9_]*\b/g)) {
     references.add(match[0]);
   }
   return [...references].sort();
+}
+
+function normalizeUnit(unit: string): string {
+  const lowered = unit.toLowerCase();
+  if (lowered === "%" || lowered === "percent" || lowered === "percentage") return "percent";
+  if (lowered === "count" || lowered === "counts") return "count";
+  return unit.toUpperCase() === unit ? unit : lowered;
 }
 
 function isRateAssumption(name: string): boolean {

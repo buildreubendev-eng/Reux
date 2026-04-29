@@ -1,18 +1,18 @@
 module personal_life
 
 simulate personal_finance {
-  income = 5000
-  rent = 1500
-  debt_payment = 500
+  income = 5000 USD
+  rent = 1500 USD
+  debt_payment = 500 USD
   formula cash_flow = income - rent - debt_payment
   formula annual_surplus = cash_flow * 12
 
   scenario lower_rent {
-    rent = 1200
+    rent = 1200 USD
   }
 
   scenario debt_free {
-    debt_payment = 0
+    debt_payment = 0 USD
   }
 
   forecast 12 months
