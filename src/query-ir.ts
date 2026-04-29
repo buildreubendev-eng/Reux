@@ -9,6 +9,7 @@ export type QueryInputIr = ScanIr | JoinIr | FilterIr | GroupIr | OrderIr | Limi
 export interface QueryPlanIr {
   name: string;
   resultType: string;
+  inferredResultType: string;
   parameters: QueryParameterIr[];
   root: QueryIr;
 }
@@ -28,6 +29,7 @@ export interface ScanIr {
 
 export interface JoinIr {
   kind: "Join";
+  joinKind: "inner" | "left";
   input: QueryInputIr;
   entity: string;
   table: string;
@@ -171,6 +173,7 @@ export function buildQueryIr(schema: SchemaIr, query: QueryDeclaration): QueryPl
     aliases.set(join.rangeName, joinEntity);
     input = {
       kind: "Join",
+      joinKind: join.kind,
       input,
       entity: joinEntity.name,
       table: joinEntity.tableName,
@@ -179,8 +182,9 @@ export function buildQueryIr(schema: SchemaIr, query: QueryDeclaration): QueryPl
     };
   }
 
-  if (query.body.where) {
-    const predicate = predicateExpressionIr(schema, query, aliases, query.body.where);
+  const predicateSource = combinedPredicateSource(query.body.where, query.body.after);
+  if (predicateSource) {
+    const predicate = predicateExpressionIr(schema, query, aliases, predicateSource);
     input = {
       kind: "Filter",
       input,
@@ -220,6 +224,7 @@ export function buildQueryIr(schema: SchemaIr, query: QueryDeclaration): QueryPl
   return {
     name: query.name,
     resultType: query.resultType,
+    inferredResultType: inferQueryResultType(schema, query),
     parameters: query.parameters.map((parameter, index) => ({
       name: parameter.name,
       type: parameter.type.raw,
@@ -231,6 +236,73 @@ export function buildQueryIr(schema: SchemaIr, query: QueryDeclaration): QueryPl
       projection: projectionIr(schema, query, aliases, query.body.select),
     },
   };
+}
+
+export function inferQueryResultType(schema: SchemaIr, query: QueryDeclaration): string {
+  const aliases = queryAliases(schema, query);
+  const nullableAliases = new Set(query.body.joins.filter((join) => join.kind === "left").map((join) => join.rangeName));
+
+  if (query.body.select.kind === "entity") {
+    const entity = aliases.get(query.body.select.expression);
+    return entity ? `Query<${entity.name}>` : query.resultType;
+  }
+
+  const fields = query.body.select.fields.map((field) => {
+    const inferred = inferExpressionType(schema, aliases, nullableAliases, field.expression);
+    return `${field.name}: ${inferred ?? "unknown"}`;
+  });
+  return `Query<{ ${fields.join(", ")} }>`;
+}
+
+function queryAliases(schema: SchemaIr, query: QueryDeclaration): Map<string, EntityIr> {
+  const root = findEntity(schema, query.body.sourceEntity);
+  const aliases = new Map<string, EntityIr>();
+  if (root) aliases.set(query.body.rangeName, root);
+  for (const join of query.body.joins) {
+    const entity = findEntity(schema, join.sourceEntity);
+    if (entity) aliases.set(join.rangeName, entity);
+  }
+  return aliases;
+}
+
+function inferExpressionType(
+  schema: SchemaIr,
+  aliases: Map<string, EntityIr>,
+  nullableAliases: Set<string>,
+  expression: string,
+): string | undefined {
+  if (/^count\(\s*\)$/.test(expression)) return "Int64";
+  const aggregate = expression.match(/^(sum|avg|min|max)\(([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)\)$/);
+  if (aggregate) {
+    const field = aliases.get(aggregate[2])?.fields.find((candidate) => candidate.name === aggregate[3]);
+    return field ? maybeNullable(field.type.raw, nullableAliases.has(aggregate[2])) : undefined;
+  }
+
+  const fieldMatch = expression.match(/^([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)$/);
+  if (fieldMatch) {
+    const field = aliases.get(fieldMatch[1])?.fields.find((candidate) => candidate.name === fieldMatch[2]);
+    return field ? maybeNullable(field.type.raw, nullableAliases.has(fieldMatch[1])) : undefined;
+  }
+
+  if (expression === "true" || expression === "false") return "Bool";
+  if (/^-?\d+$/.test(expression)) return "Int64";
+  if (/^-?\d+\.\d+$/.test(expression)) return "Decimal";
+  if ((expression.startsWith("\"") && expression.endsWith("\"")) || (expression.startsWith("'") && expression.endsWith("'"))) {
+    return "String";
+  }
+  if (schema.enums.some((enumeration) => enumeration.values.includes(expression))) return "String";
+  return undefined;
+}
+
+function maybeNullable(type: string, nullableAlias: boolean): string {
+  return nullableAlias && !type.endsWith("?") ? `${type}?` : type;
+}
+
+function combinedPredicateSource(where: string | undefined, after: string | undefined): string | undefined {
+  const predicates = [where, after].filter((predicate): predicate is string => Boolean(predicate));
+  if (predicates.length === 0) return undefined;
+  if (predicates.length === 1) return predicates[0];
+  return predicates.map((predicate) => `(${predicate})`).join(" and ");
 }
 
 function projectionIr(

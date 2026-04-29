@@ -313,6 +313,7 @@ function validateQuery(query: QueryDeclaration, entities: EntityDeclaration[], e
   const expressions = [
     ...query.body.joins.map((join) => join.on),
     query.body.where,
+    query.body.after,
     ...query.body.groupBy,
     query.body.orderBy?.expression,
     query.body.limit,
@@ -334,7 +335,7 @@ function validateQuery(query: QueryDeclaration, entities: EntityDeclaration[], e
     }
   }
 
-  validateQueryLimit(query, diagnostics);
+  validateQueryPagination(query, diagnostics);
   validateQueryResultType(query, aliases, new Set(entities.map((entity) => entity.name)), enumNames, diagnostics);
 }
 
@@ -343,10 +344,30 @@ function projectionExpressions(projection: QueryProjection): string[] {
   return projection.fields.map((field) => field.expression);
 }
 
-function validateQueryLimit(query: QueryDeclaration, diagnostics: string[]): void {
+function validateQueryPagination(query: QueryDeclaration, diagnostics: string[]): void {
+  if (query.body.after) {
+    if (!query.body.orderBy) {
+      diagnostics.push(`query ${query.name} after requires order by for deterministic cursor pagination`);
+    }
+    if (!query.body.limit) {
+      diagnostics.push(`query ${query.name} after requires limit for bounded cursor pagination`);
+    }
+    if (!query.parameters.some((parameter) => new RegExp(`\\b${parameter.name}\\b`).test(query.body.after ?? ""))) {
+      diagnostics.push(`query ${query.name} after must compare against a query parameter`);
+    }
+  }
+
   if (!query.body.limit) return;
+  if (!query.body.orderBy) {
+    diagnostics.push(`query ${query.name} limit requires order by for deterministic pagination`);
+  }
   const limit = query.body.limit.trim();
-  if (/^[1-9][0-9]*$/.test(limit)) return;
+  if (/^[1-9][0-9]*$/.test(limit)) {
+    if (Number.parseInt(limit, 10) > 1000) {
+      diagnostics.push(`query ${query.name} limit literal must be 1000 or less`);
+    }
+    return;
+  }
 
   const parameter = query.parameters.find((candidate) => candidate.name === limit);
   if (parameter) {
@@ -366,6 +387,11 @@ function validateQueryResultType(
   enumNames: Set<string>,
   diagnostics: string[],
 ): void {
+  if (query.resultType === "Query<infer>") {
+    validateInferredQueryResultType(query, aliases, diagnostics);
+    return;
+  }
+
   if (query.body.select.kind === "entity") {
     const entity = aliases.get(query.body.rangeName);
     if (!entity) return;
@@ -425,9 +451,10 @@ function validateQueryResultType(
     }
     const entity = aliases.get(fieldMatch[1]);
     const entityField = entity?.fields.find((field) => field.name === fieldMatch[2]);
-    if (entity && entityField && declared !== entityField.type.raw) {
+    const expected = entityField ? queryExpressionFieldType(query, fieldMatch[1], entityField.type.raw) : undefined;
+    if (entity && entityField && declared !== expected) {
       diagnostics.push(
-        `query ${query.name} declares ${projection.name}: ${declared} but ${entity.name}.${entityField.name} is ${entityField.type.raw}`,
+        `query ${query.name} declares ${projection.name}: ${declared} but ${entity.name}.${entityField.name} is ${expected}`,
       );
     }
   }
@@ -438,6 +465,39 @@ function validateQueryResultType(
       diagnostics.push(`query ${query.name} declares result field ${declaredField} but does not project it`);
     }
   }
+}
+
+function validateInferredQueryResultType(
+  query: QueryDeclaration,
+  aliases: Map<string, EntityDeclaration>,
+  diagnostics: string[],
+): void {
+  if (query.body.select.kind === "entity") {
+    if (!aliases.has(query.body.select.expression)) {
+      diagnostics.push(`query ${query.name} cannot infer unknown entity projection ${query.body.select.expression}`);
+    }
+    if (query.body.groupBy.length > 0) {
+      diagnostics.push(`query ${query.name} cannot select an entity from a grouped query`);
+    }
+    return;
+  }
+
+  for (const projection of query.body.select.fields) {
+    if (isCountExpression(projection.expression) || aggregateExpression(projection.expression)) continue;
+    const fieldMatch = projection.expression.match(/^([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)$/);
+    if (!fieldMatch) {
+      diagnostics.push(`query ${query.name} cannot infer projection field ${projection.name} from expression ${projection.expression}`);
+      continue;
+    }
+    if (query.body.groupBy.length > 0 && !query.body.groupBy.includes(projection.expression)) {
+      diagnostics.push(`query ${query.name} projects ${projection.expression} without grouping by it`);
+    }
+  }
+}
+
+function queryExpressionFieldType(query: QueryDeclaration, alias: string, fieldType: string): string {
+  const nullableAlias = query.body.joins.some((join) => join.kind === "left" && join.rangeName === alias);
+  return nullableAlias && !fieldType.endsWith("?") ? `${fieldType}?` : fieldType;
 }
 
 function isCountExpression(expression: string): boolean {

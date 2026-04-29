@@ -234,6 +234,65 @@ query topUsers(maxRows: Int): Query<{ email: String, balance: Decimal }> =
     expect(sql).toContain("LIMIT $1;");
   });
 
+  it("lowers cursor-style after clauses to bounded PostgreSQL pagination", () => {
+    const sql = emitQuerySql(
+      `module commerce
+
+entity User {
+  id: Id<User> primary generated
+  email: String
+  balance: Decimal
+  active: Bool
+}
+
+query activeUserPage(cursorBalance: Decimal, pageSize: Int): Query<{ email: String, balance: Decimal }> =
+  from user in User
+  where user.active == true
+  after user.balance < cursorBalance
+  order by user.balance desc
+  limit pageSize
+  select { email: user.email, balance: user.balance }
+`,
+      "activeUserPage",
+    );
+
+    expect(sql).toContain('WHERE ("user".active = true) AND ("user".balance < $1)');
+    expect(sql).toContain('ORDER BY "user".balance DESC');
+    expect(sql).toContain("LIMIT $2;");
+  });
+
+  it("rejects unsafe pagination shapes", () => {
+    expect(() =>
+      compileSource(`module broken
+
+entity User {
+  id: Id<User> primary generated
+  email: String
+}
+
+query users(): Query<User> =
+  from user in User
+  limit 1001
+  select user
+`),
+    ).toThrow(DlAggregateError);
+
+    expect(() =>
+      compileSource(`module broken
+
+entity User {
+  id: Id<User> primary generated
+  email: String
+}
+
+query users(cursor: String): Query<User> =
+  from user in User
+  after user.email > cursor
+  select user
+`),
+    ).toThrow(DlAggregateError);
+  });
+
   it("rejects non-integer query limits", () => {
     expect(() =>
       compileSource(`module broken
@@ -583,6 +642,84 @@ query namedUsers(min: Decimal): Query<User> =
     );
 
     expect(sql).toBe('SELECT "user".*\nFROM users AS "user"\nWHERE "user".email <> \'min\' AND "user".balance > $1;');
+  });
+
+  it("expands reusable query fragments into query predicates", () => {
+    const source = `module commerce
+
+entity User {
+  id: Id<User> primary generated
+  email: String
+  balance: Decimal
+  active: Bool
+}
+
+query fragment activeUsers(user in User) = where user.active == true
+
+query activePremiumUsers(min: Decimal): Query<infer> =
+  from user in User
+  with activeUsers
+  where user.balance > min
+  select { email: user.email, balance: user.balance }
+`;
+    const sql = emitQuerySql(source, "activePremiumUsers");
+    const queryIr = JSON.parse(emitQueryIr(source, "activePremiumUsers"));
+    const api = emitApiClient(source);
+
+    expect(sql).toContain('WHERE ("user".active = true) AND ("user".balance > $1)');
+    expect(queryIr.inferredResultType).toBe("Query<{ email: String, balance: Decimal }>");
+    expect(api).toContain("export type ActivePremiumUsersRow = { email: string; balance: number | string };");
+  });
+
+  it("lowers nullable left joins and infers nullable joined fields", () => {
+    const source = `module commerce
+
+entity Profile {
+  id: Id<Profile> primary generated
+  bio: String
+}
+
+entity Account {
+  id: Id<Account> primary generated
+  email: String
+  profile: Profile?
+}
+
+query accountProfiles(): Query<infer> =
+  from account in Account
+  left join profile in Profile on account.profile == profile
+  select { email: account.email, bio: profile.bio }
+`;
+    const sql = emitQuerySql(source, "accountProfiles");
+    const queryIr = JSON.parse(emitQueryIr(source, "accountProfiles"));
+    const api = emitApiClient(source);
+
+    expect(sql).toContain('LEFT JOIN profiles AS "profile" ON "account".profile_id = "profile".id');
+    expect(queryIr.inferredResultType).toBe("Query<{ email: String, bio: String? }>");
+    expect(api).toContain("export type AccountProfilesRow = { email: string; bio: string | null };");
+  });
+
+  it("requires explicit result types to mark left-joined fields optional", () => {
+    expect(() =>
+      compileSource(`module commerce
+
+entity Profile {
+  id: Id<Profile> primary generated
+  bio: String
+}
+
+entity Account {
+  id: Id<Account> primary generated
+  email: String
+  profile: Profile?
+}
+
+query accountProfiles(): Query<{ email: String, bio: String }> =
+  from account in Account
+  left join profile in Profile on account.profile == profile
+  select { email: account.email, bio: profile.bio }
+`),
+    ).toThrow(DlAggregateError);
   });
 
   it("rejects invalid enum literals in query predicates", () => {

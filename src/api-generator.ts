@@ -1,6 +1,7 @@
 import { QueryDeclaration, TransactionDeclaration, TypeRef } from "./ast.js";
 import { parseProgram, parseTypeRef } from "./parser.js";
 import { queryToPostgres, transactionToPostgres } from "./postgres.js";
+import { inferQueryResultType } from "./query-ir.js";
 import { buildSchema, FieldIr, findEntity, SchemaIr } from "./schema.js";
 
 export interface TypeScriptApiOptions {
@@ -462,12 +463,13 @@ function parameterSignature(name: string, parameters: { name: string; type: Type
 }
 
 function queryRowType(schema: SchemaIr, query: QueryDeclaration): string {
-  const record = parseQueryRecord(query.resultType);
+  const resultType = query.resultType === "Query<infer>" ? inferQueryResultType(schema, query) : query.resultType;
+  const record = parseQueryRecord(resultType);
   if (record) {
     return `{ ${[...record.entries()].map(([name, type]) => `${name}: ${sourceTypeToTs(schema, type)}`).join("; ")} }`;
   }
 
-  const entityMatch = query.resultType.match(/^Query<([A-Za-z_][A-Za-z0-9_]*)>$/);
+  const entityMatch = resultType.match(/^Query<([A-Za-z_][A-Za-z0-9_]*)>$/);
   const entity = entityMatch ? findEntity(schema, entityMatch[1]) : undefined;
   return entity ? `${entity.name}Row` : "unknown";
 }

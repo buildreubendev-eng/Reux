@@ -142,9 +142,10 @@ function collectClauses(input: QueryInputIr): {
 
   const clauses = collectClauses(input.input);
   if (input.kind === "Join") {
+    const joinSql = input.joinKind === "left" ? "LEFT JOIN" : "JOIN";
     return {
       ...clauses,
-      joins: [...clauses.joins, `JOIN ${input.table} AS ${quoteIdentifier(input.alias)} ON ${expressionSql(input.on)}`],
+      joins: [...clauses.joins, `${joinSql} ${input.table} AS ${quoteIdentifier(input.alias)} ON ${expressionSql(input.on)}`],
     };
   }
 

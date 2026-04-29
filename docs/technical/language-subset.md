@@ -8,6 +8,7 @@ This prototype implements the first data-module subset of Reux. It is intentiona
 - `entity <Name> { ... }`
 - `enum <Name> { ... }`
 - `transition <Entity>.<field> { ... }`
+- `query fragment <name>(range in Entity) = where ...`
 - `query <name>(params): Query<T> = from ...`
 - `transaction function <name>(params) writes Entity, ... { ... }`
 
@@ -99,7 +100,7 @@ node dist/cli.js transition-rules examples/pilot_reux.dl Order.status
 
 ## Query Subset
 
-The current query subset supports one scanned entity, optional joins, optional `where`, optional `group by`, optional `order by`, optional `limit`, and `select` projections:
+The current query subset supports one scanned entity, optional joins, reusable filter fragments, optional `where`, optional cursor `after`, optional `group by`, optional `order by`, optional `limit`, and `select` projections:
 
 ```dl
 query highValueUsers(min: Decimal<12,2>): Query<{ email: String?, balance: Decimal<12,2> }> =
@@ -112,13 +113,25 @@ query highValueUsers(min: Decimal<12,2>): Query<{ email: String?, balance: Decim
 
 Query parameters lower to positional PostgreSQL parameters such as `$1`. Entity field references are validated against Schema IR before SQL is emitted.
 
-`limit` accepts a positive integer literal or a non-optional `Int`/`Int64` query parameter:
+`limit` accepts a positive integer literal of 1000 or less, or a non-optional `Int`/`Int64` query parameter. Limited queries must declare `order by` so generated SQL is deterministic:
 
 ```dl
 query topUsers(maxRows: Int): Query<{ email: String, balance: Decimal<12,2> }> =
   from user in User
   order by user.balance desc
   limit maxRows
+  select { email: user.email, balance: user.balance }
+```
+
+Cursor-style pagination uses `after` with an ordered and limited query. The `after` predicate must compare against at least one query parameter:
+
+```dl
+query activeUserPage(cursorBalance: Decimal<12,2>, pageSize: Int): Query<{ email: String, balance: Decimal<12,2> }> =
+  from user in User
+  where user.active == true
+  after user.balance < cursorBalance
+  order by user.balance desc
+  limit pageSize
   select { email: user.email, balance: user.balance }
 ```
 
@@ -132,7 +145,21 @@ Supported comparison operators are `==`, `!=`, `>`, `>=`, `<`, and `<=`. Predica
 
 Enum fields can be compared with bare enum literals in query predicates. For example, `order.status == Paid` lowers to a PostgreSQL enum literal comparison, and invalid values are rejected during query lowering.
 
-Record projections must match the declared `Query<{ ... }>` result shape: projected fields must be declared, declared fields must be projected, declared result field types must be valid Reux types, duplicate projected field names are rejected, and simple field optionality must match.
+Reusable query fragments package common filters for queries that scan the same range/entity pair:
+
+```dl
+query fragment activeUsers(user in User) = where user.active == true
+
+query activePremiumUsers(min: Decimal<12,2>): Query<infer> =
+  from user in User
+  with activeUsers
+  where user.balance > min
+  select { email: user.email, balance: user.balance }
+```
+
+Fragments are expanded into the query `where` predicate and validated with the consuming query's parameters and aliases.
+
+Record projections must match the declared `Query<{ ... }>` result shape: projected fields must be declared, declared fields must be projected, declared result field types must be valid Reux types, duplicate projected field names are rejected, and simple field optionality must match. Queries may also declare `Query<infer>` to let generated TypeScript API clients infer row types from simple field projections and supported aggregates.
 
 Join support is intentionally narrow and explicit:
 
@@ -145,6 +172,15 @@ query accountOrders(minTotal: Decimal<12,2>): Query<{ email: String, total: Deci
 ```
 
 The supported join predicate shape is an entity reference compared with a joined range variable, such as `order.account == account`. This lowers to a PostgreSQL foreign-key equality.
+
+Optional relationships may be read with `left join`. Fields projected from a left-joined alias infer as nullable and must be declared as optional when using explicit result types:
+
+```dl
+query accountProfiles(): Query<infer> =
+  from account in Account
+  left join profile in Profile on account.profile == profile
+  select { email: account.email, bio: profile.bio }
+```
 
 Aggregation support is intentionally narrow:
 

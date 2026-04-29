@@ -1,4 +1,10 @@
-export type Declaration = EntityDeclaration | EnumDeclaration | QueryDeclaration | TransactionDeclaration | TransitionDeclaration;
+export type Declaration =
+  | EntityDeclaration
+  | EnumDeclaration
+  | QueryDeclaration
+  | QueryFragmentDeclaration
+  | TransactionDeclaration
+  | TransitionDeclaration;
 
 export interface Program {
   moduleName: string;
@@ -52,6 +58,14 @@ export interface QueryDeclaration {
   body: QueryBody;
 }
 
+export interface QueryFragmentDeclaration {
+  kind: "queryFragment";
+  name: string;
+  rangeName: string;
+  sourceEntity: string;
+  where: string;
+}
+
 export interface TransactionDeclaration {
   kind: "transaction";
   name: string;
@@ -84,7 +98,9 @@ export interface QueryBody {
   rangeName: string;
   sourceEntity: string;
   joins: QueryJoin[];
+  fragments: string[];
   where?: string;
+  after?: string;
   groupBy: string[];
   orderBy?: {
     expression: string;
@@ -95,6 +111,7 @@ export interface QueryBody {
 }
 
 export interface QueryJoin {
+  kind: "inner" | "left";
   rangeName: string;
   sourceEntity: string;
   on: string;

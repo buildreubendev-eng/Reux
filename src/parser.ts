@@ -7,6 +7,7 @@ import {
   Program,
   QueryBody,
   QueryDeclaration,
+  QueryFragmentDeclaration,
   QueryParameter,
   QueryProjection,
   TransitionDeclaration,
@@ -15,7 +16,7 @@ import {
 } from "./ast.js";
 import { DlError } from "./errors.js";
 
-const declarationStart = /^(entity|enum|query|transition|transaction\s+function)\s+/;
+const declarationStart = /^(entity|enum|query(?:\s+fragment)?|transition|transaction\s+function)\s+/;
 
 export function parseProgram(source: string): Program {
   const lines = normalizeLines(source);
@@ -54,6 +55,13 @@ export function parseProgram(source: string): Program {
       continue;
     }
 
+    if (text.startsWith("query fragment ")) {
+      const parsed = parseQueryFragment(lines, index);
+      declarations.push(parsed.declaration);
+      index = parsed.nextIndex;
+      continue;
+    }
+
     if (text.startsWith("query ")) {
       const parsed = parseQuery(lines, index);
       declarations.push(parsed.declaration);
@@ -80,7 +88,7 @@ export function parseProgram(source: string): Program {
 
   return {
     moduleName: moduleMatch[1],
-    declarations,
+    declarations: expandQueryFragments(declarations),
   };
 }
 
@@ -396,6 +404,36 @@ function parseQuery(lines: SourceLine[], start: number): { declaration: QueryDec
   };
 }
 
+function parseQueryFragment(lines: SourceLine[], start: number): { declaration: QueryFragmentDeclaration; nextIndex: number } {
+  const collected: string[] = [];
+  let index = start;
+  while (index < lines.length) {
+    const trimmed = lines[index].text.trim();
+    if (index !== start && declarationStart.test(trimmed)) break;
+    if (trimmed) collected.push(trimmed);
+    index += 1;
+  }
+
+  const source = collected.join(" ");
+  const match = source.match(
+    /^query\s+fragment\s+([A-Za-z_][A-Za-z0-9_]*)\(\s*([A-Za-z_][A-Za-z0-9_]*)\s+in\s+([A-Za-z_][A-Za-z0-9_]*)\s*\)\s*=\s*where\s+(.+)$/u,
+  );
+  if (!match) {
+    throw new DlError(`line ${lines[start].number}: could not parse query fragment declaration`);
+  }
+
+  return {
+    declaration: {
+      kind: "queryFragment",
+      name: match[1],
+      rangeName: match[2],
+      sourceEntity: match[3],
+      where: match[4].trim(),
+    },
+    nextIndex: index,
+  };
+}
+
 function parseQueryParameters(source: string): QueryParameter[] {
   if (!source.trim()) return [];
   return splitTopLevel(source, ",").map((part) => {
@@ -423,24 +461,43 @@ function parseQueryBody(source: string, lineNumber: number): QueryBody {
   const selectSource = rest.slice(selectIndex + "select".length).trim();
   const orderIndex = findKeyword(beforeSelect, "order by");
   const groupIndex = findKeyword(beforeSelect, "group by");
+  const withIndex = findKeyword(beforeSelect, "with");
   const whereIndex = findKeyword(beforeSelect, "where");
+  const afterIndex = findKeyword(beforeSelect, "after");
   const limitIndex = findKeyword(beforeSelect, "limit");
-  const firstClauseIndex = minDefined(whereIndex, groupIndex, orderIndex, limitIndex) ?? beforeSelect.length;
+  const firstClauseIndex = minDefined(withIndex, whereIndex, afterIndex, groupIndex, orderIndex, limitIndex) ?? beforeSelect.length;
   const joinsSource = beforeSelect.slice(0, firstClauseIndex).trim();
   const clauseSource = beforeSelect.slice(firstClauseIndex).trim();
   const clauseOrderIndex = findKeyword(clauseSource, "order by");
   const clauseGroupIndex = findKeyword(clauseSource, "group by");
+  const clauseWithIndex = findKeyword(clauseSource, "with");
   const clauseWhereIndex = findKeyword(clauseSource, "where");
+  const clauseAfterIndex = findKeyword(clauseSource, "after");
   const clauseLimitIndex = findKeyword(clauseSource, "limit");
 
+  let fragments: string[] = [];
   let where: string | undefined;
+  let after: string | undefined;
   let groupBy: string[] = [];
   let orderBy: QueryBody["orderBy"];
   let limit: string | undefined;
 
+  if (clauseWithIndex >= 0) {
+    const withEnd = minDefinedAfter(clauseWithIndex, clauseWhereIndex, clauseAfterIndex, clauseGroupIndex, clauseOrderIndex, clauseLimitIndex) ?? clauseSource.length;
+    fragments = splitTopLevel(clauseSource.slice(clauseWithIndex + "with".length, withEnd).trim(), ",");
+  }
+
   if (clauseWhereIndex >= 0) {
-    const whereEnd = minDefinedAfter(clauseWhereIndex, clauseGroupIndex, clauseOrderIndex, clauseLimitIndex) ?? clauseSource.length;
+    const whereEnd = minDefinedAfter(clauseWhereIndex, clauseAfterIndex, clauseGroupIndex, clauseOrderIndex, clauseLimitIndex) ?? clauseSource.length;
     where = clauseSource.slice(clauseWhereIndex + "where".length, whereEnd).trim();
+  }
+
+  if (clauseAfterIndex >= 0) {
+    const afterEnd = minDefinedAfter(clauseAfterIndex, clauseGroupIndex, clauseOrderIndex, clauseLimitIndex) ?? clauseSource.length;
+    after = clauseSource.slice(clauseAfterIndex + "after".length, afterEnd).trim();
+    if (!after) {
+      throw new DlError(`line ${lineNumber}: after clause requires a predicate`);
+    }
   }
 
   if (clauseGroupIndex >= 0) {
@@ -472,7 +529,9 @@ function parseQueryBody(source: string, lineNumber: number): QueryBody {
     rangeName: fromMatch[1],
     sourceEntity: fromMatch[2],
     joins: parseJoins(joinsSource, lineNumber),
+    fragments,
     where,
+    after,
     groupBy,
     orderBy,
     limit,
@@ -484,16 +543,17 @@ function parseJoins(source: string, lineNumber: number): QueryBody["joins"] {
   if (!source) return [];
   const joins: QueryBody["joins"] = [];
   const pattern =
-    /\bjoin\s+([A-Za-z_][A-Za-z0-9_]*)\s+in\s+([A-Za-z_][A-Za-z0-9_]*)\s+on\s+([\s\S]*?)(?=\s+\bjoin\s+[A-Za-z_][A-Za-z0-9_]*\s+in\s+[A-Za-z_][A-Za-z0-9_]*\s+on\s+|$)/gu;
+    /\b(left\s+join|join)\s+([A-Za-z_][A-Za-z0-9_]*)\s+in\s+([A-Za-z_][A-Za-z0-9_]*)\s+on\s+([\s\S]*?)(?=\s+\b(?:left\s+join|join)\s+[A-Za-z_][A-Za-z0-9_]*\s+in\s+[A-Za-z_][A-Za-z0-9_]*\s+on\s+|$)/gu;
   let lastIndex = 0;
   let remainder = "";
   for (const match of source.matchAll(pattern)) {
     remainder += source.slice(lastIndex, match.index);
     lastIndex = match.index + match[0].length;
     joins.push({
-      rangeName: match[1],
-      sourceEntity: match[2],
-      on: match[3].trim(),
+      kind: match[1].startsWith("left") ? "left" : "inner",
+      rangeName: match[2],
+      sourceEntity: match[3],
+      on: match[4].trim(),
     });
   }
   remainder += source.slice(lastIndex);
@@ -554,6 +614,45 @@ export function parseTypeRef(source: string): TypeRef {
     args: [],
     raw,
   };
+}
+
+function expandQueryFragments(declarations: Program["declarations"]): Program["declarations"] {
+  const fragments = new Map<string, QueryFragmentDeclaration>();
+  for (const declaration of declarations) {
+    if (declaration.kind !== "queryFragment") continue;
+    if (fragments.has(declaration.name)) {
+      throw new DlError(`duplicate query fragment declaration ${declaration.name}`);
+    }
+    fragments.set(declaration.name, declaration);
+  }
+
+  return declarations.map((declaration) => {
+    if (declaration.kind !== "query" || declaration.body.fragments.length === 0) return declaration;
+
+    const fragmentPredicates = declaration.body.fragments.map((name) => {
+      const fragment = fragments.get(name);
+      if (!fragment) {
+        throw new DlError(`query ${declaration.name} uses unknown query fragment ${name}`);
+      }
+      if (fragment.rangeName !== declaration.body.rangeName || fragment.sourceEntity !== declaration.body.sourceEntity) {
+        throw new DlError(
+          `query ${declaration.name} uses fragment ${name} for ${fragment.rangeName} in ${fragment.sourceEntity}, but scans ${declaration.body.rangeName} in ${declaration.body.sourceEntity}`,
+        );
+      }
+      return fragment.where;
+    });
+    const predicates = [...fragmentPredicates, declaration.body.where].filter((predicate): predicate is string => Boolean(predicate));
+    const where = predicates.length === 1 ? predicates[0] : predicates.map((predicate) => `(${predicate})`).join(" and ");
+
+    return {
+      ...declaration,
+      body: {
+        ...declaration.body,
+        fragments: [],
+        where: predicates.length === 0 ? undefined : where,
+      },
+    };
+  });
 }
 
 function normalizeLines(source: string): SourceLine[] {

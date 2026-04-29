@@ -24,7 +24,7 @@ Status: mostly implemented for the MVP subset.
 
 Status: implemented for a narrow query subset.
 
-- Supports one scanned entity with explicit joins, optional `where`, optional `group by`, optional `order by`, optional `limit`, entity or record projection, enum literal predicates, and narrow `count()`/`sum(field)`/`avg(field)`/`min(field)`/`max(field)` aggregations.
+- Supports one scanned entity with explicit joins, left joins, reusable filter fragments, compound `where`, cursor `after`, optional `group by`, optional deterministic `order by`/`limit`, entity or record projection, enum literal predicates, `Query<infer>` row typing for generated clients, and narrow `count()`/`sum(field)`/`avg(field)`/`min(field)`/`max(field)` aggregations.
 - Emits Query IR and PostgreSQL SQL.
 - Validates referenced fields, parameter references, enum literal values, and record projection shape against declared `Query<{ ... }>` result types.
 - Provides `explain`, `query-ir`, `query-sql`, and project-scoped variants.
