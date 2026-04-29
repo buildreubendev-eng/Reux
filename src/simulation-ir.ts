@@ -4,6 +4,7 @@ import { DlAggregateError } from "./errors.js";
 export interface SimulationIr {
   name: string;
   assumptions: SimulationAssumptionIr[];
+  formulas: SimulationFormulaIr[];
   forecast: {
     periods: number;
     unit: SimulationDeclaration["forecast"]["unit"];
@@ -16,9 +17,15 @@ export interface SimulationAssumptionIr {
   value: boolean | number | string;
 }
 
+export interface SimulationFormulaIr {
+  name: string;
+  expression: string;
+  references: string[];
+}
+
 export interface SimulationRunResult {
   name: string;
-  model: "prototype-static-forecast";
+  model: "prototype-formula-forecast";
   forecast: SimulationIr["forecast"];
   periods: SimulationPeriodResult[];
 }
@@ -47,11 +54,12 @@ export function buildSimulationCatalog(program: Program): SimulationIr[] {
 
 export function runSimulationIr(simulation: SimulationIr): SimulationRunResult {
   const assumptions = Object.fromEntries(simulation.assumptions.map((assumption) => [assumption.name, assumption.value]));
-  const metrics = derivedMetrics(simulation.assumptions);
+  const formulaMetrics = evaluateFormulas(simulation, assumptions);
+  const metrics = simulation.formulas.length > 0 ? {} : derivedMetrics(simulation.assumptions);
   const periods: SimulationPeriodResult[] = [];
 
   for (let period = 1; period <= simulation.forecast.periods; period += 1) {
-    const periodMetrics: Record<string, number> = {};
+    const periodMetrics: Record<string, number> = { ...formulaMetrics };
     if (metrics.netCashFlow !== undefined) {
       periodMetrics.netCashFlow = metrics.netCashFlow;
       periodMetrics.cumulativeNetCashFlow = metrics.netCashFlow * period;
@@ -71,7 +79,7 @@ export function runSimulationIr(simulation: SimulationIr): SimulationRunResult {
 
   return {
     name: simulation.name,
-    model: "prototype-static-forecast",
+    model: "prototype-formula-forecast",
     forecast: simulation.forecast,
     periods,
   };
@@ -81,13 +89,26 @@ function buildSimulationIr(simulation: SimulationDeclaration, diagnostics: strin
   for (const duplicate of duplicates(simulation.assumptions.map((assumption) => assumption.name))) {
     diagnostics.push(`simulation ${simulation.name} declares duplicate assumption ${duplicate}`);
   }
+  for (const duplicate of duplicates(simulation.formulas.map((formula) => formula.name))) {
+    diagnostics.push(`simulation ${simulation.name} declares duplicate formula ${duplicate}`);
+  }
+  const assumptionNames = new Set(simulation.assumptions.map((assumption) => assumption.name));
+  for (const formula of simulation.formulas) {
+    if (assumptionNames.has(formula.name)) {
+      diagnostics.push(`simulation ${simulation.name} formula ${formula.name} conflicts with an assumption`);
+    }
+  }
+
+  const assumptions = simulation.assumptions.map((assumption) => ({
+    name: assumption.name,
+    ...parseSimulationValue(simulation.name, assumption, diagnostics),
+  }));
+  const formulas = buildFormulaIr(simulation, assumptions, diagnostics);
 
   return {
     name: simulation.name,
-    assumptions: simulation.assumptions.map((assumption) => ({
-      name: assumption.name,
-      ...parseSimulationValue(simulation.name, assumption, diagnostics),
-    })),
+    assumptions,
+    formulas,
     forecast: simulation.forecast,
   };
 }
@@ -122,6 +143,114 @@ function derivedMetrics(assumptions: SimulationAssumptionIr[]): { netCashFlow?: 
       : undefined,
     changeRate: rateValues.length > 0 ? rateValues.reduce((total, assumption) => total + assumption.value, 0) : undefined,
   };
+}
+
+function buildFormulaIr(
+  simulation: SimulationDeclaration,
+  assumptions: SimulationAssumptionIr[],
+  diagnostics: string[],
+): SimulationFormulaIr[] {
+  const known = new Set(assumptions.map((assumption) => assumption.name));
+  const formulas: SimulationFormulaIr[] = [];
+
+  for (const formula of simulation.formulas) {
+    const references = expressionReferences(formula.expression);
+    const unknown = references.filter((reference) => !known.has(reference));
+    for (const reference of unknown) {
+      diagnostics.push(`simulation ${simulation.name} formula ${formula.name} references unknown value ${reference}`);
+    }
+    for (const reference of references) {
+      const assumption = assumptions.find((candidate) => candidate.name === reference);
+      if (assumption && assumption.type !== "number") {
+        diagnostics.push(`simulation ${simulation.name} formula ${formula.name} references non-numeric value ${reference}`);
+      }
+    }
+    formulas.push({
+      name: formula.name,
+      expression: formula.expression,
+      references,
+    });
+    known.add(formula.name);
+  }
+
+  return formulas;
+}
+
+function evaluateFormulas(simulation: SimulationIr, assumptions: Record<string, boolean | number | string>): Record<string, number> {
+  const values = new Map<string, number>();
+  for (const [name, value] of Object.entries(assumptions)) {
+    if (typeof value === "number") values.set(name, value);
+  }
+  for (const formula of simulation.formulas) {
+    values.set(formula.name, evaluateNumericExpression(formula.expression, values));
+  }
+  return Object.fromEntries(simulation.formulas.map((formula) => [formula.name, values.get(formula.name) ?? 0]));
+}
+
+function evaluateNumericExpression(expression: string, values: Map<string, number>): number {
+  const tokens = tokenizeExpression(expression);
+  let index = 0;
+
+  function parseExpression(): number {
+    let value = parseTerm();
+    while (tokens[index] === "+" || tokens[index] === "-") {
+      const operator = tokens[index++];
+      const right = parseTerm();
+      value = operator === "+" ? value + right : value - right;
+    }
+    return value;
+  }
+
+  function parseTerm(): number {
+    let value = parseFactor();
+    while (tokens[index] === "*" || tokens[index] === "/") {
+      const operator = tokens[index++];
+      const right = parseFactor();
+      value = operator === "*" ? value * right : value / right;
+    }
+    return value;
+  }
+
+  function parseFactor(): number {
+    const token = tokens[index++];
+    if (!token) throw new Error(`invalid formula expression '${expression}'`);
+    if (token === "(") {
+      const value = parseExpression();
+      if (tokens[index++] !== ")") throw new Error(`invalid formula expression '${expression}'`);
+      return value;
+    }
+    if (token === "-") return -parseFactor();
+    if (/^-?\d+(?:\.\d+)?$/.test(token)) return Number(token);
+    const value = values.get(token);
+    if (value === undefined) throw new Error(`formula expression '${expression}' references unavailable value ${token}`);
+    return value;
+  }
+
+  const value = parseExpression();
+  if (index !== tokens.length) throw new Error(`invalid formula expression '${expression}'`);
+  return Number(value.toFixed(6));
+}
+
+function tokenizeExpression(expression: string): string[] {
+  const tokens: string[] = [];
+  const pattern = /\s*([A-Za-z_][A-Za-z0-9_]*|\d+(?:\.\d+)?|[()+\-*/])\s*/gy;
+  let index = 0;
+  while (index < expression.length) {
+    pattern.lastIndex = index;
+    const match = pattern.exec(expression);
+    if (!match) throw new Error(`invalid formula expression '${expression}'`);
+    tokens.push(match[1]);
+    index = pattern.lastIndex;
+  }
+  return tokens;
+}
+
+function expressionReferences(expression: string): string[] {
+  const references = new Set<string>();
+  for (const match of expression.matchAll(/\b[A-Za-z_][A-Za-z0-9_]*\b/g)) {
+    references.add(match[0]);
+  }
+  return [...references].sort();
 }
 
 function isRateAssumption(name: string): boolean {

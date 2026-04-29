@@ -47,13 +47,13 @@ simulate personal_finance {
   income = 5000
   rent = 1500
   debt_payment = 500
+  formula cash_flow = income - rent - debt_payment
   forecast 12 months
 }
 ```
 
-This compiles to Simulation IR and can run a prototype forecast. The next language steps are:
+This compiles to Simulation IR and can run a prototype formula forecast. The next language steps are:
 
-- explicit formulas;
 - scenario comparison;
 - typed units and currencies;
 - reusable domain templates;

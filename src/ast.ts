@@ -78,12 +78,18 @@ export interface SimulationDeclaration {
   kind: "simulation";
   name: string;
   assumptions: SimulationAssumption[];
+  formulas: SimulationFormula[];
   forecast: SimulationForecast;
 }
 
 export interface SimulationAssumption {
   name: string;
   value: string;
+}
+
+export interface SimulationFormula {
+  name: string;
+  expression: string;
 }
 
 export interface SimulationForecast {

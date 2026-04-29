@@ -11,7 +11,7 @@ Implemented today:
 - Schema declarations for modules, entities, enums, typed events, indexes, checks, generated IDs, references, transition rules, bounded decimals, and currency codes.
 - Query declarations with explicit joins, left joins, reusable filter fragments, compound predicates, cursor pagination, inferred record result types, ordering, limits, record projections, and a narrow aggregation subset.
 - Transaction functions with row locking, mutations, inserts, retry metadata, idempotency keys, require guards, transition guards, typed durable outbox events, and after-commit hooks.
-- Simulation declarations with static assumptions, forecast windows, Simulation IR, and a prototype static forecast runner.
+- Simulation declarations with static assumptions, formulas, forecast windows, Simulation IR, and a prototype formula forecast runner.
 - PostgreSQL runtime helpers for migrations, compiled queries, transaction execution, seed resets, and outbox processing.
 - CLI workflows for checking, diagnosis, migration planning, migration safety checks, SQL inspection, API generation, worker generation, and seed validation.
 - A hosted commerce and logistics pilot demo with isolated public sessions and public reset flow.
@@ -37,7 +37,7 @@ These are the milestones that make the prototype usable by public testers and ea
 The next big engineering work should move in this order.
 
 1. Transaction language depth: first slice complete with stronger expression validation, durable idempotency keys, typed event payloads, require guards, and typed generated worker contracts; remaining work is richer multi-step control flow and deeper expression typing.
-2. Simulation language foundation: first slice complete with static `simulate` declarations and a prototype runner; remaining work is explicit formulas, scenario comparison, typed units, and generated TypeScript contracts.
+2. Simulation language foundation: first slices complete with static `simulate` declarations, arithmetic formulas, and a prototype runner; remaining work is scenario comparison, typed units, and generated TypeScript contracts.
 3. Production worker semantics: add dead-letter queues, retry/backoff configuration, handler observability, poison-message protection, and clear operational docs.
 4. Migration authoring workflow: improve generated migration review, environment-specific safety gates, rollback guidance, and multi-schema deployment stories.
 5. Project packaging: define how a Reux project should be published, versioned, consumed, and upgraded across application repos.
@@ -61,6 +61,6 @@ The prototype should not try to become a complete general-purpose language yet. 
 As of this document:
 
 - Demo readiness: roughly 90%. The commerce and logistics demos are public-UI ready; the remaining demo gap is mainly polish, monitoring, and hosted redeployment validation.
-- Full completion: roughly 60%. The foundation is real, query expressiveness has moved forward, transaction functions now have the first serious safety layer, and Reux has its first simulation syntax. The largest remaining gaps are production worker semantics, migration operations, editor tooling, packaging, richer control flow, deeper expression typing, and real scenario-comparison semantics.
+- Full completion: roughly 61%. The foundation is real, query expressiveness has moved forward, transaction functions now have the first serious safety layer, and Reux has its first simulation syntax with formulas. The largest remaining gaps are production worker semantics, migration operations, editor tooling, packaging, richer control flow, deeper expression typing, typed units, and real scenario-comparison semantics.
 
 Use [Phase status](phase-status.md) for implementation-by-phase details, [Ecosystem architecture](ecosystem-architecture.md) for the Reuben/Reux/PLOS/business simulation boundary, and [Pilot demo deployment](demo-deployment.md) for hosted demo operations.

@@ -391,6 +391,8 @@ simulate personal_finance {
   income = 5000
   rent = 1500
   debt_payment = 500
+  formula cash_flow = income - rent - debt_payment
+  formula annual_surplus = cash_flow * 12
   forecast 12 months
 }
 `;
@@ -404,12 +406,16 @@ simulate personal_finance {
         { name: "rent", type: "number", value: 1500 },
         { name: "debt_payment", type: "number", value: 500 },
       ],
+      formulas: [
+        { name: "cash_flow", expression: "income - rent - debt_payment", references: ["debt_payment", "income", "rent"] },
+        { name: "annual_surplus", expression: "cash_flow * 12", references: ["cash_flow"] },
+      ],
       forecast: { periods: 12, unit: "month" },
     });
-    expect(run.model).toBe("prototype-static-forecast");
+    expect(run.model).toBe("prototype-formula-forecast");
     expect(run.periods).toHaveLength(12);
-    expect(run.periods[0].metrics.netCashFlow).toBe(3000);
-    expect(run.periods[11].metrics.cumulativeNetCashFlow).toBe(36000);
+    expect(run.periods[0].metrics.cash_flow).toBe(3000);
+    expect(run.periods[0].metrics.annual_surplus).toBe(36000);
   });
 
   it("emits prototype index metrics for rate-based simulations", () => {
@@ -417,8 +423,8 @@ simulate personal_finance {
 
     expect(run.name).toBe("workforce_change");
     expect(run.forecast).toEqual({ periods: 6, unit: "month" });
-    expect(run.periods[0].metrics.changeRate).toBe(0.18);
-    expect(run.periods[0].metrics.projectedIndex).toBe(118);
+    expect(run.periods[0].metrics.productivity_index).toBe(108);
+    expect(run.periods[0].metrics.operating_relief).toBe(0.18);
   });
 
   it("validates simulation duplicate assumptions and values", () => {
@@ -428,6 +434,21 @@ simulate personal_finance {
 simulate bad {
   income = 5000
   income = nope
+  forecast 1 month
+}
+`),
+    ).toThrow(DlAggregateError);
+  });
+
+  it("validates simulation formula references", () => {
+    expect(() =>
+      compileSource(`module broken
+
+simulate bad {
+  income = 5000
+  label = "personal"
+  formula cash_flow = income - rent
+  formula invalid = label * 2
   forecast 1 month
 }
 `),

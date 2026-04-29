@@ -431,6 +431,7 @@ function parseSimulation(lines: SourceLine[], start: number): { declaration: Sim
   }
 
   const assumptions: SimulationDeclaration["assumptions"] = [];
+  const formulas: SimulationDeclaration["formulas"] = [];
   let forecast: SimulationDeclaration["forecast"] | undefined;
   let index = start + 1;
   while (index < lines.length) {
@@ -449,6 +450,7 @@ function parseSimulation(lines: SourceLine[], start: number): { declaration: Sim
           kind: "simulation",
           name: match[1],
           assumptions,
+          formulas,
           forecast,
         },
         nextIndex: index + 1,
@@ -472,9 +474,16 @@ function parseSimulation(lines: SourceLine[], start: number): { declaration: Sim
       continue;
     }
 
+    const formula = text.match(/^formula\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+)$/);
+    if (formula) {
+      formulas.push({ name: formula[1], expression: formula[2].trim() });
+      index += 1;
+      continue;
+    }
+
     const assignment = text.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+)$/);
     if (!assignment) {
-      throw new DlError(`line ${line.number}: expected simulation assignment or forecast`);
+      throw new DlError(`line ${line.number}: expected simulation assignment, formula, or forecast`);
     }
     assumptions.push({ name: assignment[1], value: assignment[2].trim() });
     index += 1;

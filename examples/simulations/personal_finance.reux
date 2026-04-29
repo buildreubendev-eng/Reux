@@ -4,5 +4,7 @@ simulate personal_finance {
   income = 5000
   rent = 1500
   debt_payment = 500
+  formula cash_flow = income - rent - debt_payment
+  formula annual_surplus = cash_flow * 12
   forecast 12 months
 }
