@@ -65,10 +65,10 @@ simulate personal_finance {
 }
 ```
 
-This compiles to Simulation IR and can run a prototype formula forecast with shared scheduled changes, scenario-specific scheduled changes, final-period scenario comparison, period-by-period deltas, and first-divergence reporting. The next language steps are:
+This compiles to Simulation IR and can run a prototype formula forecast with shared scheduled changes, scenario-specific scheduled changes, final-period scenario comparison, period-by-period deltas, first-divergence reporting, and neutral per-metric scenario rankings. The next language steps are:
 
 - richer dimensional analysis;
-- scenario ranking and explanation summaries;
+- objective-aware scenario explanations;
 - reusable domain templates;
 - connections between simulation inputs and Reux entities/queries;
 - generated TypeScript types for simulation inputs and outputs.

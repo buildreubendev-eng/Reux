@@ -167,6 +167,9 @@ Scenario comparison reports include:
 - final-period `metricDeltas` for quick summaries;
 - `periodDeltas` for every forecast period;
 - `firstDivergence`, which points to the first period where any metric differs from baseline.
+- `metricRankings`, which ranks scenarios by final-period delta for each metric.
+
+Current rankings are neutral: they sort by largest final delta and do not yet know whether a domain wants a metric higher or lower. Future objective declarations will let Reux say which scenario is preferable for cost, risk, savings, productivity, or other domain-specific goals.
 
 If a simulation has no formulas, the runner still derives a small set of early prototype metrics:
 
@@ -180,7 +183,7 @@ node dist/cli.js simulation-ir examples/simulations/personal_finance.reux
 node dist/cli.js simulation-run examples/simulations/workforce_change.reux
 ```
 
-This is not yet the full simulation language. The next layers are richer dimensional analysis, domain packs for PLOS/business use cases, richer comparison reports, generated TypeScript contracts, and eventually integration with Reux data modules.
+This is not yet the full simulation language. The next layers are richer dimensional analysis, domain packs for PLOS/business use cases, objective-aware recommendation summaries, generated TypeScript contracts, and eventually integration with Reux data modules.
 
 ## Transition Rules
 

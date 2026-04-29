@@ -72,6 +72,7 @@ export interface SimulationComparisonResult {
     firstDivergence?: SimulationPeriodDelta;
     periodDeltas: SimulationPeriodDelta[];
   }>;
+  metricRankings: SimulationMetricRanking[];
 }
 
 export interface SimulationPeriodDelta {
@@ -79,6 +80,17 @@ export interface SimulationPeriodDelta {
   label: string;
   metricDeltas: Record<string, number>;
   metricUnits: Record<string, string>;
+}
+
+export interface SimulationMetricRanking {
+  metric: string;
+  unit?: string;
+  direction: "descending_delta";
+  scenarios: Array<{
+    name: string;
+    delta: number;
+    rank: number;
+  }>;
 }
 
 export function buildSimulationCatalog(program: Program): SimulationIr[] {
@@ -416,22 +428,49 @@ function compareScenarios(scenarios: SimulationScenarioRunResult[]): SimulationC
   const baseline = scenarios[0];
   const baselineFinal = baseline.periods.at(-1)?.metrics ?? {};
   const baselineUnits = baseline.periods.at(-1)?.metricUnits ?? {};
+  const scenarioComparisons = scenarios.slice(1).map((scenario) => {
+    const finalMetrics = scenario.periods.at(-1)?.metrics ?? {};
+    const finalUnits = scenario.periods.at(-1)?.metricUnits ?? {};
+    const periodDeltas = scenario.periods.map((period, index) => comparePeriodMetrics(baseline.periods[index], period));
+    return {
+      name: scenario.name,
+      metricDeltas: compareMetricDeltas(baselineFinal, finalMetrics),
+      metricUnits: compareMetricUnits(baselineFinal, finalMetrics, baselineUnits, finalUnits),
+      firstDivergence: periodDeltas.find((delta) => hasMetricDelta(delta.metricDeltas)),
+      periodDeltas,
+    };
+  });
+
   return {
     baseline: baseline.name,
     finalPeriod: baseline.periods.at(-1)?.period ?? 0,
-    scenarios: scenarios.slice(1).map((scenario) => {
-      const finalMetrics = scenario.periods.at(-1)?.metrics ?? {};
-      const finalUnits = scenario.periods.at(-1)?.metricUnits ?? {};
-      const periodDeltas = scenario.periods.map((period, index) => comparePeriodMetrics(baseline.periods[index], period));
-      return {
-        name: scenario.name,
-        metricDeltas: compareMetricDeltas(baselineFinal, finalMetrics),
-        metricUnits: compareMetricUnits(baselineFinal, finalMetrics, baselineUnits, finalUnits),
-        firstDivergence: periodDeltas.find((delta) => hasMetricDelta(delta.metricDeltas)),
-        periodDeltas,
-      };
-    }),
+    scenarios: scenarioComparisons,
+    metricRankings: rankScenarioMetrics(scenarioComparisons),
   };
+}
+
+function rankScenarioMetrics(
+  scenarios: SimulationComparisonResult["scenarios"],
+): SimulationMetricRanking[] {
+  const metrics = [...new Set(scenarios.flatMap((scenario) => Object.keys(scenario.metricDeltas)))].sort();
+  return metrics.map((metric) => {
+    const ranked = scenarios
+      .map((scenario) => ({
+        name: scenario.name,
+        delta: scenario.metricDeltas[metric] ?? 0,
+      }))
+      .sort((left, right) => right.delta - left.delta || left.name.localeCompare(right.name));
+
+    return {
+      metric,
+      unit: scenarios.find((scenario) => scenario.metricUnits[metric])?.metricUnits[metric],
+      direction: "descending_delta" as const,
+      scenarios: ranked.map((scenario, index) => ({
+        ...scenario,
+        rank: index + 1,
+      })),
+    };
+  });
 }
 
 function comparePeriodMetrics(

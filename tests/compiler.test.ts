@@ -434,6 +434,20 @@ simulate personal_finance {
       metricDeltas: { cash_flow: 300, annual_surplus: 3600 },
     });
     expect(run.comparison.scenarios[0].periodDeltas).toHaveLength(12);
+    expect(run.comparison.metricRankings).toEqual([
+      {
+        metric: "annual_surplus",
+        unit: "USD",
+        direction: "descending_delta",
+        scenarios: [{ name: "lower_rent", delta: 3600, rank: 1 }],
+      },
+      {
+        metric: "cash_flow",
+        unit: "USD",
+        direction: "descending_delta",
+        scenarios: [{ name: "lower_rent", delta: 300, rank: 1 }],
+      },
+    ]);
   });
 
   it("emits prototype index metrics for rate-based simulations", () => {
@@ -450,6 +464,15 @@ simulate personal_finance {
     expect(run.comparison.scenarios[0].metricDeltas).toEqual({ productivity_index: 4, operating_relief: 0.04 });
     expect(run.comparison.scenarios[0].periodDeltas[0].metricDeltas).toEqual({ productivity_index: 4, operating_relief: 0.04 });
     expect(run.comparison.scenarios[0].periodDeltas[3].metricDeltas).toEqual({ productivity_index: 4, operating_relief: 0.04 });
+    expect(run.comparison.metricRankings.find((ranking: { metric: string }) => ranking.metric === "operating_relief")).toEqual({
+      metric: "operating_relief",
+      unit: "percent",
+      direction: "descending_delta",
+      scenarios: [
+        { name: "stronger_training", delta: 0.04, rank: 1 },
+        { name: "no_overtime_change", delta: -0.1, rank: 2 },
+      ],
+    });
   });
 
   it("applies simulation assumption changes by forecast period", () => {
