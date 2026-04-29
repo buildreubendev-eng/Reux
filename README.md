@@ -14,6 +14,16 @@ Current scope:
 - Parse transaction functions, emit Transaction IR, lower a supported subset to PostgreSQL, and run it against PostgreSQL.
 - Persist durable transaction events through a small `_dl_outbox` runtime table.
 - Emit generated TypeScript API clients, minimal HTTP server scaffolds, and worker scaffolds for supported queries and transaction functions.
+- Parse `simulate` declarations, emit Simulation IR, and run a small prototype static forecast for early PLOS and business-simulation research.
+
+Ecosystem direction:
+
+- Reuben is the parent brand and public website.
+- Reux is the language/runtime layer for data-aware workflows and simulations.
+- PLOS is the future personal simulation product for finances, health, career, habits, goals, and time.
+- The real-time business simulation engine is the future enterprise product for workforce, cost, productivity, risk, and operational scenario comparison.
+
+The product apps should be built with normal web technology first. Reux should become the shared rule and simulation layer underneath them as the language matures.
 
 Run:
 
@@ -24,6 +34,8 @@ npm run verify:cli
 npm run verify:package
 npm run demo:pilot
 npm run demo:logistics
+node dist/cli.js simulation-ir examples/simulations/personal_finance.reux
+node dist/cli.js simulation-run examples/simulations/workforce_change.reux
 $env:DATABASE_URL='postgres://datalang:datalang@127.0.0.1:5432/datalang_dev'
 npm run demo:pilot-app
 npm run demo:pilot-worker
@@ -105,6 +117,7 @@ This is intentionally a scoped MVP slice, not the complete language.
 Technical documentation:
 
 - [Language subset](docs/technical/language-subset.md)
+- [Ecosystem architecture](docs/technical/ecosystem-architecture.md)
 - [Compiler artifacts](docs/technical/compiler-artifacts.md)
 - [CLI reference](docs/technical/cli.md)
 - [Migrations](docs/technical/migrations.md)

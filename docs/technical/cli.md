@@ -44,7 +44,7 @@ node dist/cli.js project-doctor --json
 node dist/cli.js project-doctor --db --json
 ```
 
-The summary inventories entities, enums, queries, transactions, and transition-rule declarations, and includes duplicate declaration diagnostics across configured files. `project-doctor` also checks manifest freshness, migration directory visibility, and whether the configured database URL environment variable is set. Add `--db` to have `project-doctor` connect to PostgreSQL and include applied/pending migration counts. Add `--json` for machine-readable output.
+The summary inventories entities, enums, queries, simulations, transactions, and transition-rule declarations, and includes duplicate declaration diagnostics across configured files. `project-doctor` also checks manifest freshness, migration directory visibility, and whether the configured database URL environment variable is set. Add `--db` to have `project-doctor` connect to PostgreSQL and include applied/pending migration counts. Add `--json` for machine-readable output.
 
 Project commands read `dl.json` by default. Set `REUX_CONFIG` to use a different config, such as the pilot application:
 
@@ -90,6 +90,8 @@ node dist/cli.js project-explain highValueUsers
 node dist/cli.js project-tx-ir rewardUser
 node dist/cli.js project-tx-sql rewardUser
 node dist/cli.js project-tx-run rewardUser '["user-id","100"]'
+node dist/cli.js project-simulation-ir personal_finance
+node dist/cli.js project-simulation-run personal_finance
 node dist/cli.js project-api-ts ./runtime.js
 node dist/cli.js project-api-server-ts ./api.js ./config.js ./runtime.js
 node dist/cli.js project-worker-ts ./config.js ./runtime.js
@@ -119,6 +121,15 @@ Inspect transition rules:
 node dist/cli.js transition-rules examples/pilot_reux.dl
 node dist/cli.js transition-rules examples/pilot_reux.dl Order.status
 ```
+
+Emit and run Simulation IR:
+
+```bash
+node dist/cli.js simulation-ir examples/simulations/personal_finance.reux
+node dist/cli.js simulation-run examples/simulations/workforce_change.reux
+```
+
+When a source contains exactly one simulation, the simulation name is optional. If a source contains multiple simulations, pass the simulation name as the final argument.
 
 Emit a generated TypeScript API client:
 

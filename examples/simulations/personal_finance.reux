@@ -1,0 +1,8 @@
+module personal_life
+
+simulate personal_finance {
+  income = 5000
+  rent = 1500
+  debt_payment = 500
+  forecast 12 months
+}

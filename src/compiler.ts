@@ -14,6 +14,7 @@ import { queryToPostgres, schemaToPostgres, transactionToPostgres } from "./post
 import { buildQueryIr } from "./query-ir.js";
 import { buildSchema, SchemaIr, TransitionIr } from "./schema.js";
 import { buildTransactionIr } from "./transaction-ir.js";
+import { buildSimulationCatalog, runSimulationIr, SimulationIr } from "./simulation-ir.js";
 import { DlAggregateError } from "./errors.js";
 import {
   emitTypeScriptApi,
@@ -27,6 +28,7 @@ import {
 export interface CompileResult {
   program: Program;
   schema: SchemaIr;
+  simulations: SimulationIr[];
 }
 
 export interface DiagnosticReport {
@@ -37,6 +39,7 @@ export interface DiagnosticReport {
     entities: number;
     enums: number;
     queries: number;
+    simulations: number;
     transactions: number;
     transitions: number;
   };
@@ -66,7 +69,8 @@ export interface MigrationSafetyCheck {
 export function compileSource(source: string): CompileResult {
   const program = parseProgram(source);
   const schema = buildSchema(program);
-  return { program, schema };
+  const simulations = buildSimulationCatalog(program);
+  return { program, schema, simulations };
 }
 
 export function diagnoseSource(source: string): DiagnosticReport {
@@ -80,6 +84,7 @@ export function diagnoseSource(source: string): DiagnosticReport {
         entities: result.schema.entities.length,
         enums: result.schema.enums.length,
         queries: result.program.declarations.filter((declaration) => declaration.kind === "query").length,
+        simulations: result.simulations.length,
         transactions: result.program.declarations.filter((declaration) => declaration.kind === "transaction").length,
         transitions: result.program.declarations.filter((declaration) => declaration.kind === "transition").length,
       },
@@ -137,6 +142,16 @@ export function emitTransactionIr(source: string, transactionName: string): stri
 export function emitTransactionSql(source: string, transactionName: string): string {
   const { program, schema } = compileSource(source);
   return transactionToPostgres(schema, findTransaction(program, transactionName));
+}
+
+export function emitSimulationIr(source: string, simulationName?: string): string {
+  const { simulations } = compileSource(source);
+  return `${JSON.stringify(findSimulation(simulations, simulationName), null, 2)}\n`;
+}
+
+export function emitSimulationRun(source: string, simulationName?: string): string {
+  const { simulations } = compileSource(source);
+  return `${JSON.stringify(runSimulationIr(findSimulation(simulations, simulationName)), null, 2)}\n`;
 }
 
 export function emitApiClient(source: string, options?: TypeScriptApiOptions): string {
@@ -236,6 +251,21 @@ function findTransaction(program: Program, transactionName: string): Transaction
     throw new Error(`transaction '${transactionName}' was not found`);
   }
   return transaction;
+}
+
+function findSimulation(simulations: SimulationIr[], simulationName?: string): SimulationIr {
+  if (simulationName) {
+    const simulation = simulations.find((candidate) => candidate.name === simulationName);
+    if (!simulation) {
+      throw new Error(`simulation '${simulationName}' was not found`);
+    }
+    return simulation;
+  }
+  if (simulations.length === 1) return simulations[0];
+  if (simulations.length === 0) {
+    throw new Error("no simulation declarations were found");
+  }
+  throw new Error("multiple simulations found; pass a simulation name");
 }
 
 function filterTransitions(transitions: TransitionIr[], target?: string): TransitionIr[] {

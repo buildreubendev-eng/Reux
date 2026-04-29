@@ -15,6 +15,8 @@ import {
   emitQueryIr,
   emitQuerySql,
   emitSchemaManifest,
+  emitSimulationIr,
+  emitSimulationRun,
   emitTransitionRules,
   emitTransactionIr,
   emitTransactionSql,
@@ -161,7 +163,7 @@ try {
     }
     for (const sourceFile of files) {
       const result = compileSource(readFileSync(sourceFile.path, "utf8"));
-      console.log(`ok: ${sourceFile.relativePath} (${result.schema.entities.length} entities, ${result.schema.enums.length} enums)`);
+      console.log(`ok: ${sourceFile.relativePath} (${result.schema.entities.length} entities, ${result.schema.enums.length} enums, ${result.simulations.length} simulations)`);
     }
     console.log(`checked ${files.length} source file${files.length === 1 ? "" : "s"}`);
   } else if (command === "project-summary") {
@@ -258,6 +260,13 @@ try {
       console.log(emitTransactionIr(source, file));
     } else {
       console.log(emitTransactionSql(source, file));
+    }
+  } else if (command === "project-simulation-ir" || command === "project-simulation-run") {
+    const source = readSingleProjectSource(loadConfig(), command);
+    if (command === "project-simulation-ir") {
+      console.log(emitSimulationIr(source, file));
+    } else {
+      console.log(emitSimulationRun(source, file));
     }
   } else if (command === "project-query-run") {
     if (!file) {
@@ -382,7 +391,7 @@ try {
       if (!report.ok) process.exitCode = 1;
     } else if (command === "check") {
       const result = compileSource(source);
-      console.log(`ok: ${basename(file)} (${result.schema.entities.length} entities, ${result.schema.enums.length} enums)`);
+      console.log(`ok: ${basename(file)} (${result.schema.entities.length} entities, ${result.schema.enums.length} enums, ${result.simulations.length} simulations)`);
     } else if (command === "sql") {
       console.log(emitPostgresSchema(source));
     } else if (command === "manifest") {
@@ -495,6 +504,10 @@ try {
         const result = await runTransactionSql(db, sql, params, attempts);
         console.log(JSON.stringify(result, null, 2));
       });
+    } else if (command === "simulation-ir") {
+      console.log(emitSimulationIr(source, extra));
+    } else if (command === "simulation-run") {
+      console.log(emitSimulationRun(source, extra));
     } else if (command === "explain") {
       if (!extra) {
         throw new Error("explain requires a query name");
@@ -530,7 +543,7 @@ try {
 }
 
 function usage(): void {
-  console.error("usage: dl <version|diagnose|check|project-diagnose|project-check|project-summary|project-doctor|project-sql|project-manifest|project-manifest-write|project-transition-rules|project-api-ts|project-api-server-ts|project-worker-ts|project-migrate-plan|project-migrate-check|project-migrate-diff-create|project-query-ir|project-query-sql|project-query-run|project-explain|project-tx-ir|project-tx-sql|project-tx-run|project-data-insert|project-data-insert-sql|project-seed-run|project-seed-dry-run|project-seed-check|project-seed-delete|project-seed-reset|sql|manifest|transition-rules|api-ts|api-server-ts|worker-ts|manifest-write|query-ir|query-sql|query-run|data-insert|data-insert-sql|seed-run|seed-dry-run|seed-check|seed-delete|seed-reset|tx-ir|tx-sql|tx-run|explain|migrate-create|migrate-plan|migrate-check|migrate-diff-create|migrate-status|migrate-apply|outbox-list|outbox-claim|outbox-mark-processed|outbox-mark-failed|outbox-requeue|outbox-requeue-stale> [args]");
+  console.error("usage: dl <version|diagnose|check|project-diagnose|project-check|project-summary|project-doctor|project-sql|project-manifest|project-manifest-write|project-transition-rules|project-api-ts|project-api-server-ts|project-worker-ts|project-migrate-plan|project-migrate-check|project-migrate-diff-create|project-query-ir|project-query-sql|project-query-run|project-explain|project-tx-ir|project-tx-sql|project-tx-run|project-simulation-ir|project-simulation-run|project-data-insert|project-data-insert-sql|project-seed-run|project-seed-dry-run|project-seed-check|project-seed-delete|project-seed-reset|sql|manifest|transition-rules|api-ts|api-server-ts|worker-ts|manifest-write|query-ir|query-sql|query-run|data-insert|data-insert-sql|seed-run|seed-dry-run|seed-check|seed-delete|seed-reset|tx-ir|tx-sql|tx-run|simulation-ir|simulation-run|explain|migrate-create|migrate-plan|migrate-check|migrate-diff-create|migrate-status|migrate-apply|outbox-list|outbox-claim|outbox-mark-processed|outbox-mark-failed|outbox-requeue|outbox-requeue-stale> [args]");
 }
 
 function packageVersion(): string {
@@ -623,6 +636,7 @@ function formatProjectSummary(summary: ProjectSummary): string {
     `entities: ${summary.totals.entities}`,
     `enums: ${summary.totals.enums}`,
     `queries: ${summary.totals.queries}`,
+    `simulations: ${summary.totals.simulations}`,
     `transactions: ${summary.totals.transactions}`,
     `transitions: ${summary.totals.transitions}`,
     "",
@@ -642,6 +656,7 @@ function formatProjectSummary(summary: ProjectSummary): string {
     lines.push(`  entities: ${formatList(file.entities)}`);
     lines.push(`  enums: ${formatList(file.enums)}`);
     lines.push(`  queries: ${formatList(file.queries)}`);
+    lines.push(`  simulations: ${formatList(file.simulations)}`);
     lines.push(`  transactions: ${formatList(file.transactions)}`);
     lines.push(`  transitions: ${formatList(file.transitions)}`);
   }
@@ -663,6 +678,7 @@ function formatDiagnosticReport(path: string, report: ReturnType<typeof diagnose
       `  entities: ${summary.entities}`,
       `  enums: ${summary.enums}`,
       `  queries: ${summary.queries}`,
+      `  simulations: ${summary.simulations}`,
       `  transactions: ${summary.transactions}`,
       `  transitions: ${summary.transitions}`,
     ].join("\n");

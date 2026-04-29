@@ -11,6 +11,7 @@ This prototype implements the first data-module subset of Reux. It is intentiona
 - `transition <Entity>.<field> { ... }`
 - `query fragment <name>(range in Entity) = where ...`
 - `query <name>(params): Query<T> = from ...`
+- `simulate <name> { ... }`
 - `transaction function <name>(params) writes Entity, ... { ... }`
 
 ## Entity Fields
@@ -85,6 +86,47 @@ event AccountDebited {
 ```
 
 If an `enqueue` statement targets a declared event, the compiler validates required payload fields, rejects unknown payload fields, and checks payload expression types against the event declaration.
+
+## Simulation Subset
+
+The first simulation slice is intentionally small. It exists to prove the Reux ecosystem direction without forcing PLOS or the business simulation engine to depend on an unfinished full language.
+
+```dl
+simulate personal_finance {
+  income = 5000
+  rent = 1500
+  debt_payment = 500
+  forecast 12 months
+}
+
+simulate workforce_change {
+  employees = 50
+  productivity_gain = 0.08
+  overtime_reduction = 0.10
+  forecast 6 months
+}
+```
+
+Supported simulation statements:
+
+- `name = number`
+- `name = true | false`
+- `name = "quoted string"`
+- `forecast N days|weeks|months|quarters|years`
+
+The compiler emits Simulation IR and can run a prototype static forecast. The runner repeats the declared assumptions for each period and derives a small set of early metrics:
+
+- `netCashFlow` and `cumulativeNetCashFlow` when an `income` assumption is present;
+- `changeRate` and `projectedIndex` when rate-like assumptions such as `productivity_gain` or `overtime_reduction` are present.
+
+Inspect and run simulations with:
+
+```bash
+node dist/cli.js simulation-ir examples/simulations/personal_finance.reux
+node dist/cli.js simulation-run examples/simulations/workforce_change.reux
+```
+
+This is not yet the full simulation language. The next layers are explicit formulas, scenario comparison, typed units, domain packs for PLOS/business use cases, and eventually integration with Reux data modules.
 
 ## Transition Rules
 

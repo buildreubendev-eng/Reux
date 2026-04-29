@@ -16,6 +16,7 @@ export interface ProjectSummary {
     entities: number;
     enums: number;
     queries: number;
+    simulations: number;
     transactions: number;
     transitions: number;
   };
@@ -27,6 +28,7 @@ export interface ProjectFileSummary {
   entities: string[];
   enums: string[];
   queries: string[];
+  simulations: string[];
   transactions: string[];
   transitions: string[];
 }
@@ -52,6 +54,7 @@ export function summarizeProject(config: DlConfig, cwd = process.cwd()): Project
       queries: result.program.declarations
         .filter((declaration) => declaration.kind === "query")
         .map((declaration) => declaration.name),
+      simulations: result.simulations.map((simulation) => simulation.name),
       transactions: result.program.declarations
         .filter((declaration) => declaration.kind === "transaction")
         .map((declaration) => declaration.name),
@@ -69,6 +72,7 @@ export function summarizeProject(config: DlConfig, cwd = process.cwd()): Project
       entities: sum(files, (file) => file.entities.length),
       enums: sum(files, (file) => file.enums.length),
       queries: sum(files, (file) => file.queries.length),
+      simulations: sum(files, (file) => file.simulations.length),
       transactions: sum(files, (file) => file.transactions.length),
       transitions: sum(files, (file) => file.transitions.length),
     },
@@ -80,6 +84,7 @@ function projectDiagnostics(files: ProjectFileSummary[]): string[] {
   diagnostics.push(...duplicateDeclarations(files, "entity", (file) => file.entities));
   diagnostics.push(...duplicateDeclarations(files, "enum", (file) => file.enums));
   diagnostics.push(...duplicateDeclarations(files, "query", (file) => file.queries));
+  diagnostics.push(...duplicateDeclarations(files, "simulation", (file) => file.simulations));
   diagnostics.push(...duplicateDeclarations(files, "transaction", (file) => file.transactions));
   diagnostics.push(...duplicateDeclarations(files, "transition", (file) => file.transitions));
   return diagnostics;

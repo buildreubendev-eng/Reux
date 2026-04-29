@@ -11,13 +11,14 @@ import {
   QueryFragmentDeclaration,
   QueryParameter,
   QueryProjection,
+  SimulationDeclaration,
   TransitionDeclaration,
   TransactionDeclaration,
   TypeRef,
 } from "./ast.js";
 import { DlError } from "./errors.js";
 
-const declarationStart = /^(entity|enum|event|query(?:\s+fragment)?|transition|transaction\s+function)\s+/;
+const declarationStart = /^(entity|enum|event|query(?:\s+fragment)?|simulate|transition|transaction\s+function)\s+/;
 
 export function parseProgram(source: string): Program {
   const lines = normalizeLines(source);
@@ -72,6 +73,13 @@ export function parseProgram(source: string): Program {
 
     if (text.startsWith("query ")) {
       const parsed = parseQuery(lines, index);
+      declarations.push(parsed.declaration);
+      index = parsed.nextIndex;
+      continue;
+    }
+
+    if (text.startsWith("simulate ")) {
+      const parsed = parseSimulation(lines, index);
       declarations.push(parsed.declaration);
       index = parsed.nextIndex;
       continue;
@@ -415,6 +423,66 @@ function parseEvent(lines: SourceLine[], start: number): { declaration: EventDec
   throw new DlError(`line ${lines[start].number}: event '${match[1]}' is missing a closing brace`);
 }
 
+function parseSimulation(lines: SourceLine[], start: number): { declaration: SimulationDeclaration; nextIndex: number } {
+  const header = lines[start].text.trim();
+  const match = header.match(/^simulate\s+([A-Za-z_][A-Za-z0-9_]*)\s*\{$/);
+  if (!match) {
+    throw new DlError(`line ${lines[start].number}: expected 'simulate name {'`);
+  }
+
+  const assumptions: SimulationDeclaration["assumptions"] = [];
+  let forecast: SimulationDeclaration["forecast"] | undefined;
+  let index = start + 1;
+  while (index < lines.length) {
+    const line = lines[index];
+    const text = line.text.trim();
+    if (!text) {
+      index += 1;
+      continue;
+    }
+    if (text === "}") {
+      if (!forecast) {
+        throw new DlError(`line ${line.number}: simulation '${match[1]}' is missing a forecast`);
+      }
+      return {
+        declaration: {
+          kind: "simulation",
+          name: match[1],
+          assumptions,
+          forecast,
+        },
+        nextIndex: index + 1,
+      };
+    }
+
+    const forecastMatch = text.match(/^forecast\s+(\d+)\s+(days?|weeks?|months?|quarters?|years?)$/);
+    if (forecastMatch) {
+      if (forecast) {
+        throw new DlError(`line ${line.number}: simulation '${match[1]}' declares more than one forecast`);
+      }
+      const periods = Number.parseInt(forecastMatch[1], 10);
+      if (periods < 1) {
+        throw new DlError(`line ${line.number}: forecast periods must be greater than zero`);
+      }
+      forecast = {
+        periods,
+        unit: singularForecastUnit(forecastMatch[2]),
+      };
+      index += 1;
+      continue;
+    }
+
+    const assignment = text.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+)$/);
+    if (!assignment) {
+      throw new DlError(`line ${line.number}: expected simulation assignment or forecast`);
+    }
+    assumptions.push({ name: assignment[1], value: assignment[2].trim() });
+    index += 1;
+  }
+
+  throw new DlError(`line ${lines[start].number}: simulation '${match[1]}' is missing a closing brace`);
+}
+
 function parseQuery(lines: SourceLine[], start: number): { declaration: QueryDeclaration; nextIndex: number } {
   const collected: string[] = [];
   let index = start;
@@ -741,6 +809,15 @@ function splitTopLevel(source: string, separator: string): string[] {
 
 function isIdentifier(value: string): boolean {
   return /^[A-Za-z_][A-Za-z0-9_]*$/.test(value);
+}
+
+function singularForecastUnit(unit: string): SimulationDeclaration["forecast"]["unit"] {
+  if (unit === "days") return "day";
+  if (unit === "weeks") return "week";
+  if (unit === "months") return "month";
+  if (unit === "quarters") return "quarter";
+  if (unit === "years") return "year";
+  return unit as SimulationDeclaration["forecast"]["unit"];
 }
 
 interface SourceLine {

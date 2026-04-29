@@ -1,0 +1,8 @@
+module business_ops
+
+simulate workforce_change {
+  employees = 50
+  productivity_gain = 0.08
+  overtime_reduction = 0.10
+  forecast 6 months
+}

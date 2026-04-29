@@ -4,7 +4,7 @@ The Reux prototype keeps source syntax, schema, query plans, and SQL as separate
 
 ## AST
 
-The parser reads source files into declaration-oriented AST objects for modules, entities, enums, transition rules, queries, and transaction functions.
+The parser reads source files into declaration-oriented AST objects for modules, entities, enums, events, transition rules, queries, simulations, and transaction functions.
 
 ## Schema IR
 
@@ -15,7 +15,8 @@ Schema IR is the backend-neutral durable model. It records:
 - field type, optionality, primary key, uniqueness, defaults, and checks;
 - references between entities;
 - indexes;
-- enums.
+- enums;
+- typed events;
 - enum-backed transition rules.
 
 Before Schema IR is emitted, the compiler rejects duplicate durable names, fields, indexes, enum values, and parameters so downstream artifacts remain deterministic.
@@ -66,6 +67,19 @@ node dist/cli.js explain examples/commerce.dl highValueUsers
 node dist/cli.js project-explain highValueUsers
 ```
 
+## Simulation IR
+
+Simulation IR records static assumptions and forecast windows from `simulate` declarations. It is intentionally separate from Schema IR because simulations are product/domain behavior rather than durable database shape.
+
+Inspect and run a simulation:
+
+```bash
+node dist/cli.js simulation-ir examples/simulations/personal_finance.reux
+node dist/cli.js simulation-run examples/simulations/workforce_change.reux
+```
+
+The current runner is a prototype static forecast. It repeats declared assumptions over the forecast window and emits early derived metrics such as net cash flow and rate-based projected indexes.
+
 ## PostgreSQL SQL
 
 The PostgreSQL backend currently emits:
@@ -89,6 +103,8 @@ Current step kinds:
 - `Save`
 - `Insert`
 - `Enqueue`
+- `IdempotencyKey`
+- `Require`
 - `AfterCommit`
 - `ExternalCall`
 - `Abort`

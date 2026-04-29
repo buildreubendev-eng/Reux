@@ -13,6 +13,8 @@ import {
   emitQueryIr,
   emitQuerySql,
   emitSchemaManifest,
+  emitSimulationIr,
+  emitSimulationRun,
   emitTransitionRules,
   emitTransactionIr,
   emitTransactionSql,
@@ -380,6 +382,56 @@ entity User {
       ok: false,
       diagnostics: [{ severity: "error", message: "User.email uses unknown type MissingType" }],
     });
+  });
+
+  it("parses simulation declarations and emits prototype forecast runs", () => {
+    const source = `module personal_life
+
+simulate personal_finance {
+  income = 5000
+  rent = 1500
+  debt_payment = 500
+  forecast 12 months
+}
+`;
+    const ir = JSON.parse(emitSimulationIr(source));
+    const run = JSON.parse(emitSimulationRun(source, "personal_finance"));
+
+    expect(ir).toEqual({
+      name: "personal_finance",
+      assumptions: [
+        { name: "income", type: "number", value: 5000 },
+        { name: "rent", type: "number", value: 1500 },
+        { name: "debt_payment", type: "number", value: 500 },
+      ],
+      forecast: { periods: 12, unit: "month" },
+    });
+    expect(run.model).toBe("prototype-static-forecast");
+    expect(run.periods).toHaveLength(12);
+    expect(run.periods[0].metrics.netCashFlow).toBe(3000);
+    expect(run.periods[11].metrics.cumulativeNetCashFlow).toBe(36000);
+  });
+
+  it("emits prototype index metrics for rate-based simulations", () => {
+    const run = JSON.parse(emitSimulationRun(readFileSync("examples/simulations/workforce_change.reux", "utf8")));
+
+    expect(run.name).toBe("workforce_change");
+    expect(run.forecast).toEqual({ periods: 6, unit: "month" });
+    expect(run.periods[0].metrics.changeRate).toBe(0.18);
+    expect(run.periods[0].metrics.projectedIndex).toBe(118);
+  });
+
+  it("validates simulation duplicate assumptions and values", () => {
+    expect(() =>
+      compileSource(`module broken
+
+simulate bad {
+  income = 5000
+  income = nope
+  forecast 1 month
+}
+`),
+    ).toThrow(DlAggregateError);
   });
 
   it("builds Schema IR for transition rules", () => {
