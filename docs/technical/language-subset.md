@@ -7,6 +7,7 @@ This prototype implements the first data-module subset of Reux. It is intentiona
 - `module <name>`
 - `entity <Name> { ... }`
 - `enum <Name> { ... }`
+- `event <Name> { ... }`
 - `transition <Entity>.<field> { ... }`
 - `query fragment <name>(range in Entity) = where ...`
 - `query <name>(params): Query<T> = from ...`
@@ -73,6 +74,17 @@ enum OrderStatus {
   Paid
 }
 ```
+
+Events declare typed outbox payload contracts:
+
+```dl
+event AccountDebited {
+  account: Account
+  amount: Decimal<12,2>
+}
+```
+
+If an `enqueue` statement targets a declared event, the compiler validates required payload fields, rejects unknown payload fields, and checks payload expression types against the event declaration.
 
 ## Transition Rules
 
@@ -212,6 +224,8 @@ transaction function rewardUser(userRef: User, amount: Decimal<12,2>) writes Use
 Supported Transaction IR step recognition:
 
 - `let name = load expr for update`
+- `idempotency key expr`
+- `require condition else abort ErrorName`
 - `target.field += expr`
 - `target.field -= expr`
 - `target.field = expr`
@@ -231,6 +245,10 @@ The compiler also validates the first effect boundary:
 - mutation or `save` of an entity loaded from an entity-typed parameter requires `writes Entity`.
 - enum-valued inserts and assignments accept bare enum literals and reject values that are not declared by the enum.
 - enum-valued inserts and assignments from transaction parameters require the parameter enum type to match the target field enum type.
+- mutation and insert expressions are checked against target field types for simple parameters, literals, loaded rows, and bound insert references.
+- `idempotency key expr` lowers to an insert into `_dl_idempotency_keys`, giving retryable callers a first-class durable key.
+- `require condition else abort ErrorName` lowers to a SQL guard that rolls back the transaction when the condition is false.
+- declared event payloads validate `enqueue Event { ... }` and generate typed worker payload contracts.
 - retryable transactions use `retry N`;
 - direct external-looking calls such as `sendEmail(user)` are rejected inside retryable transactions;
 - `after commit sendEmail(user)` and `enqueue Event { ... }` are allowed retry-safe fences;

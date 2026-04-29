@@ -6,7 +6,15 @@ import { buildTransactionIr, TransactionIr } from "./transaction-ir.js";
 import { parseObjectLiteral } from "./object-literal.js";
 
 export function schemaToPostgres(schema: SchemaIr): string {
-  const extensionSql = ["CREATE EXTENSION IF NOT EXISTS pgcrypto;"];
+  const extensionSql = [
+    "CREATE EXTENSION IF NOT EXISTS pgcrypto;",
+    [
+      "CREATE TABLE IF NOT EXISTS _dl_idempotency_keys (",
+      "  key text PRIMARY KEY,",
+      "  created_at timestamptz NOT NULL DEFAULT now()",
+      ");",
+    ].join("\n"),
+  ];
   const enumSql = schema.enums.map((enumeration) => {
     const values = enumeration.values.map((value) => quoteLiteral(value)).join(", ");
     return `CREATE TYPE ${snakeCase(enumeration.name)} AS ENUM (${values});`;
@@ -306,6 +314,10 @@ class TransactionLowering {
         lines.push(this.lowerInsert(step.entity, step.source, step.target));
       } else if (step.kind === "Enqueue") {
         lines.push(this.lowerEnqueue(step.event, step.source));
+      } else if (step.kind === "IdempotencyKey") {
+        lines.push(this.lowerIdempotencyKey(step.expression));
+      } else if (step.kind === "Require") {
+        lines.push(this.lowerRequire(step.condition, step.error));
       } else if (step.kind === "AfterCommit") {
         lines.push(`-- after commit: ${step.call}`);
       } else if (step.kind === "ExternalCall") {
@@ -443,6 +455,17 @@ class TransactionLowering {
     return `INSERT INTO _dl_outbox (event_type, payload) VALUES (${quoteLiteral(event)}, ${payload}) RETURNING id, event_type, payload;`;
   }
 
+  private lowerIdempotencyKey(expression: string): string {
+    return `INSERT INTO _dl_idempotency_keys (key) VALUES (${this.expressionSql(expression)}::text) ON CONFLICT (key) DO NOTHING RETURNING key;`;
+  }
+
+  private lowerRequire(condition: string, error: string): string {
+    return [
+      `-- guard: ${error}`,
+      `SELECT CASE WHEN ${this.conditionSql(condition)} THEN 1 ELSE 1 / 0 END;`,
+    ].join("\n");
+  }
+
   private jsonExpressionSql(expression: string): string {
     const parameter = this.transaction.parameters.find((candidate) => candidate.name === expression);
     if (parameter) {
@@ -453,6 +476,28 @@ class TransactionLowering {
     const bound = this.boundReferenceSql(expression);
     if (bound) return `${bound}::${this.boundReferenceType(expression) ?? "text"}`;
     return this.expressionSql(expression);
+  }
+
+  private conditionSql(expression: string): string {
+    let sql = expression;
+    for (const parameter of this.transaction.parameters) {
+      const position = this.transaction.parameters.indexOf(parameter) + 1;
+      sql = sql.replace(new RegExp(`\\b${parameter.name}\\b`, "g"), `$${position}`);
+    }
+    for (const [name, loaded] of this.loaded) {
+      for (const field of loaded.entity.fields) {
+        sql = sql.replace(new RegExp(`\\b${name}\\.${field.name}\\b`, "g"), `:${name}.${field.columnName}`);
+      }
+    }
+    for (const [name, entity] of this.boundInserts) {
+      if (this.loaded.has(name)) continue;
+      for (const field of entity.fields) {
+        sql = sql.replace(new RegExp(`\\b${name}\\.${field.name}\\b`, "g"), `:${name}.${field.columnName}`);
+      }
+    }
+    sql = sql.replace(/\band\b/g, "AND").replace(/\bor\b/g, "OR");
+    sql = sql.replaceAll("!=", "<>");
+    return sql.replaceAll("==", "=");
   }
 
   private boundReferenceSql(expression: string): string | undefined {

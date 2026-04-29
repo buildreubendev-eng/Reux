@@ -15,7 +15,7 @@ Status: mostly implemented for the MVP subset.
 
 Status: mostly implemented for the MVP subset.
 
-- Supports scalar fields, bounded `Decimal<precision, scale>` fields, validated `CurrencyCode` fields, entity references, generated IDs, enums, indexes, defaults, checks, uniqueness, and nullability.
+- Supports scalar fields, bounded `Decimal<precision, scale>` fields, validated `CurrencyCode` fields, entity references, generated IDs, enums, typed outbox events, indexes, defaults, checks, uniqueness, and nullability.
 - Emits backend-neutral Schema IR and stable schema manifests.
 - Supports enum-backed transition rules as validated Schema IR artifacts.
 - Rejects duplicate declarations, invalid references, unsupported types, duplicate fields/indexes/enum values, and invalid query/transaction parameters.
@@ -37,7 +37,7 @@ Status: implemented for the supported SQL subset.
 - Runs compiled queries.
 - Runs supported transaction SQL inside managed `BEGIN`/`COMMIT`/`ROLLBACK`.
 - Retries retryable PostgreSQL conflicts and deadlocks according to `retry N`.
-- Supports `load ... for update`, simple loaded-entity mutations, transition-guarded literal and parameterized enum assignments, `insert Entity { ... }`, bound insert results and later bound-field references, enum-valued transaction writes with enum-parameter compatibility checks, and durable `enqueue Event { ... }`.
+- Supports `load ... for update`, simple loaded-entity mutations, `idempotency key`, `require ... else abort ...` guards, transition-guarded literal and parameterized enum assignments, `insert Entity { ... }`, bound insert results and later bound-field references, typed event payload validation, enum-valued transaction writes with enum-parameter compatibility checks, and durable `enqueue Event { ... }`.
 - Records outbox events in `_dl_outbox` and exposes list, claim, mark processed, mark failed, requeue, and stale-claim recovery commands.
 - Provides embeddable `processOutboxEvents` and `runOutboxWorker` helpers for dispatching claimed events to application handlers.
 - Provides an embeddable `processAfterCommitHooks` helper for dispatching returned after-commit hooks to application handlers, with optional parameter and binding resolution for hook arguments.
@@ -64,7 +64,7 @@ Status: implemented for the MVP workflow.
 - `project-doctor` checks source discovery, manifest freshness, migration directory visibility, and database URL environment status.
 - `api-ts` and `project-api-ts` emit generated TypeScript API clients for supported queries and transaction functions.
 - `api-server-ts` and `project-api-server-ts` emit a minimal HTTP server scaffold around the generated client.
-- `worker-ts` and `project-worker-ts` emit an outbox worker scaffold with placeholders for declared event and after-commit handlers.
+- `worker-ts` and `project-worker-ts` emit an outbox worker scaffold with typed payload contracts for declared events and named after-commit handler contracts.
 - `scripts/demo-pilot-worker.mjs` provides a runnable pilot outbox worker process for hosted and local demo environments.
 - Seed tooling supports schema-only checks with enum validation, PostgreSQL dry runs, rerunnable upserts, deletes, and transactional resets.
 - Seed reset supports delete-and-rerun and truncate-and-rerun modes for local fixture refreshes.

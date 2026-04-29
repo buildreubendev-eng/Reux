@@ -1,6 +1,7 @@
 export type Declaration =
   | EntityDeclaration
   | EnumDeclaration
+  | EventDeclaration
   | QueryDeclaration
   | QueryFragmentDeclaration
   | TransactionDeclaration
@@ -48,6 +49,12 @@ export interface EnumDeclaration {
   kind: "enum";
   name: string;
   values: string[];
+}
+
+export interface EventDeclaration {
+  kind: "event";
+  name: string;
+  fields: FieldDeclaration[];
 }
 
 export interface QueryDeclaration {

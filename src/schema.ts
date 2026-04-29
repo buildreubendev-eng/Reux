@@ -1,4 +1,13 @@
-import { EntityDeclaration, FieldDeclaration, Program, QueryDeclaration, QueryProjection, TransitionDeclaration, TypeRef } from "./ast.js";
+import {
+  EntityDeclaration,
+  EventDeclaration,
+  FieldDeclaration,
+  Program,
+  QueryDeclaration,
+  QueryProjection,
+  TransitionDeclaration,
+  TypeRef,
+} from "./ast.js";
 import { DlAggregateError } from "./errors.js";
 import { parseObjectLiteral } from "./object-literal.js";
 import { parseTypeRef } from "./parser.js";
@@ -7,6 +16,7 @@ export interface SchemaIr {
   moduleName: string;
   entities: EntityIr[];
   enums: EnumIr[];
+  events: EventIr[];
   transitions: TransitionIr[];
 }
 
@@ -47,6 +57,17 @@ export interface EnumIr {
   values: string[];
 }
 
+export interface EventIr {
+  name: string;
+  fields: EventFieldIr[];
+}
+
+export interface EventFieldIr {
+  name: string;
+  type: TypeRef;
+  nullable: boolean;
+}
+
 export interface TransitionIr {
   entity: string;
   field: string;
@@ -76,6 +97,7 @@ export function buildSchema(program: Program): SchemaIr {
   const diagnostics: string[] = [];
   const entityDecls = program.declarations.filter((decl): decl is EntityDeclaration => decl.kind === "entity");
   const enumDecls = program.declarations.filter((decl) => decl.kind === "enum");
+  const eventDecls = program.declarations.filter((decl): decl is EventDeclaration => decl.kind === "event");
   const queryDecls = program.declarations.filter((decl): decl is QueryDeclaration => decl.kind === "query");
   const transactionDecls = program.declarations.filter((decl) => decl.kind === "transaction");
   const transitionDecls = program.declarations.filter((decl): decl is TransitionDeclaration => decl.kind === "transition");
@@ -87,6 +109,9 @@ export function buildSchema(program: Program): SchemaIr {
   }
   for (const duplicate of duplicates(enumDecls.map((enumeration) => enumeration.name))) {
     diagnostics.push(`duplicate enum declaration ${duplicate}`);
+  }
+  for (const duplicate of duplicates(eventDecls.map((event) => event.name))) {
+    diagnostics.push(`duplicate event declaration ${duplicate}`);
   }
   for (const duplicate of duplicates(queryDecls.map((query) => query.name))) {
     diagnostics.push(`duplicate query declaration ${duplicate}`);
@@ -137,6 +162,17 @@ export function buildSchema(program: Program): SchemaIr {
     }
   }
 
+  for (const event of eventDecls) {
+    const seen = new Set<string>();
+    for (const field of event.fields) {
+      if (seen.has(field.name)) {
+        diagnostics.push(`event ${event.name} declares duplicate field ${field.name}`);
+      }
+      seen.add(field.name);
+      validateType(field, `event ${event.name}`, entityNames, enumNames, diagnostics);
+    }
+  }
+
   for (const query of queryDecls) {
     for (const duplicate of duplicates(query.parameters.map((parameter) => parameter.name))) {
       diagnostics.push(`query ${query.name} declares duplicate parameter ${duplicate}`);
@@ -166,7 +202,7 @@ export function buildSchema(program: Program): SchemaIr {
     if (transaction.retry && transaction.retry.attempts < 1) {
       diagnostics.push(`transaction ${transaction.name} retry attempts must be greater than zero`);
     }
-    validateTransactionEffects(transaction, entityDecls, enumDecls, transitionDecls, diagnostics);
+    validateTransactionEffects(transaction, entityDecls, enumDecls, eventDecls, transitionDecls, diagnostics);
   }
 
   validateTransitions(transitionDecls, entityDecls, enumDecls, diagnostics);
@@ -181,6 +217,14 @@ export function buildSchema(program: Program): SchemaIr {
     enums: enumDecls.map((enumeration) => ({
       name: enumeration.name,
       values: enumeration.values,
+    })),
+    events: eventDecls.map((event) => ({
+      name: event.name,
+      fields: event.fields.map((field) => ({
+        name: field.name,
+        type: field.type,
+        nullable: field.type.optional,
+      })),
     })),
     transitions: lowerTransitions(transitionDecls, entityDecls),
   };
@@ -582,11 +626,13 @@ function validateTransactionEffects(
   transaction: Extract<Program["declarations"][number], { kind: "transaction" }>,
   entities: EntityDeclaration[],
   enumerations: Extract<Program["declarations"][number], { kind: "enum" }>[],
+  events: EventDeclaration[],
   transitions: TransitionDeclaration[],
   diagnostics: string[],
 ): void {
   const entityNames = new Set(entities.map((entity) => entity.name));
   const enumByName = new Map(enumerations.map((enumeration) => [enumeration.name, enumeration]));
+  const eventByName = new Map(events.map((event) => [event.name, event]));
   const writes = new Set(transaction.writes);
   const parameterEntities = new Map(
     transaction.parameters
@@ -604,6 +650,8 @@ function validateTransactionEffects(
       if (entity) {
         loadedEntities.set(load[1], entity);
         boundEntities.set(load[1], entity);
+      } else {
+        diagnostics.push(`transaction ${transaction.name} loads non-entity parameter ${load[2]}`);
       }
       continue;
     }
@@ -614,7 +662,7 @@ function validateTransactionEffects(
       if (entity && !writes.has(entity)) {
         diagnostics.push(`transaction ${transaction.name} mutates ${entity} through ${mutation[1]} but does not declare writes ${entity}`);
       }
-      validateEnumMutation(transaction.name, line, entity, entities, enumByName, parameterTypes, transitions, diagnostics);
+      validateMutationExpression(transaction.name, line, entity, entities, enumByName, parameterTypes, boundEntities, transitions, diagnostics);
       continue;
     }
 
@@ -635,6 +683,7 @@ function validateTransactionEffects(
         diagnostics.push(`transaction ${transaction.name} inserts ${insert[2]} but does not declare writes ${insert[2]}`);
       }
       validateInsertFields(transaction.name, line, entities, enumByName, parameterTypes, diagnostics);
+      validateInsertExpressionTypes(transaction.name, line, entities, enumByName, parameterTypes, boundEntities, diagnostics);
       validateBoundReferences(transaction.name, insert[3], entities, boundEntities, diagnostics);
       if (insert[1] && entityNames.has(insert[2])) {
         boundEntities.set(insert[1], insert[2]);
@@ -645,6 +694,22 @@ function validateTransactionEffects(
     const enqueue = line.match(/^enqueue\s+[A-Za-z_][A-Za-z0-9_]*\s+(.+)$/);
     if (enqueue) {
       validateBoundReferences(transaction.name, enqueue[1], entities, boundEntities, diagnostics);
+      validateEventPayload(transaction.name, line, eventByName, enumByName, parameterTypes, boundEntities, entities, diagnostics);
+      continue;
+    }
+
+    const idempotency = line.match(/^idempotency\s+key\s+(.+)$/);
+    if (idempotency) {
+      const expressionType = transactionExpressionType(idempotency[1], parameterTypes, boundEntities, entities);
+      if (!expressionType) {
+        diagnostics.push(`transaction ${transaction.name} idempotency key references unknown expression ${idempotency[1]}`);
+      }
+      continue;
+    }
+
+    const require = line.match(/^require\s+(.+)\s+else\s+abort\s+([A-Za-z_][A-Za-z0-9_]*)$/);
+    if (require) {
+      validateGuardExpression(transaction.name, require[1], parameterTypes, boundEntities, entities, diagnostics);
       continue;
     }
 
@@ -652,6 +717,11 @@ function validateTransactionEffects(
       diagnostics.push(
         `transaction ${transaction.name} is retryable but calls external function '${line}'. Move it to 'after commit ...' or persist an outbox event with 'enqueue ...'.`,
       );
+      continue;
+    }
+
+    if (!line.startsWith("after commit ") && !isRetryUnsafeExternalCall(line)) {
+      diagnostics.push(`transaction ${transaction.name} has unsupported statement '${line}'`);
     }
   }
 }
@@ -705,6 +775,198 @@ function validateInsertFields(
       parameterTypes,
       diagnostics,
     );
+  }
+}
+
+function validateInsertExpressionTypes(
+  transactionName: string,
+  line: string,
+  entities: EntityDeclaration[],
+  enumByName: Map<string, Extract<Program["declarations"][number], { kind: "enum" }>>,
+  parameterTypes: Map<string, string>,
+  boundEntities: Map<string, string>,
+  diagnostics: string[],
+): void {
+  const match = line.match(/^(?:let\s+[A-Za-z_][A-Za-z0-9_]*\s*=\s*)?insert\s+([A-Za-z_][A-Za-z0-9_]*)\s+(.+)$/);
+  if (!match) return;
+  const entity = entities.find((candidate) => candidate.name === match[1]);
+  if (!entity) return;
+
+  for (const objectField of parseObjectLiteral(match[2])) {
+    const field = entity.fields.find((candidate) => candidate.name === objectField.name);
+    if (!field) continue;
+    validateAssignmentType(
+      transactionName,
+      `${entity.name}.${field.name}`,
+      field.type.raw,
+      objectField.value,
+      enumByName,
+      parameterTypes,
+      boundEntities,
+      entities,
+      diagnostics,
+    );
+  }
+}
+
+function validateMutationExpression(
+  transactionName: string,
+  line: string,
+  entityName: string | undefined,
+  entities: EntityDeclaration[],
+  enumByName: Map<string, Extract<Program["declarations"][number], { kind: "enum" }>>,
+  parameterTypes: Map<string, string>,
+  boundEntities: Map<string, string>,
+  transitions: TransitionDeclaration[],
+  diagnostics: string[],
+): void {
+  if (!entityName) return;
+  const match = line.match(/^([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)\s*(\+=|-=|=)\s*(.+)$/);
+  if (!match) return;
+  const entity = entities.find((candidate) => candidate.name === entityName);
+  const field = entity?.fields.find((candidate) => candidate.name === match[2]);
+  if (!field) {
+    diagnostics.push(`transaction ${transactionName} mutates unknown field ${entityName}.${match[2]}`);
+    return;
+  }
+
+  if ((match[3] === "+=" || match[3] === "-=") && !isNumericType(field.type.raw)) {
+    diagnostics.push(`transaction ${transactionName} uses ${match[3]} on non-numeric field ${entityName}.${field.name}`);
+  }
+  validateAssignmentType(transactionName, `${entityName}.${field.name}`, field.type.raw, match[4], enumByName, parameterTypes, boundEntities, entities, diagnostics);
+  validateEnumLiteral(transactionName, `${entityName}.${field.name}`, field, match[4], enumByName, diagnostics);
+  validateCurrencyCodeLiteral(transactionName, `${entityName}.${field.name}`, field, match[4], diagnostics);
+  validateEnumParameterAssignment(transactionName, `${entityName}.${field.name}`, field, match[4], enumByName, parameterTypes, diagnostics);
+  validateTransitionAssignment(transactionName, entityName, field.name, match[4], transitions, diagnostics);
+}
+
+function validateEventPayload(
+  transactionName: string,
+  line: string,
+  eventByName: Map<string, EventDeclaration>,
+  enumByName: Map<string, Extract<Program["declarations"][number], { kind: "enum" }>>,
+  parameterTypes: Map<string, string>,
+  boundEntities: Map<string, string>,
+  entities: EntityDeclaration[],
+  diagnostics: string[],
+): void {
+  const match = line.match(/^enqueue\s+([A-Za-z_][A-Za-z0-9_]*)\s+(.+)$/);
+  if (!match) return;
+  const event = eventByName.get(match[1]);
+  if (!event) return;
+
+  const objectFields = parseObjectLiteral(match[2]);
+  const provided = new Set(objectFields.map((field) => field.name));
+  for (const duplicate of duplicates(objectFields.map((field) => field.name))) {
+    diagnostics.push(`transaction ${transactionName} enqueues ${event.name} with duplicate payload field ${duplicate}`);
+  }
+  for (const field of event.fields) {
+    if (!field.type.optional && !provided.has(field.name)) {
+      diagnostics.push(`transaction ${transactionName} enqueues ${event.name} without required payload field ${field.name}`);
+    }
+  }
+  for (const objectField of objectFields) {
+    const eventField = event.fields.find((field) => field.name === objectField.name);
+    if (!eventField) {
+      diagnostics.push(`transaction ${transactionName} enqueues ${event.name} with unknown payload field ${objectField.name}`);
+      continue;
+    }
+    validateAssignmentType(
+      transactionName,
+      `${event.name}.${eventField.name}`,
+      eventField.type.raw,
+      objectField.value,
+      enumByName,
+      parameterTypes,
+      boundEntities,
+      entities,
+      diagnostics,
+    );
+  }
+}
+
+function validateAssignmentType(
+  transactionName: string,
+  target: string,
+  targetType: string,
+  expression: string,
+  enumByName: Map<string, Extract<Program["declarations"][number], { kind: "enum" }>>,
+  parameterTypes: Map<string, string>,
+  boundEntities: Map<string, string>,
+  entities: EntityDeclaration[],
+  diagnostics: string[],
+): void {
+  const expressionType = transactionExpressionType(expression, parameterTypes, boundEntities, entities);
+  if (!expressionType) return;
+  if (typesCompatible(targetType, expressionType, enumByName)) return;
+  diagnostics.push(`transaction ${transactionName} assigns ${target} from incompatible expression type ${expressionType}`);
+}
+
+function transactionExpressionType(
+  expression: string,
+  parameterTypes: Map<string, string>,
+  boundEntities: Map<string, string>,
+  entities: EntityDeclaration[],
+): string | undefined {
+  const value = expression.trim();
+  const parameterType = parameterTypes.get(value);
+  if (parameterType) return parameterType;
+  if (value === "true" || value === "false") return "Bool";
+  if (value === "null") return "Null";
+  if (/^-?\d+$/.test(value)) return "Int64";
+  if (/^-?\d+\.\d+$/.test(value)) return "Decimal";
+  if ((value.startsWith("\"") && value.endsWith("\"")) || (value.startsWith("'") && value.endsWith("'"))) return "String";
+
+  const bound = value.match(/^([A-Za-z_][A-Za-z0-9_]*)(?:\.([A-Za-z_][A-Za-z0-9_]*))?$/);
+  if (bound && boundEntities.has(bound[1])) {
+    const entityName = boundEntities.get(bound[1]);
+    const entity = entities.find((candidate) => candidate.name === entityName);
+    const fieldName = bound[2] ?? "id";
+    const field = entity?.fields.find((candidate) => candidate.name === fieldName);
+    return field?.type.raw;
+  }
+  return undefined;
+}
+
+function typesCompatible(
+  targetType: string,
+  expressionType: string,
+  enumByName: Map<string, Extract<Program["declarations"][number], { kind: "enum" }>>,
+): boolean {
+  if (expressionType === "Null") return targetType.endsWith("?");
+  const requiredTarget = targetType.endsWith("?") ? targetType.slice(0, -1) : targetType;
+  const requiredExpression = expressionType.endsWith("?") ? expressionType.slice(0, -1) : expressionType;
+  if (requiredTarget === requiredExpression) return true;
+  if (requiredExpression === `Id<${requiredTarget}>`) return true;
+  if (isNumericType(requiredTarget) && isNumericType(requiredExpression)) return true;
+  if (requiredTarget === "String" && enumByName.has(requiredExpression)) return true;
+  return false;
+}
+
+function isNumericType(type: string): boolean {
+  const required = type.endsWith("?") ? type.slice(0, -1) : type;
+  return required === "Int" || required === "Int64" || required === "Float" || required.startsWith("Decimal");
+}
+
+function validateGuardExpression(
+  transactionName: string,
+  condition: string,
+  parameterTypes: Map<string, string>,
+  boundEntities: Map<string, string>,
+  entities: EntityDeclaration[],
+  diagnostics: string[],
+): void {
+  for (const reference of condition.matchAll(/\b([A-Za-z_][A-Za-z0-9_]*)(?:\.([A-Za-z_][A-Za-z0-9_]*))?\b/g)) {
+    const token = reference[0];
+    if (token === "and" || token === "or" || token === "true" || token === "false" || token === "null") continue;
+    if (/^-?\d+(\.\d+)?$/.test(token)) continue;
+    if (parameterTypes.has(token)) continue;
+    if (!reference[2]) continue;
+    const entityName = boundEntities.get(reference[1]);
+    const entity = entities.find((candidate) => candidate.name === entityName);
+    if (!entity?.fields.some((field) => field.name === reference[2])) {
+      diagnostics.push(`transaction ${transactionName} guard references unknown field ${token}`);
+    }
   }
 }
 

@@ -148,6 +148,15 @@ CREATE TABLE IF NOT EXISTS _dl_outbox (
   await db.query("CREATE INDEX IF NOT EXISTS _dl_outbox_status_claimed_at_idx ON _dl_outbox (status, claimed_at);");
 }
 
+export async function ensureIdempotencyTable(db: Database): Promise<void> {
+  await db.query(`
+CREATE TABLE IF NOT EXISTS _dl_idempotency_keys (
+  key text PRIMARY KEY,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+`);
+}
+
 export async function listOutboxEvents(
   db: Database,
   limit = 50,
@@ -458,6 +467,9 @@ export async function runTransactionSql(
   if (plan.usesOutbox) {
     await ensureOutboxTable(db);
   }
+  if (plan.usesIdempotency) {
+    await ensureIdempotencyTable(db);
+  }
   const attempts = Math.max(1, maxAttempts);
 
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
@@ -531,10 +543,16 @@ export function parseJsonParams(source: string | undefined): unknown[] {
   return parsed;
 }
 
-export function parseTransactionSql(sql: string): { statements: TransactionStatement[]; afterCommit: string[]; usesOutbox: boolean } {
+export function parseTransactionSql(sql: string): {
+  statements: TransactionStatement[];
+  afterCommit: string[];
+  usesOutbox: boolean;
+  usesIdempotency?: boolean;
+} {
   const statements: TransactionStatement[] = [];
   const afterCommit: string[] = [];
   let usesOutbox = false;
+  let usesIdempotency = false;
   let transitionGuard: string | undefined;
   let resultBinding: string | undefined;
 
@@ -556,19 +574,22 @@ export function parseTransactionSql(sql: string): { statements: TransactionState
     if (line.startsWith("--")) continue;
     if (line === "BEGIN;" || line === "COMMIT;") continue;
     const outbox = line.includes("INSERT INTO _dl_outbox");
+    const idempotency = line.includes("INSERT INTO _dl_idempotency_keys");
     usesOutbox ||= outbox;
-    statements.push({
+    usesIdempotency ||= idempotency;
+    const statement: TransactionStatement = {
       sql: line,
       paramCount: maxPlaceholder(line),
       outbox,
-      transitionGuard,
-      resultBinding,
-    });
+    };
+    if (transitionGuard) statement.transitionGuard = transitionGuard;
+    if (resultBinding) statement.resultBinding = resultBinding;
+    statements.push(statement);
     transitionGuard = undefined;
     resultBinding = undefined;
   }
 
-  return { statements, afterCommit, usesOutbox };
+  return usesIdempotency ? { statements, afterCommit, usesOutbox, usesIdempotency } : { statements, afterCommit, usesOutbox };
 }
 
 function maxPlaceholder(sql: string): number {

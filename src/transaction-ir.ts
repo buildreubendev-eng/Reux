@@ -19,6 +19,8 @@ export type TransactionStepIr =
   | SaveStepIr
   | InsertStepIr
   | EnqueueStepIr
+  | IdempotencyKeyStepIr
+  | RequireStepIr
   | AfterCommitStepIr
   | ExternalCallStepIr
   | MutationStepIr
@@ -47,6 +49,17 @@ export interface EnqueueStepIr {
   kind: "Enqueue";
   event: string;
   source: string;
+}
+
+export interface IdempotencyKeyStepIr {
+  kind: "IdempotencyKey";
+  expression: string;
+}
+
+export interface RequireStepIr {
+  kind: "Require";
+  condition: string;
+  error: string;
 }
 
 export interface AfterCommitStepIr {
@@ -98,6 +111,23 @@ function parseSteps(body: string): TransactionStepIr[] {
 }
 
 function parseStep(line: string): TransactionStepIr {
+  const idempotency = line.match(/^idempotency\s+key\s+(.+)$/);
+  if (idempotency) {
+    return {
+      kind: "IdempotencyKey",
+      expression: idempotency[1],
+    };
+  }
+
+  const require = line.match(/^require\s+(.+)\s+else\s+abort\s+([A-Za-z_][A-Za-z0-9_]*)$/);
+  if (require) {
+    return {
+      kind: "Require",
+      condition: require[1],
+      error: require[2],
+    };
+  }
+
   const load = line.match(/^let\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*load\s+(.+)\s+for\s+update$/);
   if (load) {
     return {

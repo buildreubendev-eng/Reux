@@ -933,6 +933,66 @@ enum OrderStatus {
     expect(sql).toContain("COMMIT;");
   });
 
+  it("lowers idempotency keys and require guards in transactions", () => {
+    const source = `module commerce
+
+entity Account {
+  id: Id<Account> primary generated
+  balance: Decimal<12,2>
+}
+
+event AccountDebited {
+  account: Account
+  amount: Decimal<12,2>
+}
+
+transaction function debitAccount(accountRef: Account, amount: Decimal<12,2>, requestId: String) writes Account retry 3 {
+  idempotency key requestId
+  let account = load accountRef for update
+  require account.balance >= amount else abort InsufficientFunds
+  account.balance -= amount
+  save account
+  enqueue AccountDebited { account: accountRef, amount: amount }
+}
+`;
+    const txIr = JSON.parse(emitTransactionIr(source, "debitAccount"));
+    const sql = emitTransactionSql(source, "debitAccount");
+    const worker = emitWorker(source);
+
+    expect(txIr.steps[0]).toEqual({ kind: "IdempotencyKey", expression: "requestId" });
+    expect(txIr.steps[2]).toEqual({ kind: "Require", condition: "account.balance >= amount", error: "InsufficientFunds" });
+    expect(sql).toContain("INSERT INTO _dl_idempotency_keys (key) VALUES ($3::text) ON CONFLICT (key) DO NOTHING RETURNING key;");
+    expect(sql).toContain("-- guard: InsufficientFunds");
+    expect(sql).toContain("SELECT CASE WHEN :account.balance >= $2 THEN 1 ELSE 1 / 0 END;");
+    expect(worker).toContain("export interface AccountDebitedPayload");
+    expect(worker).toContain("account: string;");
+    expect(worker).toContain("amount: number | string;");
+    expect(worker).toContain("AccountDebited: TypedOutboxHandler<AccountDebitedPayload>");
+  });
+
+  it("validates transaction expression and event payload types", () => {
+    expect(() =>
+      compileSource(`module broken
+
+entity Account {
+  id: Id<Account> primary generated
+  balance: Decimal
+}
+
+event AccountDebited {
+  account: Account
+  amount: Decimal
+}
+
+transaction function bad(accountRef: Account, amount: Decimal) writes Account {
+  let account = load accountRef for update
+  account.balance = accountRef
+  enqueue AccountDebited { account: accountRef }
+}
+`),
+    ).toThrow(DlAggregateError);
+  });
+
   it("lowers transition rules to guarded transaction updates", () => {
     const sql = emitTransactionSql(
       `module commerce

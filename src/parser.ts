@@ -1,6 +1,7 @@
 import {
   EntityDeclaration,
   EnumDeclaration,
+  EventDeclaration,
   FieldAttributes,
   FieldDeclaration,
   IndexDeclaration,
@@ -16,7 +17,7 @@ import {
 } from "./ast.js";
 import { DlError } from "./errors.js";
 
-const declarationStart = /^(entity|enum|query(?:\s+fragment)?|transition|transaction\s+function)\s+/;
+const declarationStart = /^(entity|enum|event|query(?:\s+fragment)?|transition|transaction\s+function)\s+/;
 
 export function parseProgram(source: string): Program {
   const lines = normalizeLines(source);
@@ -50,6 +51,13 @@ export function parseProgram(source: string): Program {
 
     if (text.startsWith("enum ")) {
       const parsed = parseEnum(lines, index);
+      declarations.push(parsed.declaration);
+      index = parsed.nextIndex;
+      continue;
+    }
+
+    if (text.startsWith("event ")) {
+      const parsed = parseEvent(lines, index);
       declarations.push(parsed.declaration);
       index = parsed.nextIndex;
       continue;
@@ -372,6 +380,39 @@ function parseEnum(lines: SourceLine[], start: number): { declaration: EnumDecla
   }
 
   throw new DlError(`line ${lines[start].number}: enum '${match[1]}' is missing a closing brace`);
+}
+
+function parseEvent(lines: SourceLine[], start: number): { declaration: EventDeclaration; nextIndex: number } {
+  const header = lines[start].text.trim();
+  const match = header.match(/^event\s+([A-Za-z_][A-Za-z0-9_]*)\s*\{$/);
+  if (!match) {
+    throw new DlError(`line ${lines[start].number}: expected 'event Name {'`);
+  }
+
+  const fields: EventDeclaration["fields"] = [];
+  let index = start + 1;
+  while (index < lines.length) {
+    const line = lines[index];
+    const text = line.text.trim();
+    if (!text) {
+      index += 1;
+      continue;
+    }
+    if (text === "}") {
+      return {
+        declaration: {
+          kind: "event",
+          name: match[1],
+          fields,
+        },
+        nextIndex: index + 1,
+      };
+    }
+    fields.push(parseField(text, line.number));
+    index += 1;
+  }
+
+  throw new DlError(`line ${lines[start].number}: event '${match[1]}' is missing a closing brace`);
 }
 
 function parseQuery(lines: SourceLine[], start: number): { declaration: QueryDeclaration; nextIndex: number } {
