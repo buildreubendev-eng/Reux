@@ -176,6 +176,7 @@ Scenario comparison reports include:
 - `periodDeltas` for every forecast period;
 - `firstDivergence`, which points to the first period where any metric differs from baseline.
 - `metricRankings`, which ranks scenarios by final-period delta for each metric and uses declared objectives when present.
+- `explanations`, which summarize the preferred scenario, objective, final delta, and first divergence for each metric.
 
 If a simulation has no formulas, the runner still derives a small set of early prototype metrics:
 
@@ -190,9 +191,9 @@ node dist/cli.js simulation-run examples/simulations/workforce_change.reux
 node dist/cli.js simulation-types-ts examples/simulations/workforce_change.reux
 ```
 
-Generated simulation TypeScript contracts include typed assumption maps, metric maps, scenario names, run/result shapes, and a small metadata constant for each simulation. This lets a frontend or product backend consume simulation output without treating it as unstructured JSON.
+Generated simulation TypeScript contracts include typed assumption maps, metric maps, scenario names, run/result shapes, explanation summaries, and a small metadata constant for each simulation. This lets a frontend or product backend consume simulation output without treating it as unstructured JSON.
 
-This is not yet the full simulation language. The next layers are richer dimensional analysis, domain packs for PLOS/business use cases, explanation summaries, deeper generated TypeScript client helpers, and eventually integration with Reux data modules.
+This is not yet the full simulation language. The next layers are richer dimensional analysis, domain packs for PLOS/business use cases, deeper generated TypeScript client helpers, and eventually integration with Reux data modules.
 
 ## Transition Rules
 

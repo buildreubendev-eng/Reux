@@ -65,8 +65,8 @@ Status: implemented for the MVP workflow.
 - `api-ts` and `project-api-ts` emit generated TypeScript API clients for supported queries and transaction functions.
 - `api-server-ts` and `project-api-server-ts` emit a minimal HTTP server scaffold around the generated client.
 - `worker-ts` and `project-worker-ts` emit an outbox worker scaffold with typed payload contracts for declared events and named after-commit handler contracts.
-- `simulation-ir` and `simulation-run` emit and execute the first prototype formula-based simulation forecast model with lightweight units, maximize/minimize objectives, shared scheduled assumption changes, scenario-specific scheduled changes, scenario overrides, final-period deltas, period-by-period deltas, first-divergence reporting, and objective-aware metric rankings.
-- `simulation-types-ts` and `project-simulation-types-ts` emit TypeScript contracts for simulation assumptions, metrics, scenarios, objectives, run results, comparisons, and metadata constants.
+- `simulation-ir` and `simulation-run` emit and execute the first prototype formula-based simulation forecast model with lightweight units, maximize/minimize objectives, shared scheduled assumption changes, scenario-specific scheduled changes, scenario overrides, final-period deltas, period-by-period deltas, first-divergence reporting, objective-aware metric rankings, and explanation summaries.
+- `simulation-types-ts` and `project-simulation-types-ts` emit TypeScript contracts for simulation assumptions, metrics, scenarios, objectives, run results, comparisons, explanations, and metadata constants.
 - `scripts/demo-pilot-worker.mjs` provides a runnable pilot outbox worker process for hosted and local demo environments.
 - Seed tooling supports schema-only checks with enum validation, PostgreSQL dry runs, rerunnable upserts, deletes, and transactional resets.
 - Seed reset supports delete-and-rerun and truncate-and-rerun modes for local fixture refreshes.

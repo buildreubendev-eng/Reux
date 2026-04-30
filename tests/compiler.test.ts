@@ -461,6 +461,19 @@ simulate personal_finance {
         scenarios: [{ name: "lower_rent", delta: 300, rank: 1 }],
       },
     ]);
+    expect(run.comparison.explanations[1]).toEqual({
+      metric: "cash_flow",
+      unit: "USD",
+      objective: "maximize",
+      preferredScenario: "lower_rent",
+      preferredDelta: 300,
+      firstDivergence: {
+        scenario: "lower_rent",
+        period: 1,
+        label: "1 month",
+      },
+      summary: "lower_rent ranks first for cash_flow under the maximize objective with a final delta of 300 USD. First divergence occurs at 1 month.",
+    });
   });
 
   it("emits prototype index metrics for rate-based simulations", () => {
@@ -486,6 +499,14 @@ simulate personal_finance {
         { name: "stronger_training", delta: 0.04, rank: 1 },
         { name: "no_overtime_change", delta: -0.1, rank: 2 },
       ],
+    });
+    expect(run.comparison.explanations.find((explanation: { metric: string }) => explanation.metric === "operating_relief")).toMatchObject({
+      metric: "operating_relief",
+      unit: "percent",
+      objective: "maximize",
+      preferredScenario: "stronger_training",
+      preferredDelta: 0.04,
+      firstDivergence: { scenario: "stronger_training", period: 1, label: "1 month" },
     });
   });
 
@@ -533,6 +554,7 @@ simulate support_cost {
     expect(types).toContain("export type WorkforceChangeMetricName = \"operating_relief\" | \"productivity_index\";");
     expect(types).toContain("export type WorkforceChangeScenarioName = \"baseline\" | \"stronger_training\" | \"no_overtime_change\";");
     expect(types).toContain("export interface WorkforceChangeAssumptions");
+    expect(types).toContain("export interface ReuxSimulationExplanation<ScenarioName extends string, MetricName extends string>");
     expect(types).toContain("productivity_gain: number;");
     expect(types).toContain("export type WorkforceChangeRun = ReuxSimulationRun<WorkforceChangeSimulationName, WorkforceChangeScenarioName, WorkforceChangeAssumptions, WorkforceChangeMetrics, WorkforceChangeMetricName>;");
     expect(types).toContain("export const workforceChangeSimulation = {");

@@ -80,6 +80,7 @@ export interface SimulationComparisonResult {
     periodDeltas: SimulationPeriodDelta[];
   }>;
   metricRankings: SimulationMetricRanking[];
+  explanations: SimulationExplanation[];
 }
 
 export interface SimulationPeriodDelta {
@@ -99,6 +100,20 @@ export interface SimulationMetricRanking {
     delta: number;
     rank: number;
   }>;
+}
+
+export interface SimulationExplanation {
+  metric: string;
+  unit?: string;
+  objective?: "maximize" | "minimize";
+  preferredScenario?: string;
+  preferredDelta?: number;
+  firstDivergence?: {
+    scenario: string;
+    period: number;
+    label: string;
+  };
+  summary: string;
 }
 
 export function buildSimulationCatalog(program: Program): SimulationIr[] {
@@ -474,12 +489,14 @@ function compareScenarios(
       periodDeltas,
     };
   });
+  const metricRankings = rankScenarioMetrics(scenarioComparisons, objectives);
 
   return {
     baseline: baseline.name,
     finalPeriod: baseline.periods.at(-1)?.period ?? 0,
     scenarios: scenarioComparisons,
-    metricRankings: rankScenarioMetrics(scenarioComparisons, objectives),
+    metricRankings,
+    explanations: explainScenarioMetrics(scenarioComparisons, metricRankings),
   };
 }
 
@@ -513,6 +530,58 @@ function rankScenarioMetrics(
       })),
     };
   });
+}
+
+function explainScenarioMetrics(
+  scenarios: SimulationComparisonResult["scenarios"],
+  rankings: SimulationMetricRanking[],
+): SimulationExplanation[] {
+  return rankings.map((ranking) => {
+    const preferred = ranking.scenarios[0];
+    const firstDivergence = preferred ? firstDivergenceForMetric(scenarios, preferred.name, ranking.metric) : undefined;
+    return {
+      metric: ranking.metric,
+      unit: ranking.unit,
+      objective: ranking.objective,
+      preferredScenario: preferred?.name,
+      preferredDelta: preferred?.delta,
+      firstDivergence,
+      summary: explanationSummary(ranking, preferred, firstDivergence),
+    };
+  });
+}
+
+function firstDivergenceForMetric(
+  scenarios: SimulationComparisonResult["scenarios"],
+  scenarioName: string,
+  metric: string,
+): SimulationExplanation["firstDivergence"] {
+  const scenario = scenarios.find((candidate) => candidate.name === scenarioName);
+  const delta = scenario?.periodDeltas.find((periodDelta) => (periodDelta.metricDeltas[metric] ?? 0) !== 0);
+  return delta
+    ? {
+        scenario: scenarioName,
+        period: delta.period,
+        label: delta.label,
+      }
+    : undefined;
+}
+
+function explanationSummary(
+  ranking: SimulationMetricRanking,
+  preferred: SimulationMetricRanking["scenarios"][number] | undefined,
+  firstDivergence: SimulationExplanation["firstDivergence"],
+): string {
+  if (!preferred) return `No scenarios were available to compare for ${ranking.metric}.`;
+  const objective = ranking.objective ? `${ranking.objective} objective` : "neutral ranking";
+  const deltaText = formatMetricDelta(preferred.delta, ranking.unit);
+  const divergenceText = firstDivergence ? ` First divergence occurs at ${firstDivergence.label}.` : "";
+  return `${preferred.name} ranks first for ${ranking.metric} under the ${objective} with a final delta of ${deltaText}.${divergenceText}`;
+}
+
+function formatMetricDelta(delta: number, unit?: string): string {
+  const value = Number(delta.toFixed(6));
+  return unit ? `${value} ${unit}` : String(value);
 }
 
 function comparePeriodMetrics(
