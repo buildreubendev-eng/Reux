@@ -59,10 +59,14 @@ npm run postgres:preflight
 ```bash
 node dist/cli.js migrate-status
 node dist/cli.js migrate-status --json
+node dist/cli.js project-migrate-plan
+node dist/cli.js project-migrate-check --env staging
 node dist/cli.js project-doctor --db
 node dist/cli.js migrate-apply
 node dist/cli.js migrate-status
 ```
+
+Use `project-migrate-plan` before creating a diff migration so you can inspect review notes, rollback notes, and the deployment checklist. `project-migrate-check` blocks unsafe/destructive changes unless you pass the explicit approval flags; use `--env production --allow-production` only after testing against staging or a disposable clone.
 
 ## Insert Data
 

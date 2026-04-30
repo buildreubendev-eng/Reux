@@ -66,6 +66,7 @@ node dist/cli.js project-manifest-write
 node dist/cli.js project-transition-rules
 node dist/cli.js project-transition-rules Order.status
 node dist/cli.js project-migrate-plan
+node dist/cli.js project-migrate-check --env production --allow-production
 node dist/cli.js project-migrate-diff-create commerce_next
 node dist/cli.js project-query-sql highValueUsers
 node dist/cli.js project-query-run highValueUsers '[1000]'
@@ -121,6 +122,8 @@ node dist/cli.js migrate-apply
 ```
 
 Applies pending migration files in filename order. Each file is executed inside a transaction and recorded in `_dl_schema_migrations` after it succeeds.
+
+Before creating or applying a diff migration, run `migrate-plan` or `project-migrate-plan` and read the generated review notes, rollback notes, and deployment checklist. `migrate-diff-create` and `project-migrate-diff-create` refuse to write unsafe or destructive migrations unless the matching approval flags are present. For production gates, pass `--env production --allow-production` only after the migration has been reviewed and tested against staging or a disposable database.
 
 ## Query Run
 
@@ -328,11 +331,13 @@ CREATE TABLE IF NOT EXISTS _dl_outbox (
   last_error text NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
   claimed_at timestamptz NULL,
+  next_attempt_at timestamptz NULL,
+  dead_lettered_at timestamptz NULL,
   processed_at timestamptz NULL
 );
 ```
 
-The runtime also creates `_dl_outbox_status_created_at_idx` on `(status, created_at)` for listing and `_dl_outbox_status_claimed_at_idx` on `(status, claimed_at)` for stale claim recovery.
+The runtime also creates `_dl_outbox_status_created_at_idx` on `(status, created_at)` for listing, `_dl_outbox_status_claimed_at_idx` on `(status, claimed_at)` for stale claim recovery, and `_dl_outbox_status_next_attempt_at_idx` on `(status, next_attempt_at)` for delayed retries.
 
 Example:
 
@@ -359,6 +364,7 @@ List a specific status or all statuses:
 ```bash
 node dist/cli.js outbox-list failed 10
 node dist/cli.js outbox-list processing 10
+node dist/cli.js outbox-list dead 10
 node dist/cli.js outbox-list all 50
 ```
 
@@ -374,7 +380,7 @@ Claim events for a worker:
 node dist/cli.js outbox-claim 10
 ```
 
-Claiming uses `FOR UPDATE SKIP LOCKED`, changes status from `pending` to `processing`, increments `attempts`, and clears `last_error`.
+Claiming uses `FOR UPDATE SKIP LOCKED`, changes status from `pending` to `processing`, increments `attempts`, clears `last_error`, and skips rows whose `next_attempt_at` is still in the future.
 
 Mark an event failed:
 
@@ -388,7 +394,7 @@ Requeue a failed or processing event:
 node dist/cli.js outbox-requeue 00000000-0000-0000-0000-000000000000
 ```
 
-Requeueing changes status back to `pending`, clears `last_error`, leaves `attempts` intact, and only applies to events currently in `failed` or `processing`.
+Requeueing changes status back to `pending`, clears `last_error`, clears `next_attempt_at`, leaves `attempts` intact, and applies to events currently in `failed`, `processing`, or `dead`.
 
 Requeue abandoned processing claims:
 
@@ -413,7 +419,7 @@ const result = await processOutboxEvents(db, {
 });
 ```
 
-`processOutboxEvents` claims pending events, dispatches by `eventType`, marks successful events processed, and marks missing or throwing handlers failed with `last_error` populated. It returns `{ processed, failed }` so a caller can log or retry according to its own worker policy.
+`processOutboxEvents` claims pending events, dispatches by `eventType`, marks successful events processed, and marks missing or throwing handlers failed with `last_error` populated. Pass `{ maxAttempts, retryDelaySeconds }` to turn failures into scheduled retries until the attempt budget is exhausted; exhausted events move to `dead` and set `dead_lettered_at`. It returns `{ processed, failed, retried, deadLettered }` so a caller can log normal failures, scheduled retries, and terminal poison-message cases separately.
 
 For a long-running application worker, use `runOutboxWorker`:
 
@@ -433,11 +439,13 @@ await runOutboxWorker(
   {
     limit: 10,
     intervalMs: 1000,
+    maxAttempts: 5,
+    retryDelaySeconds: 30,
     signal: controller.signal,
   },
 );
 ```
 
-`runOutboxWorker` repeatedly calls `processOutboxEvents`, supports abort signals for shutdown, and supports `maxIterations` for tests or demos. Set `requeueStaleAfterSeconds` to have the worker move abandoned `processing` events back to `pending` before each processing iteration; `requeueStaleLimit` controls how many stale claims are recovered per iteration.
+`runOutboxWorker` repeatedly calls `processOutboxEvents`, supports abort signals for shutdown, and supports `maxIterations` for tests or demos. Set `maxAttempts` and `retryDelaySeconds` to protect the worker from poison messages while preserving delayed retry behavior. Set `requeueStaleAfterSeconds` to have the worker move abandoned `processing` events back to `pending` before each processing iteration; `requeueStaleLimit` controls how many stale claims are recovered per iteration.
 
 These commands are intentionally small. They provide enough operational visibility for the prototype while leaving hosted worker deployment and handler discovery to the application layer.

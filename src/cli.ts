@@ -217,6 +217,7 @@ try {
     const config = loadConfig();
     const source = readSingleProjectSource(config, command);
     const previousManifest = readFileSync(config.schemaManifest, "utf8");
+    assertMigrationSafe(previousManifest, source);
     const plan = JSON.parse(emitMigrationPlan(previousManifest, source, "json")) as { operations: unknown[] };
     if (plan.operations.length === 0) {
       console.log("no migration operations; schema manifest is already up to date");
@@ -371,6 +372,7 @@ try {
       console.log(args.includes("--json") ? JSON.stringify(check, null, 2) : formatMigrationSafetyCheck(check));
       if (!check.ok) process.exitCode = 1;
     } else {
+      assertMigrationSafe(previousManifest, currentSource);
       const migrationName = process.argv.slice(2)[3] ?? "schema_diff";
       const artifact = emitDiffMigration(previousManifest, currentSource, migrationName);
       mkdirSync("migrations", { recursive: true });
@@ -590,7 +592,7 @@ function parseOutboxListArgs(first: string | undefined, second: string | undefin
 }
 
 function isOutboxListStatus(value: string): value is OutboxListStatus {
-  return value === "pending" || value === "processing" || value === "processed" || value === "failed" || value === "all";
+  return value === "pending" || value === "processing" || value === "processed" || value === "failed" || value === "dead" || value === "all";
 }
 
 function parseApiServerOptions(apiImport?: string, configImport?: string, runtimeImport?: string): Parameters<typeof emitApiServer>[1] {
@@ -603,10 +605,27 @@ function parseApiServerOptions(apiImport?: string, configImport?: string, runtim
 
 function migrationSafetyOptions(): Parameters<typeof checkMigrationSafety>[2] {
   const allowDestructive = args.includes("--allow-destructive");
+  const envIndex = args.indexOf("--env");
+  const environment = envIndex >= 0 ? args[envIndex + 1] : process.env.REUX_ENV;
   return {
     allowDestructive,
     allowUnsafe: allowDestructive || args.includes("--allow-unsafe"),
+    environment: parseMigrationEnvironment(environment),
+    allowProduction: args.includes("--allow-production"),
   };
+}
+
+function parseMigrationEnvironment(value: string | undefined): "development" | "staging" | "production" | undefined {
+  if (!value) return undefined;
+  if (value === "development" || value === "staging" || value === "production") return value;
+  throw new Error(`unknown migration environment ${value}`);
+}
+
+function assertMigrationSafe(previousManifest: string, currentSource: string): void {
+  const check = checkMigrationSafety(previousManifest, currentSource, migrationSafetyOptions());
+  if (!check.ok) {
+    throw new Error(`migration safety check failed before creating migration:\n${check.diagnostics.map((diagnostic) => `- ${diagnostic}`).join("\n")}`);
+  }
 }
 
 function formatMigrationSafetyCheck(check: ReturnType<typeof checkMigrationSafety>): string {
@@ -619,8 +638,15 @@ function formatMigrationSafetyCheck(check: ReturnType<typeof checkMigrationSafet
       `Allowed: unsafe=${check.allowed.allowUnsafe ? "yes" : "no"}, destructive=${check.allowed.allowDestructive ? "yes" : "no"}`,
     );
   }
+  if (check.allowed.environment) {
+    lines.push(`Environment: ${check.allowed.environment}${check.allowed.allowProduction ? " (production override enabled)" : ""}`);
+  }
   for (const diagnostic of check.diagnostics) {
     lines.push(`- ${diagnostic}`);
+  }
+  if (check.review.required) {
+    lines.push("Review required before apply:");
+    for (const warning of check.review.warnings) lines.push(`- ${warning}`);
   }
   return lines.join("\n");
 }

@@ -25,6 +25,7 @@ export interface SimulationFormulaIr {
   name: string;
   expression: string;
   references: string[];
+  unit?: string;
 }
 
 export interface SimulationObjectiveIr {
@@ -244,6 +245,7 @@ function buildFormulaIr(
   diagnostics: string[],
 ): SimulationFormulaIr[] {
   const known = new Set(assumptions.map((assumption) => assumption.name));
+  const formulaUnits = new Map(assumptions.filter((assumption) => assumption.unit).map((assumption) => [assumption.name, assumption.unit as string]));
   const formulas: SimulationFormulaIr[] = [];
 
   for (const formula of simulation.formulas) {
@@ -258,12 +260,18 @@ function buildFormulaIr(
         diagnostics.push(`simulation ${simulation.name} formula ${formula.name} references non-numeric value ${reference}`);
       }
     }
+    const unitResult = analyzeFormulaUnits(formula.expression, formulaUnits);
+    for (const diagnostic of unitResult.diagnostics) {
+      diagnostics.push(`simulation ${simulation.name} formula ${formula.name} ${diagnostic}`);
+    }
     formulas.push({
       name: formula.name,
       expression: formula.expression,
       references,
+      unit: unitResult.unit,
     });
     known.add(formula.name);
+    if (unitResult.unit) formulaUnits.set(formula.name, unitResult.unit);
   }
 
   return formulas;
@@ -640,8 +648,7 @@ function evaluateFormulas(
   }
   for (const formula of simulation.formulas) {
     values.set(formula.name, evaluateNumericExpression(formula.expression, values));
-    const unit = inferExpressionUnit(formula.expression, units);
-    if (unit) units.set(formula.name, unit);
+    if (formula.unit) units.set(formula.name, formula.unit);
   }
   return {
     values: Object.fromEntries(simulation.formulas.map((formula) => [formula.name, values.get(formula.name) ?? 0])),
@@ -707,46 +714,102 @@ function tokenizeExpression(expression: string): string[] {
   return tokens;
 }
 
-function inferExpressionUnit(expression: string, units: Map<string, string>): string | undefined {
+interface FormulaUnitResult {
+  unit?: string;
+  diagnostics: string[];
+}
+
+function analyzeFormulaUnits(expression: string, units: Map<string, string>): FormulaUnitResult {
   const tokens = tokenizeExpression(expression);
   let index = 0;
+  const diagnostics: string[] = [];
 
-  function parseExpression(): string | undefined {
-    let unit = parseTerm();
+  type UnitTerm = { unit?: string; source: string };
+
+  function parseExpression(): UnitTerm {
+    let left = parseTerm();
     while (tokens[index] === "+" || tokens[index] === "-") {
-      index += 1;
+      const operator = tokens[index++];
       const right = parseTerm();
-      unit = unit && right === unit ? unit : undefined;
+      left = combineAdditiveUnits(left, right, operator);
     }
-    return unit;
+    return left;
   }
 
-  function parseTerm(): string | undefined {
-    let unit = parseFactor();
+  function parseTerm(): UnitTerm {
+    let left = parseFactor();
     while (tokens[index] === "*" || tokens[index] === "/") {
       const operator = tokens[index++];
       const right = parseFactor();
-      unit = operator === "*"
-        ? unit && right ? undefined : unit ?? right
-        : unit && !right ? unit : undefined;
+      left = operator === "*" ? combineMultiplicativeUnits(left, right) : combineDivisiveUnits(left, right);
     }
-    return unit;
+    return left;
   }
 
-  function parseFactor(): string | undefined {
+  function parseFactor(): UnitTerm {
     const token = tokens[index++];
-    if (!token) return undefined;
+    if (!token) return { source: "missing value" };
     if (token === "(") {
-      const unit = parseExpression();
+      const term = parseExpression();
       index += tokens[index] === ")" ? 1 : 0;
-      return unit;
+      return term;
     }
     if (token === "-") return parseFactor();
-    if (/^-?\d+(?:\.\d+)?$/.test(token)) return undefined;
-    return units.get(token);
+    if (/^-?\d+(?:\.\d+)?$/.test(token)) return { source: token };
+    return { unit: units.get(token), source: token };
   }
 
-  return parseExpression();
+  function combineAdditiveUnits(left: UnitTerm, right: UnitTerm, operator: string): UnitTerm {
+    if (left.unit === right.unit) return { unit: left.unit, source: `${left.source} ${operator} ${right.source}` };
+    if (isPercentUnit(left.unit) && !right.unit) return { source: `${left.source} ${operator} ${right.source}` };
+    if (!left.unit && isPercentUnit(right.unit)) return { source: `${left.source} ${operator} ${right.source}` };
+    diagnostics.push(`cannot ${operator === "+" ? "add" : "subtract"} ${describeUnit(left.unit)} and ${describeUnit(right.unit)}`);
+    return { source: `${left.source} ${operator} ${right.source}` };
+  }
+
+  function combineMultiplicativeUnits(left: UnitTerm, right: UnitTerm): UnitTerm {
+    if (left.unit && right.unit && !isPercentUnit(left.unit) && !isPercentUnit(right.unit)) {
+      diagnostics.push(`cannot multiply ${describeUnit(left.unit)} by ${describeUnit(right.unit)} until compound units are supported`);
+      return { source: `${left.source} * ${right.source}` };
+    }
+    return { unit: nonPercentUnit(left.unit) ?? nonPercentUnit(right.unit) ?? percentResultUnit(left.unit, right.unit), source: `${left.source} * ${right.source}` };
+  }
+
+  function combineDivisiveUnits(left: UnitTerm, right: UnitTerm): UnitTerm {
+    if (left.unit && right.unit) {
+      if (left.unit === right.unit) return { source: `${left.source} / ${right.source}` };
+      if (isPercentUnit(right.unit)) return { unit: left.unit, source: `${left.source} / ${right.source}` };
+      if (isPercentUnit(left.unit) && !isPercentUnit(right.unit)) {
+        diagnostics.push(`cannot divide ${describeUnit(left.unit)} by ${describeUnit(right.unit)} until compound units are supported`);
+        return { source: `${left.source} / ${right.source}` };
+      }
+      diagnostics.push(`cannot divide ${describeUnit(left.unit)} by ${describeUnit(right.unit)} until compound units are supported`);
+      return { source: `${left.source} / ${right.source}` };
+    }
+    return { unit: left.unit, source: `${left.source} / ${right.source}` };
+  }
+
+  const result = parseExpression();
+  return {
+    unit: result.unit,
+    diagnostics,
+  };
+}
+
+function describeUnit(unit: string | undefined): string {
+  return unit ? `unit ${unit}` : "a unitless value";
+}
+
+function isPercentUnit(unit: string | undefined): boolean {
+  return unit === "percent";
+}
+
+function nonPercentUnit(unit: string | undefined): string | undefined {
+  return unit && !isPercentUnit(unit) ? unit : undefined;
+}
+
+function percentResultUnit(left: string | undefined, right: string | undefined): string | undefined {
+  return isPercentUnit(left) || isPercentUnit(right) ? "percent" : undefined;
 }
 
 function expressionReferences(expression: string): string[] {

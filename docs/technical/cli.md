@@ -279,13 +279,18 @@ Plan a migration from a previous manifest to current source:
 ```bash
 node dist/cli.js migrate-plan old-manifest.json examples/commerce_v2.dl
 node dist/cli.js migrate-check old-manifest.json examples/commerce_v2.dl
+node dist/cli.js migrate-check old-manifest.json examples/commerce_v2.dl --env production --allow-production
 ```
+
+`migrate-plan` now prints review notes, rollback notes, and a deployment checklist. `migrate-check` fails unsafe/destructive plans unless you pass `--allow-unsafe` or `--allow-destructive`; production checks also require `--allow-production` after review. You can set the environment with `--env development|staging|production` or `REUX_ENV`.
 
 Create a diff migration file:
 
 ```bash
 node dist/cli.js migrate-diff-create old-manifest.json examples/commerce_v2.dl commerce_v2
 ```
+
+`migrate-diff-create` runs the same safety gate before writing the file. Use the same approval flags only after reading the rollback notes and testing the SQL against staging or a disposable database.
 
 Show migration status against PostgreSQL:
 
@@ -312,6 +317,7 @@ List events by status:
 ```bash
 node dist/cli.js outbox-list failed 10
 node dist/cli.js outbox-list processing 10
+node dist/cli.js outbox-list dead 10
 node dist/cli.js outbox-list all 50
 ```
 

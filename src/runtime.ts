@@ -46,18 +46,27 @@ export interface OutboxEvent {
   processedAt: string | null;
 }
 
-export type OutboxListStatus = "pending" | "processing" | "processed" | "failed" | "all";
+export type OutboxListStatus = "pending" | "processing" | "processed" | "failed" | "dead" | "all";
 
 export type OutboxHandler = (event: OutboxEvent) => Promise<void> | void;
 
 export interface OutboxProcessResult {
   processed: OutboxEvent[];
   failed: OutboxFailure[];
+  retried: OutboxFailure[];
+  deadLettered: OutboxFailure[];
+}
+
+export interface OutboxFailurePolicy {
+  maxAttempts?: number;
+  retryDelaySeconds?: number;
 }
 
 export interface OutboxWorkerOptions {
   limit?: number;
   intervalMs?: number;
+  maxAttempts?: number;
+  retryDelaySeconds?: number;
   requeueStaleAfterSeconds?: number;
   requeueStaleLimit?: number;
   maxIterations?: number;
@@ -69,6 +78,8 @@ export interface OutboxWorkerResult {
   iterations: number;
   processed: number;
   failed: number;
+  retried: number;
+  deadLettered: number;
   stopped: "maxIterations" | "aborted";
 }
 
@@ -138,14 +149,19 @@ CREATE TABLE IF NOT EXISTS _dl_outbox (
   last_error text NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
   claimed_at timestamptz NULL,
+  next_attempt_at timestamptz NULL,
+  dead_lettered_at timestamptz NULL,
   processed_at timestamptz NULL
 );
 `);
   await db.query("ALTER TABLE _dl_outbox ADD COLUMN IF NOT EXISTS attempts integer NOT NULL DEFAULT 0;");
   await db.query("ALTER TABLE _dl_outbox ADD COLUMN IF NOT EXISTS last_error text NULL;");
   await db.query("ALTER TABLE _dl_outbox ADD COLUMN IF NOT EXISTS claimed_at timestamptz NULL;");
+  await db.query("ALTER TABLE _dl_outbox ADD COLUMN IF NOT EXISTS next_attempt_at timestamptz NULL;");
+  await db.query("ALTER TABLE _dl_outbox ADD COLUMN IF NOT EXISTS dead_lettered_at timestamptz NULL;");
   await db.query("CREATE INDEX IF NOT EXISTS _dl_outbox_status_created_at_idx ON _dl_outbox (status, created_at);");
   await db.query("CREATE INDEX IF NOT EXISTS _dl_outbox_status_claimed_at_idx ON _dl_outbox (status, claimed_at);");
+  await db.query("CREATE INDEX IF NOT EXISTS _dl_outbox_status_next_attempt_at_idx ON _dl_outbox (status, next_attempt_at);");
 }
 
 export async function ensureIdempotencyTable(db: Database): Promise<void> {
@@ -189,7 +205,10 @@ export async function markOutboxProcessed(db: Database, id: string): Promise<Out
   const result = await db.query<OutboxEventRow>(
     `
 UPDATE _dl_outbox
-SET status = 'processed', processed_at = now()
+SET status = 'processed',
+    claimed_at = NULL,
+    next_attempt_at = NULL,
+    processed_at = now()
 WHERE id = $1
 RETURNING id, event_type, payload, status, attempts, last_error, created_at, processed_at;
 `,
@@ -207,6 +226,7 @@ WITH claimed AS (
   SELECT id
   FROM _dl_outbox
   WHERE status = 'pending'
+    AND (next_attempt_at IS NULL OR next_attempt_at <= now())
   ORDER BY created_at ASC
   LIMIT $1
   FOR UPDATE SKIP LOCKED
@@ -215,6 +235,7 @@ UPDATE _dl_outbox o
 SET status = 'processing',
     attempts = attempts + 1,
     last_error = NULL,
+    next_attempt_at = NULL,
     claimed_at = now()
 FROM claimed
 WHERE o.id = claimed.id
@@ -225,17 +246,43 @@ RETURNING o.id, o.event_type, o.payload, o.status, o.attempts, o.last_error, o.c
   return result.rows.map(outboxRow);
 }
 
-export async function markOutboxFailed(db: Database, id: string, error: string): Promise<OutboxEvent | undefined> {
+export async function markOutboxFailed(
+  db: Database,
+  id: string,
+  error: string,
+  policy: OutboxFailurePolicy = {},
+): Promise<OutboxEvent | undefined> {
   await ensureOutboxTable(db);
+  const retryDelaySeconds = policy.retryDelaySeconds;
+  const maxAttempts = policy.maxAttempts ?? 0;
+  if (maxAttempts > 0) {
+    const result = await db.query<OutboxEventRow>(
+      `
+UPDATE _dl_outbox
+SET status = CASE WHEN attempts >= $3 THEN 'dead' ELSE 'pending' END,
+    last_error = $2,
+    claimed_at = NULL,
+    next_attempt_at = CASE WHEN attempts >= $3 THEN NULL ELSE now() + ($4 * interval '1 second') END,
+    dead_lettered_at = CASE WHEN attempts >= $3 THEN now() ELSE dead_lettered_at END
+WHERE id = $1
+RETURNING id, event_type, payload, status, attempts, last_error, created_at, processed_at;
+`,
+      [id, error, maxAttempts, retryDelaySeconds ?? 0],
+    );
+    const row = result.rows[0];
+    return row ? outboxRow(row) : undefined;
+  }
   const result = await db.query<OutboxEventRow>(
     `
 UPDATE _dl_outbox
 SET status = 'failed',
-    last_error = $2
+    last_error = $2,
+    claimed_at = NULL,
+    next_attempt_at = ${retryDelaySeconds === undefined ? "NULL" : "now() + ($3 * interval '1 second')"}
 WHERE id = $1
 RETURNING id, event_type, payload, status, attempts, last_error, created_at, processed_at;
 `,
-    [id, error],
+    retryDelaySeconds === undefined ? [id, error] : [id, error, retryDelaySeconds],
   );
   const row = result.rows[0];
   return row ? outboxRow(row) : undefined;
@@ -249,9 +296,11 @@ UPDATE _dl_outbox
 SET status = 'pending',
     last_error = NULL,
     claimed_at = NULL,
+    next_attempt_at = NULL,
+    dead_lettered_at = NULL,
     processed_at = NULL
 WHERE id = $1
-  AND status IN ('processing', 'failed')
+  AND status IN ('processing', 'failed', 'dead')
 RETURNING id, event_type, payload, status, attempts, last_error, created_at, processed_at;
 `,
     [id],
@@ -278,6 +327,7 @@ UPDATE _dl_outbox o
 SET status = 'pending',
     last_error = NULL,
     claimed_at = NULL,
+    next_attempt_at = NULL,
     processed_at = NULL
 FROM stale
 WHERE o.id = stale.id
@@ -292,17 +342,20 @@ export async function processOutboxEvents(
   db: Database,
   handlers: Record<string, OutboxHandler>,
   limit = 10,
+  failurePolicy: OutboxFailurePolicy = {},
 ): Promise<OutboxProcessResult> {
   const events = await claimOutboxEvents(db, limit);
   const processed: OutboxEvent[] = [];
   const failed: OutboxFailure[] = [];
+  const retried: OutboxFailure[] = [];
+  const deadLettered: OutboxFailure[] = [];
 
   for (const event of events) {
     const handler = handlers[event.eventType];
     if (!handler) {
       const error = `no handler registered for outbox event ${event.eventType}`;
-      await markOutboxFailed(db, event.id, error);
-      failed.push({ event, error });
+      const updated = await markOutboxFailed(db, event.id, error, failurePolicy);
+      trackOutboxFailure(updated ?? event, error, failed, retried, deadLettered);
       continue;
     }
 
@@ -312,12 +365,12 @@ export async function processOutboxEvents(
       processed.push(updated ?? event);
     } catch (error) {
       const message = errorMessage(error);
-      await markOutboxFailed(db, event.id, message);
-      failed.push({ event, error: message });
+      const updated = await markOutboxFailed(db, event.id, message, failurePolicy);
+      trackOutboxFailure(updated ?? event, message, failed, retried, deadLettered);
     }
   }
 
-  return { processed, failed };
+  return { processed, failed, retried, deadLettered };
 }
 
 export async function runOutboxWorker(
@@ -327,28 +380,49 @@ export async function runOutboxWorker(
 ): Promise<OutboxWorkerResult> {
   const limit = options.limit ?? 10;
   const intervalMs = options.intervalMs ?? 1000;
+  const failurePolicy: OutboxFailurePolicy = {
+    maxAttempts: options.maxAttempts,
+    retryDelaySeconds: options.retryDelaySeconds,
+  };
   let iterations = 0;
   let processed = 0;
   let failed = 0;
+  let retried = 0;
+  let deadLettered = 0;
 
   while (!options.signal?.aborted) {
     if (options.requeueStaleAfterSeconds !== undefined) {
       await requeueStaleOutboxEvents(db, options.requeueStaleAfterSeconds, options.requeueStaleLimit ?? limit);
     }
-    const result = await processOutboxEvents(db, handlers, limit);
+    const result = await processOutboxEvents(db, handlers, limit, failurePolicy);
     iterations += 1;
     processed += result.processed.length;
     failed += result.failed.length;
+    retried += result.retried.length;
+    deadLettered += result.deadLettered.length;
     await options.onIteration?.(result);
 
     if (options.maxIterations !== undefined && iterations >= options.maxIterations) {
-      return { iterations, processed, failed, stopped: "maxIterations" };
+      return { iterations, processed, failed, retried, deadLettered, stopped: "maxIterations" };
     }
     if (options.signal?.aborted) break;
     await delay(intervalMs, options.signal);
   }
 
-  return { iterations, processed, failed, stopped: "aborted" };
+  return { iterations, processed, failed, retried, deadLettered, stopped: "aborted" };
+}
+
+function trackOutboxFailure(
+  event: OutboxEvent,
+  error: string,
+  failed: OutboxFailure[],
+  retried: OutboxFailure[],
+  deadLettered: OutboxFailure[],
+): void {
+  const failure = { event, error };
+  failed.push(failure);
+  if (event.status === "pending") retried.push(failure);
+  if (event.status === "dead") deadLettered.push(failure);
 }
 
 export function parseAfterCommitHook(call: string): AfterCommitHook {

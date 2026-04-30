@@ -99,6 +99,7 @@ node dist/cli.js project-seed-reset pilot/seeds/smoke.json
 Remove-Item Env:REUX_CONFIG
 node dist/cli.js outbox-list
 node dist/cli.js outbox-list failed 10
+node dist/cli.js outbox-list dead 10
 node dist/cli.js outbox-claim 10
 node dist/cli.js outbox-mark-processed '<event-id>'
 node dist/cli.js outbox-mark-failed '<event-id>' 'smtp unavailable'

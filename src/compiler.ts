@@ -54,6 +54,8 @@ export interface Diagnostic {
 export interface MigrationSafetyOptions {
   allowUnsafe?: boolean;
   allowDestructive?: boolean;
+  environment?: "development" | "staging" | "production";
+  allowProduction?: boolean;
 }
 
 export interface MigrationSafetyCheck {
@@ -65,6 +67,12 @@ export interface MigrationSafetyCheck {
     destructive: number;
   };
   diagnostics: string[];
+  review: {
+    required: boolean;
+    warnings: string[];
+    rollback: string[];
+    checklist: string[];
+  };
 }
 
 export function compileSource(source: string): CompileResult {
@@ -203,15 +211,21 @@ export function checkMigrationSafety(
       return !options.allowDestructive;
     })
     .map((operation) => `${operation.safety}: ${operation.description}`);
+  if (options.environment === "production" && !options.allowProduction && (plan.operations.length > 0 || diagnostics.length > 0)) {
+    diagnostics.push("production: pass --allow-production after reviewing rollback notes and testing against staging");
+  }
 
   return {
     ok: diagnostics.length === 0,
     allowed: {
       allowUnsafe: Boolean(options.allowUnsafe),
       allowDestructive: Boolean(options.allowDestructive),
+      environment: options.environment,
+      allowProduction: Boolean(options.allowProduction),
     },
     summary: plan.summary,
     diagnostics,
+    review: plan.review,
   };
 }
 

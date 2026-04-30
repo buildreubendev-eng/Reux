@@ -956,6 +956,8 @@ COMMIT;`,
         status: "pending",
         created_at: "2026-04-25T00:00:00.000Z",
         claimed_at: null,
+        next_attempt_at: null,
+        dead_lettered_at: null,
         processed_at: null,
       },
     ]);
@@ -1211,6 +1213,8 @@ COMMIT;`,
         }),
       ],
       failed: [],
+      retried: [],
+      deadLettered: [],
     });
   });
 
@@ -1243,6 +1247,8 @@ COMMIT;`,
       iterations: 1,
       processed: 1,
       failed: 0,
+      retried: 0,
+      deadLettered: 0,
       stopped: "maxIterations",
     });
   });
@@ -1277,6 +1283,8 @@ COMMIT;`,
       iterations: 1,
       processed: 1,
       failed: 0,
+      retried: 0,
+      deadLettered: 0,
       stopped: "maxIterations",
     });
     expect(db.queryCalls.some((call) => call.sql.includes("FROM stale") && call.params?.[0] === 300)).toBe(true);
@@ -1307,6 +1315,84 @@ COMMIT;`,
       status: "failed",
       attempts: 1,
       last_error: "no handler registered for outbox event UnknownEvent",
+    });
+  });
+
+  it("schedules failed outbox events for retry before max attempts", async () => {
+    const db = new FakeDb();
+    db.outbox.push({
+      id: "outbox-1",
+      event_type: "RewardGranted",
+      payload: { user: "user-id" },
+      status: "pending",
+      attempts: 0,
+      last_error: null,
+      created_at: "2026-04-25T00:00:00.000Z",
+      processed_at: null,
+    });
+
+    const result = await processOutboxEvents(
+      db,
+      {
+        RewardGranted: () => {
+          throw new Error("smtp unavailable");
+        },
+      },
+      10,
+      { maxAttempts: 3, retryDelaySeconds: 60 },
+    );
+
+    expect(result.retried).toEqual([
+      {
+        event: expect.objectContaining({ id: "outbox-1", status: "pending", attempts: 1 }),
+        error: "smtp unavailable",
+      },
+    ]);
+    expect(result.deadLettered).toEqual([]);
+    expect(db.outbox[0]).toMatchObject({
+      status: "pending",
+      attempts: 1,
+      last_error: "smtp unavailable",
+      claimed_at: null,
+      next_attempt_at: "2026-04-25T00:11:00.000Z",
+    });
+  });
+
+  it("dead-letters outbox events after max attempts", async () => {
+    const db = new FakeDb();
+    db.outbox.push({
+      id: "outbox-1",
+      event_type: "RewardGranted",
+      payload: { user: "user-id" },
+      status: "pending",
+      attempts: 2,
+      last_error: null,
+      created_at: "2026-04-25T00:00:00.000Z",
+      processed_at: null,
+    });
+
+    const result = await processOutboxEvents(
+      db,
+      {
+        RewardGranted: () => {
+          throw new Error("smtp unavailable");
+        },
+      },
+      10,
+      { maxAttempts: 3, retryDelaySeconds: 60 },
+    );
+
+    expect(result.deadLettered).toEqual([
+      {
+        event: expect.objectContaining({ id: "outbox-1", status: "dead", attempts: 3 }),
+        error: "smtp unavailable",
+      },
+    ]);
+    expect(db.outbox[0]).toMatchObject({
+      status: "dead",
+      attempts: 3,
+      last_error: "smtp unavailable",
+      dead_lettered_at: "2026-04-25T00:10:00.000Z",
     });
   });
 });
@@ -1379,6 +1465,8 @@ class FakeDb implements Database {
         last_error: null,
         created_at: "2026-04-25T00:00:00.000Z",
         claimed_at: null,
+        next_attempt_at: null,
+        dead_lettered_at: null,
         processed_at: null,
       };
       this.outbox.push(row);
@@ -1399,29 +1487,50 @@ class FakeDb implements Database {
           row.status = "pending";
           row.last_error = null;
           row.claimed_at = null;
+          row.next_attempt_at = null;
           row.processed_at = null;
         }
         return { rows: rows as T[], rowCount: rows.length };
       }
       const row = sql.includes("FROM claimed")
-        ? this.outbox.find((candidate) => candidate.status === "pending")
+        ? this.outbox.find((candidate) => candidate.status === "pending" && (!candidate.next_attempt_at || new Date(candidate.next_attempt_at) <= FakeDb.now))
         : this.outbox.find((candidate) => candidate.id === params?.[0]);
       if (!row) return { rows: [], rowCount: 0 };
-      if (sql.includes("status = 'processing'")) {
+      if (sql.includes("CASE WHEN attempts >= $3")) {
+        const maxAttempts = params?.[2] as number;
+        const retryDelaySeconds = params?.[3] as number;
+        row.last_error = params?.[1] as string;
+        row.claimed_at = null;
+        if (row.attempts >= maxAttempts) {
+          row.status = "dead";
+          row.next_attempt_at = null;
+          row.dead_lettered_at = FakeDb.now.toISOString();
+        } else {
+          row.status = "pending";
+          row.next_attempt_at = new Date(FakeDb.now.getTime() + retryDelaySeconds * 1000).toISOString();
+        }
+      } else if (sql.includes("status = 'processing'")) {
         row.status = "processing";
         row.attempts += 1;
         row.last_error = null;
+        row.next_attempt_at = null;
         row.claimed_at = FakeDb.now.toISOString();
       } else if (sql.includes("status = 'failed'")) {
         row.status = "failed";
         row.last_error = params?.[1] as string;
+        row.claimed_at = null;
+        row.next_attempt_at = null;
       } else if (sql.includes("status = 'pending'")) {
         row.status = "pending";
         row.last_error = null;
         row.claimed_at = null;
+        row.next_attempt_at = null;
+        row.dead_lettered_at = null;
         row.processed_at = null;
       } else {
         row.status = "processed";
+        row.claimed_at = null;
+        row.next_attempt_at = null;
         row.processed_at = "2026-04-25T00:01:00.000Z";
       }
       return { rows: [row] as T[], rowCount: 1 };
@@ -1447,6 +1556,8 @@ interface FakeOutboxRow {
   last_error: string | null;
   created_at: string;
   claimed_at?: string | null;
+  next_attempt_at?: string | null;
+  dead_lettered_at?: string | null;
   processed_at: string | null;
 }
 

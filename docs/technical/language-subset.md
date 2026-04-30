@@ -160,7 +160,7 @@ Supported simulation statements:
 
 Unit quantities attach a lightweight unit label to numeric assumptions. `percent` and `%` normalize to a decimal value plus `percent` unit, so `8 percent` evaluates as `0.08`. Uppercase currency labels such as `USD` are preserved. Common count labels normalize to `count`.
 
-Formula expressions support numeric literals, assumptions, earlier formulas, parentheses, and `+`, `-`, `*`, `/`. The compiler validates that referenced values exist and that formulas only use numeric assumptions or earlier formulas. Formula results carry a unit when the expression is unit-compatible, such as adding/subtracting `USD` values or multiplying one unit value by a scalar.
+Formula expressions support numeric literals, assumptions, earlier formulas, parentheses, and `+`, `-`, `*`, `/`. The compiler validates that referenced values exist, that formulas only use numeric assumptions or earlier formulas, and that unit math is compatible. Adding or subtracting requires matching non-percent units, scalar multiplication preserves the unit value, same-unit division produces a unitless ratio, and percent values can participate in scalar/rate calculations. Unsupported compound-unit math, such as `USD * count` or `USD + percent`, is rejected instead of silently producing a misleading metric. Formula results carry a unit when the expression is unit-compatible, such as adding/subtracting `USD` values or multiplying one unit value by a scalar.
 
 Objectives declare whether a metric should be maximized or minimized. Objective metrics must reference formula output metrics or known derived metrics such as `netCashFlow`, `cumulativeNetCashFlow`, `changeRate`, or `projectedIndex`. Rankings use objectives when present: maximize sorts by largest final delta, while minimize sorts by smallest final delta.
 
@@ -193,7 +193,7 @@ node dist/cli.js simulation-types-ts examples/simulations/workforce_change.reux
 
 Generated simulation TypeScript contracts include typed assumption maps, metric maps, scenario names, run/result shapes, explanation summaries, summary helper types, runtime helper functions, and a small metadata constant for each simulation. This lets a frontend or product backend consume simulation output without treating it as unstructured JSON.
 
-This is not yet the full simulation language. The next layers are richer dimensional analysis, domain packs for PLOS/business use cases, deeper generated TypeScript clients, and eventually integration with Reux data modules.
+This is not yet the full simulation language. The next layers are named domain dimensions, domain packs for PLOS/business use cases, deeper generated TypeScript clients, and eventually integration with Reux data modules.
 
 ## Transition Rules
 

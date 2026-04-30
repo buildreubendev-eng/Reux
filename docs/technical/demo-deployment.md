@@ -68,7 +68,7 @@ For a separate worker process, deploy the same repo with:
 Start command: npm run start:demo-worker
 ```
 
-Set the same `DATABASE_URL` and `REUX_DEMO_SCHEMA` as the web service. The worker honors `REUX_WORKER_INTERVAL_MS`, `REUX_WORKER_LIMIT`, `REUX_WORKER_MAX_ITERATIONS`, and `REUX_WORKER_REQUEUE_STALE_SECONDS`.
+Set the same `DATABASE_URL` and `REUX_DEMO_SCHEMA` as the web service. The worker honors `REUX_WORKER_INTERVAL_MS`, `REUX_WORKER_LIMIT`, `REUX_WORKER_MAX_ITERATIONS`, `REUX_WORKER_REQUEUE_STALE_SECONDS`, `REUX_WORKER_MAX_ATTEMPTS`, and `REUX_WORKER_RETRY_DELAY_SECONDS`.
 
 ## Website Integration
 

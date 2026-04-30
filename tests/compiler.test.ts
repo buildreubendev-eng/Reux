@@ -415,8 +415,8 @@ simulate personal_finance {
         { name: "debt_payment", type: "number", value: 500, unit: "USD" },
       ],
       formulas: [
-        { name: "cash_flow", expression: "income - rent - debt_payment", references: ["debt_payment", "income", "rent"] },
-        { name: "annual_surplus", expression: "cash_flow * 12", references: ["cash_flow"] },
+        { name: "cash_flow", expression: "income - rent - debt_payment", references: ["debt_payment", "income", "rent"], unit: "USD" },
+        { name: "annual_surplus", expression: "cash_flow * 12", references: ["cash_flow"], unit: "USD" },
       ],
       objectives: [
         { metric: "cash_flow", direction: "maximize" },
@@ -613,6 +613,35 @@ simulate bad {
 }
 `),
     ).toThrow(DlAggregateError);
+  });
+
+  it("validates simulation formula units", () => {
+    expect(() =>
+      compileSource(`module broken
+
+simulate bad {
+  income = 5000 USD
+  rent = 1500 USD
+  productivity_gain = 8 percent
+  employees = 50 count
+  formula cash_flow = income - rent
+  formula bad_add = cash_flow + productivity_gain
+  formula bad_product = income * employees
+  forecast 1 month
+}
+`),
+    ).toThrow(/cannot add unit USD and unit percent/);
+    expect(() =>
+      compileSource(`module broken
+
+simulate bad {
+  income = 5000 USD
+  employees = 50 count
+  formula bad_product = income * employees
+  forecast 1 month
+}
+`),
+    ).toThrow(/cannot multiply unit USD by unit count/);
   });
 
   it("validates simulation objective metrics", () => {
@@ -853,7 +882,10 @@ entity Invoice {
     expect(worker).toContain("hook.resolvedArgs ?? hook.args");
     expect(worker).toContain("REUX_WORKER_INTERVAL_MS");
     expect(worker).toContain("REUX_WORKER_REQUEUE_STALE_SECONDS");
+    expect(worker).toContain("REUX_WORKER_MAX_ATTEMPTS");
+    expect(worker).toContain("REUX_WORKER_RETRY_DELAY_SECONDS");
     expect(worker).toContain("requeueStaleAfterSeconds,");
+    expect(worker).toContain("dead=${result.deadLettered.length}");
     expect(worker).toContain("await runOutboxWorker(db, outboxHandlers");
   });
 
@@ -1130,10 +1162,12 @@ query users(): Query<User> =
     const plan = emitMigrationPlan(previousManifest, commerceV2);
 
     expect(plan).toContain("Migration plan for module commerce");
+    expect(plan).toContain("Review required: no");
     expect(plan).toContain("[safe] add enum value OrderStatus.Refunded");
     expect(plan).toContain("[safe] add field User.displayName");
     expect(plan).toContain("[safe] create index User.byEmail");
     expect(plan).toContain("ALTER TABLE users ADD COLUMN display_name text NULL;");
+    expect(plan).toContain("Deployment checklist:");
   });
 
   it("flags unsafe migration changes without SQL", () => {
@@ -1171,6 +1205,8 @@ enum OrderStatus {
     );
 
     expect(plan.summary.unsafe).toBeGreaterThan(0);
+    expect(plan.review.required).toBe(true);
+    expect(plan.review.rollback).toContainEqual(expect.stringContaining("requiredCode"));
     expect(plan.operations).toContainEqual(
       expect.objectContaining({
         kind: "add_field",
@@ -1210,10 +1246,16 @@ enum OrderStatus {
 
     const blocked = checkMigrationSafety(previousManifest, next);
     const allowed = checkMigrationSafety(previousManifest, next, { allowUnsafe: true });
+    const productionBlocked = checkMigrationSafety(previousManifest, next, {
+      allowUnsafe: true,
+      environment: "production",
+    });
 
     expect(blocked.ok).toBe(false);
     expect(blocked.diagnostics).toContain("unsafe: add field User.requiredCode requires backfill or default validation");
     expect(allowed.ok).toBe(true);
+    expect(productionBlocked.ok).toBe(false);
+    expect(productionBlocked.diagnostics).toContain("production: pass --allow-production after reviewing rollback notes and testing against staging");
   });
 
   it("emits Transaction IR for transaction functions", () => {

@@ -39,7 +39,7 @@ Status: implemented for the supported SQL subset.
 - Retries retryable PostgreSQL conflicts and deadlocks according to `retry N`.
 - Supports `load ... for update`, simple loaded-entity mutations, `idempotency key`, `require ... else abort ...` guards, transition-guarded literal and parameterized enum assignments, `insert Entity { ... }`, bound insert results and later bound-field references, typed event payload validation, enum-valued transaction writes with enum-parameter compatibility checks, and durable `enqueue Event { ... }`.
 - Records outbox events in `_dl_outbox` and exposes list, claim, mark processed, mark failed, requeue, and stale-claim recovery commands.
-- Provides embeddable `processOutboxEvents` and `runOutboxWorker` helpers for dispatching claimed events to application handlers.
+- Provides embeddable `processOutboxEvents` and `runOutboxWorker` helpers for dispatching claimed events to application handlers, with delayed retry scheduling, max-attempt dead-lettering, stale claim recovery, and separate retry/dead-letter result reporting.
 - Provides an embeddable `processAfterCommitHooks` helper for dispatching returned after-commit hooks to application handlers, with optional parameter and binding resolution for hook arguments.
 
 ## Phase 4: Migrations
@@ -53,6 +53,7 @@ Status: implemented for conservative schema diffs.
 - Applies migrations with hash recording and hash mismatch refusal.
 - Provides project-scoped migration planning and diff creation.
 - Provides migration safety checks that fail deployment gates on unsafe or destructive operations unless explicitly allowed.
+- Includes review notes, rollback notes, deployment checklists, production environment gates, and pre-create safety checks for generated diff migrations.
 
 ## Phase 5: Tooling
 
@@ -64,8 +65,8 @@ Status: implemented for the MVP workflow.
 - `project-doctor` checks source discovery, manifest freshness, migration directory visibility, and database URL environment status.
 - `api-ts` and `project-api-ts` emit generated TypeScript API clients for supported queries and transaction functions.
 - `api-server-ts` and `project-api-server-ts` emit a minimal HTTP server scaffold around the generated client.
-- `worker-ts` and `project-worker-ts` emit an outbox worker scaffold with typed payload contracts for declared events and named after-commit handler contracts.
-- `simulation-ir` and `simulation-run` emit and execute the first prototype formula-based simulation forecast model with lightweight units, maximize/minimize objectives, shared scheduled assumption changes, scenario-specific scheduled changes, scenario overrides, final-period deltas, period-by-period deltas, first-divergence reporting, objective-aware metric rankings, and explanation summaries.
+- `worker-ts` and `project-worker-ts` emit an outbox worker scaffold with typed payload contracts, retry/dead-letter environment controls, declared event handlers, and named after-commit handler contracts.
+- `simulation-ir` and `simulation-run` emit and execute the first prototype formula-based simulation forecast model with lightweight units, formula unit-compatibility diagnostics, maximize/minimize objectives, shared scheduled assumption changes, scenario-specific scheduled changes, scenario overrides, final-period deltas, period-by-period deltas, first-divergence reporting, objective-aware metric rankings, and explanation summaries.
 - `simulation-types-ts` and `project-simulation-types-ts` emit TypeScript contracts for simulation assumptions, metrics, scenarios, objectives, run results, comparisons, explanations, comparison summaries, helper functions, and metadata constants.
 - `scripts/demo-pilot-worker.mjs` provides a runnable pilot outbox worker process for hosted and local demo environments.
 - Seed tooling supports schema-only checks with enum validation, PostgreSQL dry runs, rerunnable upserts, deletes, and transactional resets.

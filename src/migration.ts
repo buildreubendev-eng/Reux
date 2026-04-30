@@ -12,6 +12,7 @@ export interface MigrationPlan {
   operations: MigrationOperation[];
   sql: string;
   diagnostics: string[];
+  review: MigrationReview;
   summary: {
     safe: number;
     unsafe: number;
@@ -20,6 +21,13 @@ export interface MigrationPlan {
 }
 
 export type MigrationSafety = "safe" | "unsafe" | "destructive";
+
+export interface MigrationReview {
+  required: boolean;
+  warnings: string[];
+  rollback: string[];
+  checklist: string[];
+}
 
 export interface MigrationOperation {
   kind:
@@ -67,9 +75,12 @@ export function createDiffMigration(plan: MigrationPlan, name: string, now = new
       `-- Kind: schema diff`,
       `-- Module: ${plan.moduleName}`,
       `-- Safe: ${plan.summary.safe}, unsafe: ${plan.summary.unsafe}, destructive: ${plan.summary.destructive}`,
+      `-- Review required: ${plan.review.required ? "yes" : "no"}`,
       "",
       ...unsafeBlocks,
       unsafeBlocks.length ? "" : undefined,
+      ...plan.review.rollback.map((note) => `-- Rollback: ${note}`),
+      plan.review.rollback.length ? "" : undefined,
       ...sqlStatements,
       "",
     ]
@@ -87,6 +98,11 @@ export function planMigration(previous: SchemaIr, current: SchemaIr): MigrationP
     .filter((operation) => operation.safety !== "safe")
     .map((operation) => `${operation.safety}: ${operation.description}`);
   const sql = operations.flatMap((operation) => operation.sql ?? []).join("\n");
+  const summary = {
+    safe: operations.filter((operation) => operation.safety === "safe").length,
+    unsafe: operations.filter((operation) => operation.safety === "unsafe").length,
+    destructive: operations.filter((operation) => operation.safety === "destructive").length,
+  };
 
   return {
     kind: "diff",
@@ -94,11 +110,8 @@ export function planMigration(previous: SchemaIr, current: SchemaIr): MigrationP
     operations,
     sql,
     diagnostics,
-    summary: {
-      safe: operations.filter((operation) => operation.safety === "safe").length,
-      unsafe: operations.filter((operation) => operation.safety === "unsafe").length,
-      destructive: operations.filter((operation) => operation.safety === "destructive").length,
-    },
+    review: migrationReview(operations, summary),
+    summary,
   };
 }
 
@@ -110,14 +123,65 @@ export function migrationPlanText(plan: MigrationPlan): string {
   const lines = [
     `Migration plan for module ${plan.moduleName}`,
     `Safe: ${plan.summary.safe}, unsafe: ${plan.summary.unsafe}, destructive: ${plan.summary.destructive}`,
+    `Review required: ${plan.review.required ? "yes" : "no"}`,
     "",
     ...plan.operations.map((operation) => {
       const sql = operation.sql?.length ? `\n  SQL:\n${operation.sql.map((line) => `    ${line}`).join("\n")}` : "";
       return `- [${operation.safety}] ${operation.description}${sql}`;
     }),
+    "",
+    "Review notes:",
+    ...formatReviewLines(plan.review.warnings),
+    "",
+    "Rollback notes:",
+    ...formatReviewLines(plan.review.rollback),
+    "",
+    "Deployment checklist:",
+    ...formatReviewLines(plan.review.checklist),
   ];
 
   return `${lines.join("\n")}\n`;
+}
+
+function migrationReview(
+  operations: MigrationOperation[],
+  summary: MigrationPlan["summary"],
+): MigrationReview {
+  const warnings = operations
+    .filter((operation) => operation.safety !== "safe")
+    .map((operation) => `${operation.safety}: ${operation.description}`);
+  const rollback = operations.length === 0
+    ? ["No schema operations are planned."]
+    : operations.map((operation) => rollbackNote(operation));
+  return {
+    required: summary.unsafe > 0 || summary.destructive > 0,
+    warnings,
+    rollback,
+    checklist: [
+      "Run migrate-check before creating or applying the migration.",
+      "Run the generated SQL against a disposable database or staging clone.",
+      "Back up production data before applying unsafe or destructive operations.",
+      "Regenerate and commit the schema manifest after a successful apply.",
+    ],
+  };
+}
+
+function rollbackNote(operation: MigrationOperation): string {
+  if (operation.safety === "destructive") {
+    return `${operation.description}: restore dropped data from backup or a pre-migration snapshot.`;
+  }
+  if (operation.safety === "unsafe") {
+    return `${operation.description}: write and test a manual rollback before applying.`;
+  }
+  if (operation.kind === "create_entity") return `${operation.description}: drop the created table if rollback is required before data is written.`;
+  if (operation.kind === "add_field") return `${operation.description}: drop the added column if rollback is required.`;
+  if (operation.kind === "create_index") return `${operation.description}: drop the created index if rollback is required.`;
+  if (operation.kind === "add_enum_value") return `${operation.description}: PostgreSQL enum value rollback requires a manual type rebuild.`;
+  return `${operation.description}: verify whether a reverse SQL statement is needed.`;
+}
+
+function formatReviewLines(lines: string[]): string[] {
+  return lines.length > 0 ? lines.map((line) => `- ${line}`) : ["- none"];
 }
 
 function enumOperations(previous: SchemaIr, current: SchemaIr): MigrationOperation[] {
