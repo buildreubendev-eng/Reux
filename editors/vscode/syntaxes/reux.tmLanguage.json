@@ -1,0 +1,90 @@
+{
+  "scopeName": "source.reux",
+  "name": "Reux",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#numbers" },
+    { "include": "#declarations" },
+    { "include": "#types" },
+    { "include": "#keywords" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.double-slash.reux",
+          "match": "//.*$"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.reux",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.reux",
+              "match": "\\\\."
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.single.reux",
+          "begin": "'",
+          "end": "'",
+          "patterns": [
+            {
+              "name": "constant.character.escape.reux",
+              "match": "\\\\."
+            }
+          ]
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.reux",
+          "match": "\\b-?\\d+(?:\\.\\d+)?\\b"
+        }
+      ]
+    },
+    "declarations": {
+      "patterns": [
+        {
+          "name": "entity.name.type.reux",
+          "match": "\\b(?:entity|enum|event|simulate)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": { "name": "entity.name.type.reux" }
+          }
+        },
+        {
+          "name": "entity.name.function.reux",
+          "match": "\\b(?:query|transaction\\s+function|formula|objective|scenario|transition)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": { "name": "entity.name.function.reux" }
+          }
+        }
+      ]
+    },
+    "types": {
+      "patterns": [
+        {
+          "name": "support.type.reux",
+          "match": "\\b(?:Bool|Int|Int64|Float|Decimal|CurrencyCode|String|Bytes|Date|Time|Instant|Duration|Uuid|Json|Id|Query)\\b"
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.reux",
+          "match": "\\b(?:module|entity|enum|event|query|fragment|from|in|join|left|on|with|where|after|order|by|group|limit|select|simulate|formula|objective|maximize|minimize|change|at|scenario|forecast|transition|transaction|function|writes|retry|let|load|for|update|save|insert|enqueue|commit|require|else|abort|idempotency|key|primary|generated|required|unique|default|check|and|or|not|true|false|null)\\b"
+        }
+      ]
+    }
+  }
+}

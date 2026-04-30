@@ -44,8 +44,10 @@ npm run verify:postgres
 npm run build
 npm run test:postgres
 npm run test:pilot:postgres
+node dist/cli.js format examples/pilot_reux.dl
 node dist/cli.js check examples/commerce.dl
 node dist/cli.js project-check
+node dist/cli.js project-format
 node dist/cli.js project-summary
 node dist/cli.js project-summary --json
 node dist/cli.js project-doctor
@@ -124,6 +126,8 @@ Technical documentation:
 - [Migrations](docs/technical/migrations.md)
 - [Runtime](docs/technical/runtime.md)
 - [Release and packaging](docs/technical/release.md)
+- [Package distribution](docs/technical/package-distribution.md)
+- [Editor tooling](docs/technical/editor-tooling.md)
 - [Local PostgreSQL](docs/technical/local-postgres.md)
 - [Roadmap](docs/technical/roadmap.md)
 - [Phase status](docs/technical/phase-status.md)

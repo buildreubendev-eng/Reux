@@ -709,7 +709,7 @@ function validateTransactionEffects(
 
     const require = line.match(/^require\s+(.+)\s+else\s+abort\s+([A-Za-z_][A-Za-z0-9_]*)$/);
     if (require) {
-      validateGuardExpression(transaction.name, require[1], parameterTypes, boundEntities, entities, diagnostics);
+      validateGuardExpression(transaction.name, require[1], parameterTypes, boundEntities, entities, enumerations, diagnostics);
       continue;
     }
 
@@ -954,20 +954,55 @@ function validateGuardExpression(
   parameterTypes: Map<string, string>,
   boundEntities: Map<string, string>,
   entities: EntityDeclaration[],
+  enumerations: Extract<Program["declarations"][number], { kind: "enum" }>[],
   diagnostics: string[],
 ): void {
-  for (const reference of condition.matchAll(/\b([A-Za-z_][A-Za-z0-9_]*)(?:\.([A-Za-z_][A-Za-z0-9_]*))?\b/g)) {
+  const normalized = stripQuotedStrings(condition);
+  const enumValues = new Set(enumerations.flatMap((enumeration) => enumeration.values));
+  for (const call of normalized.matchAll(/\b([A-Za-z_][A-Za-z0-9_]*)\s*\(/g)) {
+    diagnostics.push(`transaction ${transactionName} guard uses unsupported call expression ${call[1]}(...)`);
+  }
+
+  for (const reference of normalized.matchAll(/\b([A-Za-z_][A-Za-z0-9_]*)(?:\.([A-Za-z_][A-Za-z0-9_]*))?\b/g)) {
     const token = reference[0];
-    if (token === "and" || token === "or" || token === "true" || token === "false" || token === "null") continue;
-    if (/^-?\d+(\.\d+)?$/.test(token)) continue;
-    if (parameterTypes.has(token)) continue;
-    if (!reference[2]) continue;
+    if (guardKeywords.has(token)) continue;
+    if (parameterTypes.has(token) || boundEntities.has(token) || enumValues.has(token)) continue;
+    if (!reference[2]) {
+      diagnostics.push(`transaction ${transactionName} guard references unknown value ${token}`);
+      continue;
+    }
     const entityName = boundEntities.get(reference[1]);
+    if (!entityName) {
+      diagnostics.push(`transaction ${transactionName} guard references unknown value ${reference[1]}`);
+      continue;
+    }
     const entity = entities.find((candidate) => candidate.name === entityName);
     if (!entity?.fields.some((field) => field.name === reference[2])) {
       diagnostics.push(`transaction ${transactionName} guard references unknown field ${token}`);
     }
   }
+}
+
+const guardKeywords = new Set(["and", "or", "not", "is", "in", "true", "false", "null"]);
+
+function stripQuotedStrings(source: string): string {
+  let output = "";
+  let quote: string | undefined;
+  for (let index = 0; index < source.length; index += 1) {
+    const char = source[index];
+    if (quote) {
+      if (char === quote && source[index - 1] !== "\\") quote = undefined;
+      output += " ";
+      continue;
+    }
+    if (char === "\"" || char === "'") {
+      quote = char;
+      output += " ";
+      continue;
+    }
+    output += char;
+  }
+  return output;
 }
 
 function validateEnumMutation(

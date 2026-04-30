@@ -33,6 +33,16 @@ node dist/cli.js project-check
 
 `diagnose` and `project-diagnose` report compile errors without printing stack traces. JSON output is intended for editor tooling, CI summaries, and demo scripts that need structured diagnostics.
 
+Format a source file or the single configured project source:
+
+```bash
+node dist/cli.js format examples/pilot_reux.dl
+node dist/cli.js format examples/simulations/personal_finance.reux
+node dist/cli.js project-format
+```
+
+The formatter writes to stdout. Redirect it to a file when you want to apply the output.
+
 Summarize every source file matched by `dl.json`:
 
 ```bash

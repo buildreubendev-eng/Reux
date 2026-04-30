@@ -9,6 +9,15 @@ dl version
 
 Both commands resolve to `dist/cli.js`.
 
+The package also exposes typed ESM entrypoints for application integration:
+
+```ts
+import { compileSource } from "reux-prototype";
+import { createPostgresDatabase } from "reux-prototype/runtime";
+```
+
+The local editor package under `editors/vscode` is included in package dry runs so early adopters can test syntax highlighting alongside the CLI.
+
 ## Local Package Check
 
 Build and inspect the package contents before sharing a tarball or publishing:
@@ -51,9 +60,10 @@ Before tagging a prototype release:
 1. Run `npm run verify`, including CLI smoke checks for the root commerce seed and pilot seed fixture.
 2. Run `npm run verify:postgres:full` against a live PostgreSQL database.
 3. Run `npm run verify:package`.
-4. Check `docs/technical/phase-status.md`.
-5. Check `docs/technical/cli.md` for new or changed commands.
-6. Update `README.md` if setup or demo commands changed.
-7. Tag the commit after the repository is pushed.
+4. Check `docs/technical/package-distribution.md`.
+5. Check `docs/technical/phase-status.md`.
+6. Check `docs/technical/cli.md` for new or changed commands.
+7. Update `README.md` if setup or demo commands changed.
+8. Tag the commit after the repository is pushed.
 
 The package remains marked `private` until the public package name and distribution policy are final.

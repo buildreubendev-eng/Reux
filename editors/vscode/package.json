@@ -1,0 +1,36 @@
+{
+  "name": "reux-language-support",
+  "displayName": "Reux Language Support",
+  "description": "Syntax highlighting and editor basics for Reux .reux and .dl files.",
+  "version": "0.1.0",
+  "publisher": "reuben",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "reux",
+        "aliases": [
+          "Reux",
+          "reux"
+        ],
+        "extensions": [
+          ".reux",
+          ".dl"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "reux",
+        "scopeName": "source.reux",
+        "path": "./syntaxes/reux.tmLanguage.json"
+      }
+    ]
+  }
+}

@@ -1,5 +1,6 @@
 import { Program, QueryDeclaration, TransactionDeclaration } from "./ast.js";
 import { insertEntityStatement, InsertStatement } from "./data.js";
+import { formatSource } from "./formatter.js";
 import { parseSchemaManifest, schemaManifestJson } from "./manifest.js";
 import {
   createDiffMigration,
@@ -110,6 +111,10 @@ export function diagnoseSource(source: string): DiagnosticReport {
       diagnostics: [{ severity: "error", message: error instanceof Error ? error.message : String(error) }],
     };
   }
+}
+
+export function formatReuxSource(source: string): string {
+  return formatSource(source);
 }
 
 export function emitPostgresSchema(source: string): string {

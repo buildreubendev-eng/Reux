@@ -21,6 +21,7 @@ import {
   emitTransactionSql,
   emitWorker,
   explainQuery,
+  formatReuxSource,
 } from "../src/compiler.js";
 import { DlAggregateError } from "../src/errors.js";
 
@@ -114,6 +115,35 @@ describe("compiler prototype", () => {
     expect(result.program.declarations.some((declaration) => declaration.kind === "transaction" && declaration.name === "capturePayment")).toBe(true);
     expect(result.program.declarations.some((declaration) => declaration.kind === "transaction" && declaration.name === "markOrderPaid")).toBe(true);
     expect(result.program.declarations.some((declaration) => declaration.kind === "transaction" && declaration.name === "creditAccount")).toBe(true);
+  });
+
+  it("formats Reux source with stable indentation", () => {
+    const formatted = formatReuxSource(`module demo
+entity Account {
+id: Id<Account> primary generated
+balance: Decimal
+}
+transaction function debit(accountRef: Account, amount: Decimal) writes Account {
+let account = load accountRef for update
+require account.balance >= amount else abort InsufficientFunds
+account.balance -= amount
+save account
+}
+`);
+
+    expect(formatted).toBe(`module demo
+entity Account {
+  id: Id<Account> primary generated
+  balance: Decimal
+}
+transaction function debit(accountRef: Account, amount: Decimal) writes Account {
+  let account = load accountRef for update
+  require account.balance >= amount else abort InsufficientFunds
+  account.balance -= amount
+  save account
+}
+`);
+    expect(() => compileSource(formatted)).not.toThrow();
   });
 
   it("lowers Reux pilot joins to PostgreSQL", () => {
@@ -1326,6 +1356,27 @@ transaction function debitAccount(accountRef: Account, amount: Decimal<12,2>, re
     expect(worker).toContain("account: string;");
     expect(worker).toContain("amount: number | string;");
     expect(worker).toContain("AccountDebited: TypedOutboxHandler<AccountDebitedPayload>");
+  });
+
+  it("rejects unknown and unsupported transaction guard expressions", () => {
+    const brokenGuardSource = (condition: string) => `module broken
+
+entity Account {
+  id: Id<Account> primary generated
+  balance: Decimal
+}
+
+transaction function debitAccount(accountRef: Account, amount: Decimal) writes Account retry 3 {
+  let account = load accountRef for update
+  require ${condition} else abort InsufficientFunds
+  account.balance -= amount
+  save account
+}
+`;
+
+    expect(() => compileSource(brokenGuardSource("account.balance >= amunt"))).toThrow(DlAggregateError);
+    expect(() => compileSource(brokenGuardSource("account.missing >= amount"))).toThrow(DlAggregateError);
+    expect(() => compileSource(brokenGuardSource("canDebit(accountRef)"))).toThrow(DlAggregateError);
   });
 
   it("validates transaction expression and event payload types", () => {
