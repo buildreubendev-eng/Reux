@@ -4,13 +4,40 @@
   "description": "Syntax highlighting and editor basics for Reux .reux and .dl files.",
   "version": "0.1.0",
   "publisher": "reuben",
+  "main": "./extension.js",
   "engines": {
     "vscode": "^1.90.0"
   },
+  "activationEvents": [
+    "onLanguage:reux",
+    "onCommand:reux.restartDiagnostics"
+  ],
   "categories": [
     "Programming Languages"
   ],
   "contributes": {
+    "commands": [
+      {
+        "command": "reux.restartDiagnostics",
+        "title": "Reux: Restart Diagnostics"
+      }
+    ],
+    "configuration": {
+      "title": "Reux",
+      "properties": {
+        "reux.cliPath": {
+          "type": "string",
+          "default": "reux",
+          "description": "Command used to run Reux diagnostics. Use an absolute path or a PATH command."
+        },
+        "reux.diagnosticsDelayMs": {
+          "type": "number",
+          "default": 350,
+          "minimum": 0,
+          "description": "Delay before running diagnostics after document changes."
+        }
+      }
+    },
     "languages": [
       {
         "id": "reux",

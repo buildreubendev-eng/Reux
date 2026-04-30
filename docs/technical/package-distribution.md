@@ -31,7 +31,7 @@ npm install -g ./reux-prototype-0.1.0.tgz
 reux version
 ```
 
-The package includes `dist`, `docs`, `editors`, `examples`, `pilot`, migrations, root config, and the README.
+`npm run verify:package` runs a package smoke check. It verifies that the exported JavaScript files, generated declaration files, docs, and editor assets exist and are included in the npm tarball dry run. The package includes `dist`, `docs`, `editors`, `examples`, `pilot`, migrations, root config, and the README.
 
 ## Private Consumption
 

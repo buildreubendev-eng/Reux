@@ -713,6 +713,10 @@ function validateTransactionEffects(
       continue;
     }
 
+    if (/^abort\s+[A-Za-z_][A-Za-z0-9_]*$/.test(line)) {
+      continue;
+    }
+
     if (transaction.retry && isRetryUnsafeExternalCall(line)) {
       diagnostics.push(
         `transaction ${transaction.name} is retryable but calls external function '${line}'. Move it to 'after commit ...' or persist an outbox event with 'enqueue ...'.`,

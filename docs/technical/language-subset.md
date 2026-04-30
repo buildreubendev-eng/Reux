@@ -358,6 +358,7 @@ The compiler also validates the first effect boundary:
 - `idempotency key expr` lowers to an insert into `_dl_idempotency_keys`, giving retryable callers a first-class durable key.
 - `require condition else abort ErrorName` lowers to a SQL guard that rolls back the transaction when the condition is false.
 - `require` guard expressions validate transaction parameters, loaded row fields, bound insert references, and enum literals. Unknown bare references, unknown loaded fields, and function-call-shaped guard expressions are rejected before SQL lowering.
+- `abort ErrorName` lowers to an explicit failing SQL statement so supported transaction runners roll back immediately.
 - declared event payloads validate `enqueue Event { ... }` and generate typed worker payload contracts.
 - retryable transactions use `retry N`;
 - direct external-looking calls such as `sendEmail(user)` are rejected inside retryable transactions;

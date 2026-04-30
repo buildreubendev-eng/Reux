@@ -28,7 +28,7 @@ npm run verify
 npm run verify:package
 ```
 
-`npm run build` first clears `dist/` so stale compiled files cannot leak into the package. `verify:package` runs `npm pack --dry-run`, which lists the files that would be included in the npm package without creating a permanent release artifact.
+`npm run build` first clears `dist/` so stale compiled files cannot leak into the package. `verify:package` runs a package smoke check around `npm pack --dry-run --json`; it fails if exported JavaScript files, generated declaration files, docs, or editor assets are missing from disk or missing from the dry-run tarball.
 
 ## Versioning
 

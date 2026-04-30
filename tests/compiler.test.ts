@@ -1379,6 +1379,28 @@ transaction function debitAccount(accountRef: Account, amount: Decimal) writes A
     expect(() => compileSource(brokenGuardSource("canDebit(accountRef)"))).toThrow(DlAggregateError);
   });
 
+  it("lowers explicit transaction abort steps", () => {
+    const source = `module commerce
+
+entity Account {
+  id: Id<Account> primary generated
+  balance: Decimal
+}
+
+transaction function stopAccount(accountRef: Account) writes Account retry 3 {
+  let account = load accountRef for update
+  abort ManualStop
+}
+`;
+
+    const txIr = JSON.parse(emitTransactionIr(source, "stopAccount"));
+    const sql = emitTransactionSql(source, "stopAccount");
+
+    expect(txIr.steps[1]).toEqual({ kind: "Abort", error: "ManualStop" });
+    expect(sql).toContain("-- abort: ManualStop");
+    expect(sql).toContain("SELECT 1 / 0;");
+  });
+
   it("validates transaction expression and event payload types", () => {
     expect(() =>
       compileSource(`module broken

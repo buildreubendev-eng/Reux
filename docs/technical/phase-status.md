@@ -69,7 +69,7 @@ Status: implemented for the MVP workflow.
 - `simulation-ir` and `simulation-run` emit and execute the first prototype formula-based simulation forecast model with lightweight units, formula unit-compatibility diagnostics, maximize/minimize objectives, shared scheduled assumption changes, scenario-specific scheduled changes, scenario overrides, final-period deltas, period-by-period deltas, first-divergence reporting, objective-aware metric rankings, and explanation summaries.
 - `simulation-types-ts` and `project-simulation-types-ts` emit TypeScript contracts for simulation assumptions, metrics, scenarios, objectives, run results, comparisons, explanations, comparison summaries, helper functions, and metadata constants.
 - `format` and `project-format` provide conservative stdout formatting for `.dl` and `.reux` files.
-- A local VS Code language package under `editors/vscode` provides `.dl`/`.reux` file association, syntax highlighting, and bracket pairing.
+- A local VS Code language package under `editors/vscode` provides `.dl`/`.reux` file association, syntax highlighting, bracket pairing, and file-level diagnostics backed by `reux diagnose --json`.
 - Package distribution now has typed ESM entrypoints, runtime subpath exports, package dry-run coverage for editor assets, and tarball installation documentation.
 - `scripts/demo-pilot-worker.mjs` provides a runnable pilot outbox worker process for hosted and local demo environments.
 - Seed tooling supports schema-only checks with enum validation, PostgreSQL dry runs, rerunnable upserts, deletes, and transactional resets.

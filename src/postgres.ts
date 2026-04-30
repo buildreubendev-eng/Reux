@@ -323,7 +323,7 @@ class TransactionLowering {
       } else if (step.kind === "ExternalCall") {
         lines.push(`-- external call: ${step.call}`);
       } else if (step.kind === "Abort") {
-        lines.push(`-- abort ${step.error}`);
+        lines.push(this.lowerAbort(step.error));
       } else {
         lines.push(`-- raw: ${step.source}`);
       }
@@ -344,6 +344,10 @@ class TransactionLowering {
     });
     this.boundInserts.set(target, entity);
     return `-- bind result: ${target}\nSELECT * FROM ${entity.tableName} WHERE id = $${parameter.position} FOR UPDATE;`;
+  }
+
+  private lowerAbort(error: string): string {
+    return `-- abort: ${error}\nSELECT 1 / 0;`;
   }
 
   private lowerMutation(target: string, operator: "+=" | "-=" | "=", expression: string): string {

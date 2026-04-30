@@ -5,6 +5,7 @@ Reux now has a first editor-support slice:
 - CLI formatter for `.dl` and `.reux` files.
 - Project-scoped formatter for the single-source `dl.json` workflow.
 - Local VS Code syntax package under `editors/vscode`.
+- File-level VS Code diagnostics backed by the Reux CLI.
 
 ## Formatting
 
@@ -32,7 +33,13 @@ The local VS Code language package lives at:
 editors/vscode
 ```
 
-It provides `.reux` and `.dl` file association, syntax highlighting, and bracket/quote pairing. It does not yet run compiler diagnostics in the editor.
+It provides `.reux` and `.dl` file association, syntax highlighting, bracket/quote pairing, and compiler diagnostics. Diagnostics run:
+
+```bash
+reux diagnose <file> --json
+```
+
+Set `reux.cliPath` in VS Code settings when the `reux` command is not on `PATH` or when you want to point at a local development build.
 
 Use the CLI for validation:
 
@@ -43,4 +50,4 @@ node dist/cli.js check examples/pilot_reux.dl
 
 ## Next Editor Work
 
-The next editor milestone is a small language server that shells out to the compiler diagnostics path, then adds document formatting, go-to-definition for declarations, and hover text for fields and transaction parameters.
+The next editor milestone is a proper language-server process with document formatting, go-to-definition for declarations, completion, and hover text for fields and transaction parameters.
