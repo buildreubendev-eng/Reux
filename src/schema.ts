@@ -713,6 +713,12 @@ function validateTransactionEffects(
       continue;
     }
 
+    const afterCommit = line.match(/^after\s+commit\s+(.+)$/);
+    if (afterCommit) {
+      validateAfterCommitHook(transaction.name, afterCommit[1], parameterTypes, boundEntities, entities, enumerations, diagnostics);
+      continue;
+    }
+
     if (/^abort\s+[A-Za-z_][A-Za-z0-9_]*$/.test(line)) {
       continue;
     }
@@ -988,6 +994,62 @@ function validateGuardExpression(
 }
 
 const guardKeywords = new Set(["and", "or", "not", "is", "in", "true", "false", "null"]);
+
+function validateAfterCommitHook(
+  transactionName: string,
+  call: string,
+  parameterTypes: Map<string, string>,
+  boundEntities: Map<string, string>,
+  entities: EntityDeclaration[],
+  enumerations: Extract<Program["declarations"][number], { kind: "enum" }>[],
+  diagnostics: string[],
+): void {
+  const match = call.match(/^([A-Za-z_][A-Za-z0-9_]*)\((.*)\)$/);
+  if (!match) {
+    diagnostics.push(`transaction ${transactionName} has invalid after commit hook ${call}`);
+    return;
+  }
+
+  const enumValues = new Set(enumerations.flatMap((enumeration) => enumeration.values));
+  const args = match[2].trim() ? splitTopLevel(match[2], ",") : [];
+  for (const arg of args) {
+    validateAfterCommitArg(transactionName, arg, parameterTypes, boundEntities, entities, enumValues, diagnostics);
+  }
+}
+
+function validateAfterCommitArg(
+  transactionName: string,
+  arg: string,
+  parameterTypes: Map<string, string>,
+  boundEntities: Map<string, string>,
+  entities: EntityDeclaration[],
+  enumValues: Set<string>,
+  diagnostics: string[],
+): void {
+  const value = arg.trim();
+  if (parameterTypes.has(value) || enumValues.has(value)) return;
+  if (value === "true" || value === "false" || value === "null") return;
+  if (/^-?\d+(\.\d+)?$/.test(value)) return;
+  if ((value.startsWith("\"") && value.endsWith("\"")) || (value.startsWith("'") && value.endsWith("'"))) return;
+
+  const bindingMatch = value.match(/^([A-Za-z_][A-Za-z0-9_]*)(?:\.([A-Za-z_][A-Za-z0-9_]*))?$/);
+  if (!bindingMatch) {
+    diagnostics.push(`transaction ${transactionName} after commit hook uses unsupported argument ${value}`);
+    return;
+  }
+
+  const entityName = boundEntities.get(bindingMatch[1]);
+  if (!entityName) {
+    diagnostics.push(`transaction ${transactionName} after commit hook references unknown value ${bindingMatch[1]}`);
+    return;
+  }
+
+  const fieldName = bindingMatch[2] ?? "id";
+  const entity = entities.find((candidate) => candidate.name === entityName);
+  if (!entity?.fields.some((field) => field.name === fieldName)) {
+    diagnostics.push(`transaction ${transactionName} after commit hook references unknown field ${bindingMatch[1]}.${fieldName}`);
+  }
+}
 
 function stripQuotedStrings(source: string): string {
   let output = "";

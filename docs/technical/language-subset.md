@@ -363,6 +363,7 @@ The compiler also validates the first effect boundary:
 - retryable transactions use `retry N`;
 - direct external-looking calls such as `sendEmail(user)` are rejected inside retryable transactions;
 - `after commit sendEmail(user)` and `enqueue Event { ... }` are allowed retry-safe fences;
+- `after commit` hook arguments are validated against transaction parameters, loaded rows, bound insert results, literals, and enum literals;
 - `enqueue Event { ... }` is durable at runtime through `_dl_outbox`.
 
 ## Name Validation

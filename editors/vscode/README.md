@@ -8,6 +8,7 @@ It currently provides:
 - Syntax highlighting for declarations, keywords, strings, numbers, and built-in types.
 - Basic bracket and quote pairing.
 - File-level compiler diagnostics by running `reux diagnose <file> --json`.
+- Document formatting by running `reux format <file>`.
 
 It does not yet provide completion, rename, hover, or go-to-definition.
 

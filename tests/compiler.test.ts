@@ -1401,6 +1401,26 @@ transaction function stopAccount(accountRef: Account) writes Account retry 3 {
     expect(sql).toContain("SELECT 1 / 0;");
   });
 
+  it("validates after commit hook arguments", () => {
+    const source = (hook: string) => `module commerce
+
+entity Account {
+  id: Id<Account> primary generated
+  balance: Decimal
+}
+
+transaction function notifyAccount(accountRef: Account) writes Account retry 3 {
+  let account = load accountRef for update
+  after commit ${hook}
+}
+`;
+
+    expect(() => compileSource(source("notifyAccount(accountRef, account.id, \"ok\")"))).not.toThrow();
+    expect(() => compileSource(source("notifyAccount(missingRef)"))).toThrow(DlAggregateError);
+    expect(() => compileSource(source("notifyAccount(account.missing)"))).toThrow(DlAggregateError);
+    expect(() => compileSource(source("notifyAccount(accountRef + 1)"))).toThrow(DlAggregateError);
+  });
+
   it("validates transaction expression and event payload types", () => {
     expect(() =>
       compileSource(`module broken

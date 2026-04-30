@@ -6,6 +6,7 @@ Reux now has a first editor-support slice:
 - Project-scoped formatter for the single-source `dl.json` workflow.
 - Local VS Code syntax package under `editors/vscode`.
 - File-level VS Code diagnostics backed by the Reux CLI.
+- VS Code document formatting backed by the Reux CLI.
 
 ## Formatting
 
@@ -33,13 +34,19 @@ The local VS Code language package lives at:
 editors/vscode
 ```
 
-It provides `.reux` and `.dl` file association, syntax highlighting, bracket/quote pairing, and compiler diagnostics. Diagnostics run:
+It provides `.reux` and `.dl` file association, syntax highlighting, bracket/quote pairing, compiler diagnostics, and document formatting. Diagnostics run:
 
 ```bash
 reux diagnose <file> --json
 ```
 
 Set `reux.cliPath` in VS Code settings when the `reux` command is not on `PATH` or when you want to point at a local development build.
+
+Formatting runs:
+
+```bash
+reux format <file>
+```
 
 Use the CLI for validation:
 

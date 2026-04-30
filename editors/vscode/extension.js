@@ -7,6 +7,7 @@ function activate(context) {
   const output = vscode.window.createOutputChannel("Reux");
   const diagnostics = vscode.languages.createDiagnosticCollection("reux");
   const runner = new ReuxDiagnosticsRunner(diagnostics, output);
+  const formatter = new ReuxFormatter(output);
 
   context.subscriptions.push(output, diagnostics);
   context.subscriptions.push(vscode.workspace.onDidOpenTextDocument((document) => runner.schedule(document)));
@@ -17,6 +18,8 @@ function activate(context) {
     if (event.affectsConfiguration("reux")) runner.refreshOpenDocuments();
   }));
   context.subscriptions.push(vscode.commands.registerCommand("reux.restartDiagnostics", () => runner.refreshOpenDocuments()));
+  context.subscriptions.push(vscode.commands.registerCommand("reux.formatDocument", () => formatter.formatActiveDocument()));
+  context.subscriptions.push(vscode.languages.registerDocumentFormattingEditProvider(languageId, formatter));
 
   runner.refreshOpenDocuments();
 }
@@ -105,6 +108,68 @@ class ReuxDiagnosticsRunner {
   }
 }
 
+class ReuxFormatter {
+  constructor(output) {
+    this.output = output;
+  }
+
+  async formatActiveDocument() {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor || !isReuxDocument(editor.document)) {
+      vscode.window.showWarningMessage("Open a Reux .dl or .reux file before formatting.");
+      return;
+    }
+    const edits = await this.provideDocumentFormattingEdits(editor.document);
+    if (!edits || edits.length === 0) return;
+    const workspaceEdit = new vscode.WorkspaceEdit();
+    for (const edit of edits) {
+      workspaceEdit.replace(editor.document.uri, edit.range, edit.newText);
+    }
+    await vscode.workspace.applyEdit(workspaceEdit);
+  }
+
+  provideDocumentFormattingEdits(document) {
+    if (!isReuxDocument(document)) return [];
+    if (document.uri.scheme !== "file") {
+      vscode.window.showWarningMessage("Reux formatting only runs for saved files.");
+      return [];
+    }
+
+    return new Promise((resolve) => {
+      const cliPath = vscode.workspace.getConfiguration("reux").get("cliPath", "reux");
+      const workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri);
+      const child = childProcess.spawn(cliPath, ["format", document.uri.fsPath], {
+        cwd: workspaceFolder?.uri.fsPath,
+        shell: true,
+        windowsHide: true,
+      });
+
+      let stdout = "";
+      let stderr = "";
+      child.stdout.on("data", (chunk) => {
+        stdout += chunk.toString();
+      });
+      child.stderr.on("data", (chunk) => {
+        stderr += chunk.toString();
+      });
+      child.on("error", (error) => {
+        this.output.appendLine(error.message);
+        vscode.window.showErrorMessage(`Unable to run Reux formatter with '${cliPath}'. Set reux.cliPath to a working CLI command.`);
+        resolve([]);
+      });
+      child.on("close", (code) => {
+        if (code !== 0) {
+          if (stderr.trim()) this.output.appendLine(stderr.trim());
+          vscode.window.showErrorMessage("Reux formatter failed. See the Reux output channel.");
+          resolve([]);
+          return;
+        }
+        resolve([vscode.TextEdit.replace(fullDocumentRange(document), stdout)]);
+      });
+    });
+  }
+}
+
 function parseDiagnosticReport(stdout) {
   try {
     const value = JSON.parse(stdout);
@@ -129,6 +194,11 @@ function fileDiagnostic(document, message) {
 function firstLineRange(document) {
   const line = document.lineAt(Math.min(document.lineCount - 1, 0));
   return new vscode.Range(line.range.start, line.range.end);
+}
+
+function fullDocumentRange(document) {
+  const lastLine = document.lineAt(Math.max(document.lineCount - 1, 0));
+  return new vscode.Range(new vscode.Position(0, 0), lastLine.range.end);
 }
 
 module.exports = {

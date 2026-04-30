@@ -10,6 +10,7 @@
   },
   "activationEvents": [
     "onLanguage:reux",
+    "onCommand:reux.formatDocument",
     "onCommand:reux.restartDiagnostics"
   ],
   "categories": [
@@ -17,6 +18,10 @@
   ],
   "contributes": {
     "commands": [
+      {
+        "command": "reux.formatDocument",
+        "title": "Reux: Format Document"
+      },
       {
         "command": "reux.restartDiagnostics",
         "title": "Reux: Restart Diagnostics"
