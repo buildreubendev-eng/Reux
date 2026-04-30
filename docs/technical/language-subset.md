@@ -191,9 +191,9 @@ node dist/cli.js simulation-run examples/simulations/workforce_change.reux
 node dist/cli.js simulation-types-ts examples/simulations/workforce_change.reux
 ```
 
-Generated simulation TypeScript contracts include typed assumption maps, metric maps, scenario names, run/result shapes, explanation summaries, and a small metadata constant for each simulation. This lets a frontend or product backend consume simulation output without treating it as unstructured JSON.
+Generated simulation TypeScript contracts include typed assumption maps, metric maps, scenario names, run/result shapes, explanation summaries, summary helper types, runtime helper functions, and a small metadata constant for each simulation. This lets a frontend or product backend consume simulation output without treating it as unstructured JSON.
 
-This is not yet the full simulation language. The next layers are richer dimensional analysis, domain packs for PLOS/business use cases, deeper generated TypeScript client helpers, and eventually integration with Reux data modules.
+This is not yet the full simulation language. The next layers are richer dimensional analysis, domain packs for PLOS/business use cases, deeper generated TypeScript clients, and eventually integration with Reux data modules.
 
 ## Transition Rules
 

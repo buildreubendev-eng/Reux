@@ -555,6 +555,10 @@ simulate support_cost {
     expect(types).toContain("export type WorkforceChangeScenarioName = \"baseline\" | \"stronger_training\" | \"no_overtime_change\";");
     expect(types).toContain("export interface WorkforceChangeAssumptions");
     expect(types).toContain("export interface ReuxSimulationExplanation<ScenarioName extends string, MetricName extends string>");
+    expect(types).toContain("export interface ReuxSimulationMetricSummary<ScenarioName extends string, MetricName extends string>");
+    expect(types).toContain("export function formatReuxSimulationDelta(delta: number | undefined, unit?: string): string");
+    expect(types).toContain("export function summarizeReuxSimulationComparison<ScenarioName extends string, Metrics extends object, MetricName extends string>");
+    expect(types).toContain("export function listReuxSimulationScenarioDeltas<ScenarioName extends string, Metrics extends object, MetricName extends string>");
     expect(types).toContain("productivity_gain: number;");
     expect(types).toContain("export type WorkforceChangeRun = ReuxSimulationRun<WorkforceChangeSimulationName, WorkforceChangeScenarioName, WorkforceChangeAssumptions, WorkforceChangeMetrics, WorkforceChangeMetricName>;");
     expect(types).toContain("export const workforceChangeSimulation = {");
