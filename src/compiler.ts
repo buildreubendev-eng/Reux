@@ -24,6 +24,7 @@ import {
   TypeScriptApiServerOptions,
   TypeScriptWorkerOptions,
 } from "./api-generator.js";
+import { emitTypeScriptSimulationContracts } from "./simulation-generator.js";
 
 export interface CompileResult {
   program: Program;
@@ -152,6 +153,10 @@ export function emitSimulationIr(source: string, simulationName?: string): strin
 export function emitSimulationRun(source: string, simulationName?: string): string {
   const { simulations } = compileSource(source);
   return `${JSON.stringify(runSimulationIr(findSimulation(simulations, simulationName)), null, 2)}\n`;
+}
+
+export function emitSimulationTypes(source: string): string {
+  return emitTypeScriptSimulationContracts(source);
 }
 
 export function emitApiClient(source: string, options?: TypeScriptApiOptions): string {

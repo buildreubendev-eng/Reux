@@ -187,9 +187,12 @@ Inspect and run simulations with:
 ```bash
 node dist/cli.js simulation-ir examples/simulations/personal_finance.reux
 node dist/cli.js simulation-run examples/simulations/workforce_change.reux
+node dist/cli.js simulation-types-ts examples/simulations/workforce_change.reux
 ```
 
-This is not yet the full simulation language. The next layers are richer dimensional analysis, domain packs for PLOS/business use cases, explanation summaries, generated TypeScript contracts, and eventually integration with Reux data modules.
+Generated simulation TypeScript contracts include typed assumption maps, metric maps, scenario names, run/result shapes, and a small metadata constant for each simulation. This lets a frontend or product backend consume simulation output without treating it as unstructured JSON.
+
+This is not yet the full simulation language. The next layers are richer dimensional analysis, domain packs for PLOS/business use cases, explanation summaries, deeper generated TypeScript client helpers, and eventually integration with Reux data modules.
 
 ## Transition Rules
 

@@ -15,6 +15,7 @@ import {
   emitSchemaManifest,
   emitSimulationIr,
   emitSimulationRun,
+  emitSimulationTypes,
   emitTransitionRules,
   emitTransactionIr,
   emitTransactionSql,
@@ -523,6 +524,19 @@ simulate support_cost {
         ],
       },
     ]);
+  });
+
+  it("emits TypeScript contracts for simulations", () => {
+    const types = emitSimulationTypes(readFileSync("examples/simulations/workforce_change.reux", "utf8"));
+
+    expect(types).toContain("export type WorkforceChangeAssumptionName = \"employees\" | \"productivity_gain\" | \"overtime_reduction\";");
+    expect(types).toContain("export type WorkforceChangeMetricName = \"operating_relief\" | \"productivity_index\";");
+    expect(types).toContain("export type WorkforceChangeScenarioName = \"baseline\" | \"stronger_training\" | \"no_overtime_change\";");
+    expect(types).toContain("export interface WorkforceChangeAssumptions");
+    expect(types).toContain("productivity_gain: number;");
+    expect(types).toContain("export type WorkforceChangeRun = ReuxSimulationRun<WorkforceChangeSimulationName, WorkforceChangeScenarioName, WorkforceChangeAssumptions, WorkforceChangeMetrics, WorkforceChangeMetricName>;");
+    expect(types).toContain("export const workforceChangeSimulation = {");
+    expect(types).toContain("\"direction\": \"maximize\"");
   });
 
   it("applies simulation assumption changes by forecast period", () => {
