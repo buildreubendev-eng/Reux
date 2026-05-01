@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Reux Operations</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Reux Pilot</p>
+        <h1>Operations</h1>
+        <p class="session-line">Queue and worker health across demo domains.</p>
+      </div>
+      <div class="actions">
+        <a class="button-link" href="/">Demo Console</a>
+        <button id="refreshOps" type="button">Refresh</button>
+      </div>
+    </header>
+    <main>
+      <section class="status-grid" aria-label="Operations status">
+        <div class="metric">
+          <span>Overall Health</span>
+          <strong id="opsHealth">-</strong>
+        </div>
+        <div class="metric">
+          <span>Active Events</span>
+          <strong id="opsActive">-</strong>
+        </div>
+        <div class="metric">
+          <span>Failed</span>
+          <strong id="opsFailed">-</strong>
+        </div>
+        <div class="metric">
+          <span>Dead</span>
+          <strong id="opsDead">-</strong>
+        </div>
+      </section>
+      <section id="opsDomains" class="data-grid" aria-label="Domain queues"></section>
+    </main>
+    <div id="toast" role="status" aria-live="polite"></div>
+    <script src="/ops.js" type="module"></script>
+  </body>
+</html>

@@ -41,6 +41,34 @@ export function emptyOutboxSummary() {
   return summarizeOutboxStats({ total: 0, byStatus: [] });
 }
 
+export function summarizeOperationalDashboard(domains) {
+  const summaries = domains.map((domain) => ({
+    domain: domain.domain,
+    title: domain.title,
+    queue: summarizeOutboxStats(domain.outbox),
+  }));
+  const totals = summaries.reduce(
+    (current, domain) => ({
+      total: current.total + domain.queue.total,
+      active: current.active + domain.queue.active,
+      pending: current.pending + domain.queue.pending,
+      processing: current.processing + domain.queue.processing,
+      processed: current.processed + domain.queue.processed,
+      failed: current.failed + domain.queue.failed,
+      dead: current.dead + domain.queue.dead,
+      attempts: current.attempts + domain.queue.attempts,
+    }),
+    { total: 0, active: 0, pending: 0, processing: 0, processed: 0, failed: 0, dead: 0, attempts: 0 },
+  );
+
+  return {
+    generatedAt: new Date().toISOString(),
+    health: queueHealth(totals),
+    totals,
+    domains: summaries,
+  };
+}
+
 function queueHealth({ pending, processing, failed, dead }) {
   if (dead > 0) return "blocked";
   if (failed > 0) return "needs retry";

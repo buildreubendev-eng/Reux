@@ -376,6 +376,8 @@ node dist/cli.js outbox-stats
 
 `outbox-stats` returns `total` plus `byStatus` rows with count, accumulated attempts, oldest event time, and newest event time. This gives dashboards and hosted operators a cheap health snapshot without listing every event.
 
+The pilot app exposes equivalent demo-layer views through `/api/outbox/stats`, `/api/logistics/outbox/stats`, `/api/ops`, and `/ops.html`. Production apps can build the same style of worker dashboard from `outbox-stats` or the `summarizeOutboxStats` helper.
+
 Mark an event processed after an external worker has handled it:
 
 ```bash

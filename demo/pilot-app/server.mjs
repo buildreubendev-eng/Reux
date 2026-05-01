@@ -21,7 +21,7 @@ import {
   sessionInfo,
   sessionSchema,
 } from "./session.mjs";
-import { emptyOutboxSummary, summarizeOutboxStats } from "./status.mjs";
+import { emptyOutboxSummary, summarizeOperationalDashboard, summarizeOutboxStats } from "./status.mjs";
 
 const rootDir = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 const publicDir = join(rootDir, "demo", "pilot-app", "public");
@@ -108,6 +108,11 @@ async function route(request, response) {
 
   if (url.pathname === "/api/health") {
     sendJson(response, 200, { ok: true, module: "pilot", databaseUrlEnv: config.databaseUrlEnv, schema: demoSchema, sessionMode, domains: Object.keys(domains) });
+    return;
+  }
+
+  if (url.pathname === "/api/ops" && method === "GET") {
+    sendJson(response, 200, await operationsDashboard(request));
     return;
   }
 
@@ -399,6 +404,24 @@ async function demoOutboxStats(request, domain) {
     session: sessionInfo(context),
     outbox: stats,
     summary: summarizeOutboxStats(stats),
+  };
+}
+
+async function operationsDashboard(request) {
+  const context = requestContext(request);
+  await ensureDemoSchema(context);
+  await ensureDemoOutboxTable(context);
+  const summaries = await Promise.all(
+    Object.values(domains).map(async (domain) => ({
+      domain: domain.key,
+      title: domain.title,
+      outbox: await domainOutboxStats(context, domain),
+    })),
+  );
+  return {
+    ok: true,
+    session: sessionInfo(context),
+    ...summarizeOperationalDashboard(summaries),
   };
 }
 

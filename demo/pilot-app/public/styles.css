@@ -70,11 +70,16 @@ main {
 }
 
 button,
-input {
+input,
+.button-link {
   font: inherit;
 }
 
-button {
+button,
+.button-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-height: 36px;
   border: 1px solid #1c5590;
   border-radius: 6px;
@@ -83,9 +88,11 @@ button {
   cursor: pointer;
   font-weight: 650;
   padding: 0 14px;
+  text-decoration: none;
 }
 
-button:hover {
+button:hover,
+.button-link:hover {
   background: #194f87;
 }
 

@@ -30,6 +30,15 @@ npm run demo:healthcheck -- https://your-demo-host.example.com --deep
 
 Deep mode also checks `/api/outbox/stats` and `/api/logistics/outbox/stats`.
 
+The hosted service also exposes a small operations dashboard:
+
+```bash
+https://your-demo-host.example.com/ops.html
+https://your-demo-host.example.com/api/ops
+```
+
+The dashboard summarizes commerce and logistics queue health for the active visitor/session, including pending, processing, processed, failed, dead-lettered, and attempt counts.
+
 For lightweight uptime watching, run:
 
 ```bash

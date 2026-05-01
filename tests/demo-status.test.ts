@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { emptyOutboxSummary, summarizeOutboxStats } from "../demo/pilot-app/status.mjs";
+import { emptyOutboxSummary, summarizeOperationalDashboard, summarizeOutboxStats } from "../demo/pilot-app/status.mjs";
 
 describe("demo queue status summaries", () => {
   it("normalizes empty outbox stats into a clear queue summary", () => {
@@ -76,5 +76,36 @@ describe("demo queue status summaries", () => {
         ],
       }).health,
     ).toBe("blocked");
+  });
+
+  it("summarizes operations health across demo domains", () => {
+    const dashboard = summarizeOperationalDashboard([
+      {
+        domain: "commerce",
+        title: "Commerce Console",
+        outbox: {
+          total: 2,
+          byStatus: [{ status: "pending", count: 2, attempts: 0 }],
+        },
+      },
+      {
+        domain: "logistics",
+        title: "Logistics Dispatch",
+        outbox: {
+          total: 1,
+          byStatus: [{ status: "failed", count: 1, attempts: 3 }],
+        },
+      },
+    ]);
+
+    expect(dashboard.health).toBe("needs retry");
+    expect(dashboard.totals).toMatchObject({
+      total: 3,
+      active: 3,
+      pending: 2,
+      failed: 1,
+      attempts: 3,
+    });
+    expect(dashboard.domains.map((domain) => domain.domain)).toEqual(["commerce", "logistics"]);
   });
 });

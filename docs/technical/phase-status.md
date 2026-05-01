@@ -103,6 +103,7 @@ Phase 6 coverage:
 - Production-like verification path documented for WSL PostgreSQL through `npm run test:postgres`.
 - Browser demo app deployed as a Node/PostgreSQL service path with public-safe admin setup controls, schema-isolated outbox state, domain-scoped queue health, and a worker-style outbox processing loop.
 - Public demo UI includes in-page tester guidance and clearer empty states so visitors understand reset, transaction, and outbox behavior without an admin token.
+- Hosted demo operations now include `/api/ops` and `/ops.html` for cross-domain queue and worker health summaries.
 - Hosted demo validation includes health, deep queue stats, and an opt-in smoke mode that exercises public reset, transactions, queue health transitions, and outbox processing for commerce and logistics.
 - Hosted demo monitoring includes a repeatable `demo:monitor` wrapper for continuous or cron-style health/deep/smoke checks.
 - CI runs the same smoke path against a PostgreSQL-backed demo server through `npm run verify:demo:smoke`.
