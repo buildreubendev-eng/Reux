@@ -101,6 +101,14 @@ Metric snapshots include:
 - Scenario IDs should be stable slugs because they are used as keys in comparison maps.
 - The `reuxSource` field is read-only display text for the Reux transparency panel.
 
+For a deterministic frontend/backend handoff artifact, run:
+
+```bash
+node dist/cli.js business-simulator-contract
+```
+
+That command emits the endpoint map, template response, sample run request, sample run response, sample compare request, sample compare response, and frontend mapping notes. It is useful when checking that a website mock, API client, or demo fixture still matches the Reux backend contract.
+
 ## Backend Integration Notes
 
 The first backend implementation can adapt the existing Reux simulation runner:
@@ -150,6 +158,8 @@ It provides:
 - `runBusinessSimulator(request)`
 - `compareBusinessSimulatorScenarios(request)`
 - `buildBusinessSimulatorSource(request)`
+- `createBusinessSimulatorContractFixture()`
+- `emitBusinessSimulatorContractFixture()`
 
 The adapter turns frontend contract requests into a temporary Reux simulation source, runs it through the Reux simulation runtime, and normalizes the result back into `BusinessSimulatorRunResponse`.
 

@@ -41,6 +41,11 @@ export {
   listBusinessSimulations,
   runBusinessSimulator,
 } from "./business-simulator-adapter.js";
+export {
+  businessSimulatorContractFixtureDate,
+  createBusinessSimulatorContractFixture,
+  emitBusinessSimulatorContractFixture,
+} from "./business-simulator-fixture.js";
 export type {
   BusinessSimulatorAssumptions,
   BusinessSimulatorCompareRequest,

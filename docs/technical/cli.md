@@ -18,6 +18,7 @@ Check a Reux source file:
 
 ```bash
 node dist/cli.js version
+node dist/cli.js business-simulator-contract
 node dist/cli.js diagnose examples/commerce.dl
 node dist/cli.js diagnose examples/commerce.dl --json
 node dist/cli.js check examples/commerce.dl
@@ -32,6 +33,8 @@ node dist/cli.js project-check
 ```
 
 `diagnose` and `project-diagnose` report compile errors without printing stack traces. JSON output is intended for editor tooling, CI summaries, and demo scripts that need structured diagnostics.
+
+`business-simulator-contract` emits a deterministic JSON fixture for the public Business Simulator API. It includes the endpoint map, operations template, sample run request/response, sample compare request/response, recommendation output, and Reux source transparency text so frontend clients can verify their mock data and adapters against the backend contract.
 
 Format a source file or the single configured project source:
 

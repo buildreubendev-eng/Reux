@@ -8,6 +8,8 @@ import {
 } from "../src/business-simulator-contract.js";
 import {
   compareBusinessSimulatorScenarios,
+  createBusinessSimulatorContractFixture,
+  emitBusinessSimulatorContractFixture,
   compileSource,
   emitSimulationRun,
   getBusinessSimulation,
@@ -165,5 +167,22 @@ describe("business simulator API contract", () => {
     expect(comparison.comparison.baselineScenarioId).toBe("baseline");
     expect(comparison.comparison.recommendedScenarioId).toBeTruthy();
     expect(comparison.generatedAt).toBe("2026-05-01T00:00:00.000Z");
+  });
+
+  it("emits a deterministic frontend handoff fixture", () => {
+    const fixture = createBusinessSimulatorContractFixture(new Date("2026-05-01T00:00:00.000Z"));
+
+    expect(fixture.contractVersion).toBe("2026-05-01");
+    expect(fixture.endpoints.runSimulation).toBe("POST /api/simulations/run");
+    expect(fixture.templateResponse.simulation.id).toBe("operations-decision");
+    expect(fixture.runRequest.options?.includeReuxSource).toBe(true);
+    expect(fixture.runResponse.reuxSource).toContain("simulate operations_decision");
+    expect(fixture.runResponse.comparison.recommendedScenarioId).toBeTruthy();
+    expect(fixture.compareResponse.comparison.metricDeltasByScenario["process-improvement"]).toBeTruthy();
+    expect(fixture.frontendMapping.ratesAreDecimals).toBe(true);
+
+    const emitted = JSON.parse(emitBusinessSimulatorContractFixture(new Date("2026-05-01T00:00:00.000Z")));
+    expect(emitted.generatedAt).toBe("2026-05-01T00:00:00.000Z");
+    expect(emitted.runResponse.generatedAt).toBe("2026-05-01T00:00:00.000Z");
   });
 });

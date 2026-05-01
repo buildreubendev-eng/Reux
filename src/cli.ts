@@ -7,6 +7,7 @@ import {
   diagnoseSource,
   emitApiClient,
   emitApiServer,
+  emitBusinessSimulatorContractFixture,
   emitInsertStatement,
   emitDiffMigration,
   formatReuxSource,
@@ -59,6 +60,8 @@ try {
     process.exitCode = 1;
   } else if (command === "version" || command === "--version" || command === "-v") {
     console.log(packageVersion());
+  } else if (command === "business-simulator-contract") {
+    process.stdout.write(emitBusinessSimulatorContractFixture());
   } else if (command === "project-diagnose") {
     const config = loadConfig();
     const files = discoverSourceFiles(config);
@@ -573,7 +576,7 @@ try {
 }
 
 function usage(): void {
-  console.error("usage: dl <version|format|diagnose|check|project-format|project-diagnose|project-check|project-summary|project-doctor|project-sql|project-manifest|project-manifest-write|project-transition-rules|project-api-ts|project-api-server-ts|project-worker-ts|project-simulation-types-ts|project-simulation-packs|project-migrate-plan|project-migrate-check|project-migrate-diff-create|project-query-ir|project-query-sql|project-query-run|project-explain|project-tx-ir|project-tx-sql|project-tx-run|project-simulation-ir|project-simulation-run|project-data-insert|project-data-insert-sql|project-seed-run|project-seed-dry-run|project-seed-check|project-seed-delete|project-seed-reset|sql|manifest|transition-rules|api-ts|api-server-ts|worker-ts|simulation-types-ts|simulation-packs|manifest-write|query-ir|query-sql|query-run|data-insert|data-insert-sql|seed-run|seed-dry-run|seed-check|seed-delete|seed-reset|tx-ir|tx-sql|tx-run|simulation-ir|simulation-run|explain|migrate-create|migrate-plan|migrate-check|migrate-diff-create|migrate-status|migrate-apply|outbox-list|outbox-stats|outbox-claim|outbox-mark-processed|outbox-mark-failed|outbox-requeue|outbox-requeue-stale> [args]");
+  console.error("usage: dl <version|business-simulator-contract|format|diagnose|check|project-format|project-diagnose|project-check|project-summary|project-doctor|project-sql|project-manifest|project-manifest-write|project-transition-rules|project-api-ts|project-api-server-ts|project-worker-ts|project-simulation-types-ts|project-simulation-packs|project-migrate-plan|project-migrate-check|project-migrate-diff-create|project-query-ir|project-query-sql|project-query-run|project-explain|project-tx-ir|project-tx-sql|project-tx-run|project-simulation-ir|project-simulation-run|project-data-insert|project-data-insert-sql|project-seed-run|project-seed-dry-run|project-seed-check|project-seed-delete|project-seed-reset|sql|manifest|transition-rules|api-ts|api-server-ts|worker-ts|simulation-types-ts|simulation-packs|manifest-write|query-ir|query-sql|query-run|data-insert|data-insert-sql|seed-run|seed-dry-run|seed-check|seed-delete|seed-reset|tx-ir|tx-sql|tx-run|simulation-ir|simulation-run|explain|migrate-create|migrate-plan|migrate-check|migrate-diff-create|migrate-status|migrate-apply|outbox-list|outbox-stats|outbox-claim|outbox-mark-processed|outbox-mark-failed|outbox-requeue|outbox-requeue-stale> [args]");
 }
 
 function packageVersion(): string {
