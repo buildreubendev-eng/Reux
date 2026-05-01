@@ -16,6 +16,7 @@ Implemented today:
 - CLI workflows for checking, diagnosis, migration planning, migration safety checks, migration review/rollback guidance, SQL inspection, API generation, worker generation, and seed validation.
 - A hosted commerce and logistics pilot demo with isolated public sessions and public reset flow.
 - Logistics and clinic pilot sources showing the same language subset applied outside commerce.
+- An executable example catalog check that keeps workflow pilots, seed fixtures, docs, generated scaffolds, and simulation examples aligned.
 
 ## Demo-Ready Milestones
 
@@ -32,6 +33,7 @@ These are the milestones that make the prototype usable by public testers and ea
 | Logistics executable walkthrough | Complete | `npm run demo:logistics` shows diagnostics, SQL, generated scaffolds, and seed validation without a database. |
 | Clinic pilot source | Complete | `examples/clinic_reux.dl` validates that Reux can model appointment and care-task workflows. |
 | Clinic executable walkthrough | Complete | `npm run demo:clinic` shows diagnostics, SQL, generated scaffolds, and seed validation without a database. |
+| Example catalog consistency | Complete | `npm run examples:check` verifies the documented workflow and simulation examples as one coherent teaching set. |
 | Production monitoring | Started | Hosted health exists, `npm run demo:healthcheck -- <url>` validates the public service, `npm run demo:healthcheck -- <url> --deep` validates queue stats endpoints, `npm run demo:healthcheck -- <url> --smoke` validates public reset/transaction/outbox behavior in an isolated session, `npm run demo:monitor -- <url> --deep` provides repeatable uptime watching with optional JSON webhook alerts, `npm run verify:demo:smoke` boots the compiled demo server against PostgreSQL in CI, the public dashboard shows domain-scoped queue health, the public UI now includes tester guidance and clearer empty states, `outbox-stats` and demo API queue endpoints summarize queue health, and worker logs expose retry/dead-letter/stale-requeue counters. DB maintenance is still manual. |
 
 ## Full-Completion Priorities

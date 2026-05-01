@@ -35,10 +35,13 @@ If this command passes, the local compiler, formatter dependencies, example sour
 - `examples/clinic_reux.dl`: clinic workflow with patients, clinicians, visits, care tasks, transitions, and appointment events.
 - `examples/simulations/*.reux`: early simulation language examples for PLOS and business-simulator research.
 
+See [Example catalog](examples.md) for the full list and the consistency rules each example is expected to follow.
+
 ## Common Local Commands
 
 ```powershell
 npm run build
+npm run examples:check
 node dist/cli.js check examples/clinic_reux.dl
 node dist/cli.js query-sql examples/logistics_reux.dl driverManifest
 node dist/cli.js tx-sql examples/pilot_reux.dl capturePayment

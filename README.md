@@ -153,6 +153,7 @@ Technical documentation:
 - [Ecosystem architecture](docs/technical/ecosystem-architecture.md)
 - [Compiler artifacts](docs/technical/compiler-artifacts.md)
 - [CLI reference](docs/technical/cli.md)
+- [Example catalog](docs/technical/examples.md)
 - [Migrations](docs/technical/migrations.md)
 - [Runtime](docs/technical/runtime.md)
 - [Release and packaging](docs/technical/release.md)

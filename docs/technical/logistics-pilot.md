@@ -25,6 +25,7 @@ Useful commands:
 ```powershell
 npm run demo:logistics
 node dist/cli.js check examples/logistics_reux.dl
+node dist/cli.js transition-rules examples/logistics_reux.dl Shipment.status
 node dist/cli.js query-sql examples/logistics_reux.dl activeShipments
 node dist/cli.js query-sql examples/logistics_reux.dl driverManifest
 node dist/cli.js query-sql examples/logistics_reux.dl shipmentStatusSummary

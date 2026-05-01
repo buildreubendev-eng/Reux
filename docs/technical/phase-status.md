@@ -115,5 +115,6 @@ Phase 6 coverage:
 - Isolated public demo sessions map each visitor to a session schema and expose a public `Reset My Session` flow, avoiding shared-state collisions in the hosted demo.
 - Logistics pilot coverage shows the same Reux subset applied to dispatch workflows rather than commerce.
 - Clinic pilot coverage shows the same Reux subset applied to appointment and care-task workflows rather than commerce or logistics.
+- Example catalog coverage now runs through `npm run examples:check`, keeping workflow pilots, seeds, docs, generated scaffolds, and simulation examples aligned.
 
 The remaining gaps are beyond Phase 6 rather than blockers for it: richer query composition, deeper aggregation semantics, broader fixture/seed workflows, more production-grade worker supervision/dead-letter behavior, deeper simulation semantics, and eventually switching `dl.json` from commerce fixtures to the pilot source when the project is ready to treat the pilot as the active application. See [Roadmap](roadmap.md) for the current demo-readiness and full-completion priorities.

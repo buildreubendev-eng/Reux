@@ -20,6 +20,14 @@ Run the no-database pilot demo:
 npm run demo:pilot
 ```
 
+Check every documented workflow and simulation example:
+
+```bash
+npm run examples:check
+```
+
+This verifies example source files, docs, seeds, query SQL emission, transaction SQL emission, generated workflow scaffolds, and simulation runs. See [Example catalog](examples.md) for the rules.
+
 ## Commands
 
 Check a Reux source file:
