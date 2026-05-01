@@ -448,4 +448,20 @@ await runOutboxWorker(
 
 `runOutboxWorker` repeatedly calls `processOutboxEvents`, supports abort signals for shutdown, and supports `maxIterations` for tests or demos. Set `maxAttempts` and `retryDelaySeconds` to protect the worker from poison messages while preserving delayed retry behavior. Set `requeueStaleAfterSeconds` to have the worker move abandoned `processing` events back to `pending` before each processing iteration; `requeueStaleLimit` controls how many stale claims are recovered per iteration.
 
+The worker returns cumulative observability counters:
+
+```json
+{
+  "iterations": 1,
+  "processed": 1,
+  "failed": 0,
+  "retried": 0,
+  "deadLettered": 0,
+  "staleRequeued": 0,
+  "stopped": "maxIterations"
+}
+```
+
+`onIteration` receives the per-iteration `processed`, `failed`, `retried`, `deadLettered`, and `staleRequeued` collections plus the current `iteration` number. The hosted demo worker logs those counters and honors `REUX_WORKER_MAX_ATTEMPTS` and `REUX_WORKER_RETRY_DELAY_SECONDS`.
+
 These commands are intentionally small. They provide enough operational visibility for the prototype while leaving hosted worker deployment and handler discovery to the application layer.

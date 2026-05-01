@@ -1249,6 +1249,7 @@ COMMIT;`,
       failed: 0,
       retried: 0,
       deadLettered: 0,
+      staleRequeued: 0,
       stopped: "maxIterations",
     });
   });
@@ -1285,9 +1286,70 @@ COMMIT;`,
       failed: 0,
       retried: 0,
       deadLettered: 0,
+      staleRequeued: 1,
       stopped: "maxIterations",
     });
     expect(db.queryCalls.some((call) => call.sql.includes("FROM stale") && call.params?.[0] === 300)).toBe(true);
+  });
+
+  it("reports worker iteration observability totals", async () => {
+    const db = new FakeDb();
+    db.outbox.push({
+      id: "outbox-1",
+      event_type: "RewardGranted",
+      payload: { user: "user-id" },
+      status: "pending",
+      attempts: 0,
+      last_error: null,
+      created_at: "2026-04-25T00:00:00.000Z",
+      processed_at: null,
+    });
+    const iterations: unknown[] = [];
+
+    const result = await runOutboxWorker(
+      db,
+      {
+        RewardGranted: () => {
+          throw new Error("smtp unavailable");
+        },
+      },
+      {
+        intervalMs: 0,
+        maxAttempts: 3,
+        retryDelaySeconds: 60,
+        maxIterations: 1,
+        onIteration(iteration) {
+          iterations.push({
+            iteration: iteration.iteration,
+            processed: iteration.processed.length,
+            failed: iteration.failed.length,
+            retried: iteration.retried.length,
+            deadLettered: iteration.deadLettered.length,
+            staleRequeued: iteration.staleRequeued.length,
+          });
+        },
+      },
+    );
+
+    expect(iterations).toEqual([
+      {
+        iteration: 1,
+        processed: 0,
+        failed: 1,
+        retried: 1,
+        deadLettered: 0,
+        staleRequeued: 0,
+      },
+    ]);
+    expect(result).toEqual({
+      iterations: 1,
+      processed: 0,
+      failed: 1,
+      retried: 1,
+      deadLettered: 0,
+      staleRequeued: 0,
+      stopped: "maxIterations",
+    });
   });
 
   it("marks outbox events failed when processing has no handler", async () => {

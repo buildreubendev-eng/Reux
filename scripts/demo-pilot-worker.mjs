@@ -19,6 +19,8 @@ const controller = new AbortController();
 const intervalMs = envInt("REUX_WORKER_INTERVAL_MS", 1000);
 const limit = envInt("REUX_WORKER_LIMIT", 10);
 const requeueStaleAfterSeconds = envInt("REUX_WORKER_REQUEUE_STALE_SECONDS", 300);
+const maxAttempts = envInt("REUX_WORKER_MAX_ATTEMPTS", 5);
+const retryDelaySeconds = envInt("REUX_WORKER_RETRY_DELAY_SECONDS", 30);
 const maxIterations = optionalEnvInt("REUX_WORKER_MAX_ITERATIONS");
 
 const outboxHandlers = {
@@ -44,16 +46,28 @@ try {
   const result = await runOutboxWorker(db, outboxHandlers, {
     intervalMs,
     limit,
+    maxAttempts,
+    retryDelaySeconds,
     maxIterations,
     requeueStaleAfterSeconds,
     signal: controller.signal,
     onIteration(iteration) {
-      if (iteration.processed.length > 0 || iteration.failed.length > 0) {
-        console.log(`outbox processed=${iteration.processed.length} failed=${iteration.failed.length}`);
+      if (
+        iteration.processed.length > 0 ||
+        iteration.failed.length > 0 ||
+        iteration.retried.length > 0 ||
+        iteration.deadLettered.length > 0 ||
+        iteration.staleRequeued.length > 0
+      ) {
+        console.log(
+          `outbox iteration=${iteration.iteration} processed=${iteration.processed.length} failed=${iteration.failed.length} retried=${iteration.retried.length} dead=${iteration.deadLettered.length} staleRequeued=${iteration.staleRequeued.length}`,
+        );
       }
     },
   });
-  console.log(`worker stopped: ${result.stopped} iterations=${result.iterations} processed=${result.processed} failed=${result.failed}`);
+  console.log(
+    `worker stopped: ${result.stopped} iterations=${result.iterations} processed=${result.processed} failed=${result.failed} retried=${result.retried} dead=${result.deadLettered} staleRequeued=${result.staleRequeued}`,
+  );
 } finally {
   await db.end?.();
 }

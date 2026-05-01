@@ -71,7 +71,7 @@ export interface OutboxWorkerOptions {
   requeueStaleLimit?: number;
   maxIterations?: number;
   signal?: AbortSignal;
-  onIteration?(result: OutboxProcessResult): void | Promise<void>;
+  onIteration?(result: OutboxWorkerIterationResult): void | Promise<void>;
 }
 
 export interface OutboxWorkerResult {
@@ -80,7 +80,13 @@ export interface OutboxWorkerResult {
   failed: number;
   retried: number;
   deadLettered: number;
+  staleRequeued: number;
   stopped: "maxIterations" | "aborted";
+}
+
+export interface OutboxWorkerIterationResult extends OutboxProcessResult {
+  iteration: number;
+  staleRequeued: OutboxEvent[];
 }
 
 export interface OutboxFailure {
@@ -389,10 +395,12 @@ export async function runOutboxWorker(
   let failed = 0;
   let retried = 0;
   let deadLettered = 0;
+  let staleRequeued = 0;
 
   while (!options.signal?.aborted) {
+    let stale: OutboxEvent[] = [];
     if (options.requeueStaleAfterSeconds !== undefined) {
-      await requeueStaleOutboxEvents(db, options.requeueStaleAfterSeconds, options.requeueStaleLimit ?? limit);
+      stale = await requeueStaleOutboxEvents(db, options.requeueStaleAfterSeconds, options.requeueStaleLimit ?? limit);
     }
     const result = await processOutboxEvents(db, handlers, limit, failurePolicy);
     iterations += 1;
@@ -400,16 +408,17 @@ export async function runOutboxWorker(
     failed += result.failed.length;
     retried += result.retried.length;
     deadLettered += result.deadLettered.length;
-    await options.onIteration?.(result);
+    staleRequeued += stale.length;
+    await options.onIteration?.({ ...result, iteration: iterations, staleRequeued: stale });
 
     if (options.maxIterations !== undefined && iterations >= options.maxIterations) {
-      return { iterations, processed, failed, retried, deadLettered, stopped: "maxIterations" };
+      return { iterations, processed, failed, retried, deadLettered, staleRequeued, stopped: "maxIterations" };
     }
     if (options.signal?.aborted) break;
     await delay(intervalMs, options.signal);
   }
 
-  return { iterations, processed, failed, retried, deadLettered, stopped: "aborted" };
+  return { iterations, processed, failed, retried, deadLettered, staleRequeued, stopped: "aborted" };
 }
 
 function trackOutboxFailure(
