@@ -135,5 +135,6 @@ Technical documentation:
 - [Pilot demo deployment](docs/technical/demo-deployment.md)
 - [Logistics pilot](docs/technical/logistics-pilot.md)
 - [Pilot demo walkthrough](docs/tutorial/demo-walkthrough.md)
+- [Public Reux roadmap](docs/public/reux-roadmap.md)
 
 GitHub Actions runs `npm run verify` and PostgreSQL-backed `npm run verify:postgres` on pushes and pull requests to `main`.
