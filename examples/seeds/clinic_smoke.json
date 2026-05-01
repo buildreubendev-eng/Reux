@@ -1,0 +1,55 @@
+{
+  "mode": "upsert",
+  "reset": "delete",
+  "records": [
+    {
+      "entity": "Patient",
+      "as": "riley",
+      "by": ["id"],
+      "data": {
+        "id": "00000000-0000-4000-8000-300000000001",
+        "email": "riley.clinic@example.com",
+        "displayName": "Riley Clinic",
+        "balance": "35.00",
+        "riskScore": "2.50"
+      }
+    },
+    {
+      "entity": "Clinician",
+      "as": "drAvery",
+      "by": ["id"],
+      "data": {
+        "id": "00000000-0000-4000-8000-300000000002",
+        "email": "avery.clinician@example.com",
+        "displayName": "Dr. Avery",
+        "specialty": "Primary Care"
+      }
+    },
+    {
+      "entity": "Visit",
+      "as": "rileyVisit",
+      "by": ["id"],
+      "data": {
+        "id": "00000000-0000-4000-8000-300000000003",
+        "patient": "$riley",
+        "clinician": "$drAvery",
+        "copay": "35.00",
+        "status": "Scheduled",
+        "priority": "Routine"
+      }
+    },
+    {
+      "entity": "CareTask",
+      "as": "followupTask",
+      "by": ["id"],
+      "data": {
+        "id": "00000000-0000-4000-8000-300000000004",
+        "visit": "$rileyVisit",
+        "owner": "$drAvery",
+        "description": "Review lab history before appointment",
+        "effortHours": "0.50",
+        "status": "Open"
+      }
+    }
+  ]
+}

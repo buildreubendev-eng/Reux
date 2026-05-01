@@ -208,6 +208,53 @@ transaction function debit(accountRef: Account, amount: Decimal) writes Account 
     expect(creditSql).toContain("INSERT INTO _dl_outbox (event_type, payload) VALUES ('DriverCredited'");
   });
 
+  it("compiles the clinic pilot source", () => {
+    const result = compileSource(readFileSync("examples/clinic_reux.dl", "utf8"));
+
+    expect(result.schema.entities.map((entity) => entity.name)).toEqual(["Patient", "Clinician", "Visit", "CareTask"]);
+    expect(result.schema.enums.map((enumDecl) => enumDecl.name)).toEqual(["VisitStatus", "VisitPriority", "TaskStatus"]);
+    expect(result.schema.transitions).toHaveLength(9);
+    expect(result.program.declarations.some((declaration) => declaration.kind === "transaction" && declaration.name === "checkInVisit")).toBe(true);
+    expect(result.program.declarations.some((declaration) => declaration.kind === "transaction" && declaration.name === "completeVisit")).toBe(true);
+    expect(result.program.declarations.some((declaration) => declaration.kind === "transaction" && declaration.name === "assignCareTask")).toBe(true);
+    expect(result.program.declarations.some((declaration) => declaration.kind === "transaction" && declaration.name === "closeCareTask")).toBe(true);
+  });
+
+  it("lowers clinic pilot joins and aggregations to PostgreSQL", () => {
+    const source = readFileSync("examples/clinic_reux.dl", "utf8");
+    const visitsSql = emitQuerySql(source, "upcomingVisits");
+    const taskLoadSql = emitQuerySql(source, "clinicianTaskLoad");
+    const statusSummarySql = emitQuerySql(source, "visitStatusSummary");
+
+    expect(visitsSql).toContain('JOIN patients AS "patient" ON "visit".patient_id = "patient".id');
+    expect(visitsSql).toContain('JOIN clinicians AS "clinician" ON "visit".clinician_id = "clinician".id');
+    expect(visitsSql).toContain('ORDER BY "visit".scheduled_at ASC');
+    expect(taskLoadSql).toContain('SELECT "clinician".email AS clinicianEmail, count(*) AS taskCount, sum("task".effort_hours) AS totalEffort');
+    expect(taskLoadSql).toContain('GROUP BY "clinician".email');
+    expect(statusSummarySql).toContain('SELECT "visit".status AS status, count(*) AS visitCount, sum("visit".copay) AS totalCopay');
+    expect(statusSummarySql).toContain('GROUP BY "visit".status');
+  });
+
+  it("lowers clinic pilot transitions, inserts, and outbox events to PostgreSQL", () => {
+    const source = readFileSync("examples/clinic_reux.dl", "utf8");
+    const checkInSql = emitTransactionSql(source, "checkInVisit");
+    const completeSql = emitTransactionSql(source, "completeVisit");
+    const assignSql = emitTransactionSql(source, "assignCareTask");
+    const closeSql = emitTransactionSql(source, "closeCareTask");
+
+    expect(checkInSql).toContain("-- transition guard: Visit.status -> CheckedIn");
+    expect(checkInSql).toContain("UPDATE visits SET status = 'CheckedIn' WHERE id = $1 AND status IN ('Scheduled');");
+    expect(checkInSql).toContain("INSERT INTO _dl_outbox (event_type, payload) VALUES ('VisitCheckedIn'");
+    expect(completeSql).toContain("-- transition guard: Visit.status -> Completed");
+    expect(completeSql).toContain("UPDATE visits SET status = 'Completed' WHERE id = $1 AND status IN ('CheckedIn');");
+    expect(completeSql).toContain("INSERT INTO _dl_outbox (event_type, payload) VALUES ('VisitCompleted'");
+    expect(assignSql).toContain("INSERT INTO care_tasks (visit_id, owner_id, description, effort_hours, status) VALUES ($1, $2, $3, $4, 'Open') RETURNING *;");
+    expect(assignSql).toContain("INSERT INTO _dl_outbox (event_type, payload) VALUES ('CareTaskCreated'");
+    expect(closeSql).toContain("-- transition guard: CareTask.status -> Done");
+    expect(closeSql).toContain("UPDATE care_tasks SET status = 'Done' WHERE id = $1 AND status IN ('Open', 'Blocked');");
+    expect(closeSql).toContain("INSERT INTO _dl_outbox (event_type, payload) VALUES ('CareTaskClosed'");
+  });
+
   it("lowers broader grouped aggregate functions to PostgreSQL", () => {
     const sql = emitQuerySql(
       `module commerce

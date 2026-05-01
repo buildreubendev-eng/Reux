@@ -13,6 +13,7 @@ Current status:
 
 - Public browser demo for commerce workflows.
 - Public browser demo for logistics workflows.
+- Clinic pilot source and walkthrough for appointment and care-task workflows.
 - In-page public testing guide and clearer empty states for first-time visitors.
 - Hosted Railway backend connected to PostgreSQL.
 - Reuben website embed/link for public testing.
@@ -79,7 +80,8 @@ Planned work:
 - Build PLOS as a personal simulation product using normal web technology first.
 - Build the real-time business simulation engine as an enterprise product prototype.
 - Use Reux underneath both products as the rule, workflow, and simulation layer as it matures.
-- Add more non-commerce pilots to prove the language outside a single domain.
+- Use clinic, logistics, and future product pilots to keep language features grounded in real workflows.
+- Add deeper product pilots for PLOS and enterprise operations once the core language/runtime path is stable.
 
 ### 5. Developer Experience
 

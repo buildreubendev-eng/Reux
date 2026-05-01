@@ -1,0 +1,134 @@
+module clinic
+
+entity Patient {
+  id: Id<Patient> primary generated
+  email: String unique
+  displayName: String
+  balance: Decimal<12,2> default 0
+  riskScore: Decimal<6,2> default 0 check riskScore >= 0
+
+  index byEmail(email asc)
+}
+
+entity Clinician {
+  id: Id<Clinician> primary generated
+  email: String unique
+  displayName: String
+  specialty: String
+
+  index bySpecialty(specialty asc)
+}
+
+entity Visit {
+  id: Id<Visit> primary generated
+  patient: Patient required
+  clinician: Clinician required
+  scheduledAt: Instant default now()
+  copay: Decimal<12,2> default 0 check copay >= 0
+  status: VisitStatus default Scheduled
+  priority: VisitPriority default Routine
+
+  index byPatient(patient asc)
+  index byClinician(clinician asc)
+  index byStatus(status asc)
+}
+
+entity CareTask {
+  id: Id<CareTask> primary generated
+  visit: Visit required
+  owner: Clinician required
+  description: String
+  effortHours: Decimal<6,2> default 0 check effortHours >= 0
+  status: TaskStatus default Open
+
+  index byVisit(visit asc)
+  index byOwner(owner asc)
+  index byStatus(status asc)
+}
+
+enum VisitStatus {
+  Scheduled
+  CheckedIn
+  Completed
+  Cancelled
+  NoShow
+}
+
+enum VisitPriority {
+  Routine
+  Urgent
+}
+
+enum TaskStatus {
+  Open
+  Done
+  Blocked
+}
+
+transition Visit.status {
+  Scheduled -> CheckedIn
+  Scheduled -> Cancelled
+  Scheduled -> NoShow
+  CheckedIn -> Completed
+  CheckedIn -> Cancelled
+}
+
+transition CareTask.status {
+  Open -> Done
+  Open -> Blocked
+  Blocked -> Open
+  Blocked -> Done
+}
+
+query upcomingVisits(minCopay: Decimal<12,2>): Query<{ patientEmail: String, clinicianEmail: String, status: VisitStatus, priority: VisitPriority, copay: Decimal<12,2> }> =
+  from visit in Visit
+  join patient in Patient on visit.patient == patient
+  join clinician in Clinician on visit.clinician == clinician
+  where visit.copay > minCopay
+  order by visit.scheduledAt asc
+  select { patientEmail: patient.email, clinicianEmail: clinician.email, status: visit.status, priority: visit.priority, copay: visit.copay }
+
+query clinicianTaskLoad(minEffort: Decimal<6,2>): Query<{ clinicianEmail: String, taskCount: Int64, totalEffort: Decimal<6,2> }> =
+  from task in CareTask
+  join clinician in Clinician on task.owner == clinician
+  where task.effortHours > minEffort
+  group by clinician.email
+  order by sum(task.effortHours) desc
+  select { clinicianEmail: clinician.email, taskCount: count(), totalEffort: sum(task.effortHours) }
+
+query visitStatusSummary(minCopay: Decimal<12,2>): Query<{ status: VisitStatus, visitCount: Int64, totalCopay: Decimal<12,2> }> =
+  from visit in Visit
+  where visit.copay > minCopay
+  group by visit.status
+  order by count() desc
+  select { status: visit.status, visitCount: count(), totalCopay: sum(visit.copay) }
+
+transaction function checkInVisit(visitRef: Visit) writes Visit retry 3 {
+  let visit = load visitRef for update
+  visit.status = CheckedIn
+  save visit
+  enqueue VisitCheckedIn { visit: visitRef }
+  after commit notifyCareTeam(visitRef)
+}
+
+transaction function completeVisit(visitRef: Visit) writes Visit retry 3 {
+  let visit = load visitRef for update
+  visit.status = Completed
+  save visit
+  enqueue VisitCompleted { visit: visitRef }
+  after commit notifyPatient(visitRef)
+}
+
+transaction function assignCareTask(visitRef: Visit, clinicianRef: Clinician, description: String, effort: Decimal<6,2>) writes CareTask retry 3 {
+  let task = insert CareTask { visit: visitRef, owner: clinicianRef, description: description, effortHours: effort, status: Open }
+  enqueue CareTaskCreated { task: task.id, visit: visitRef, owner: clinicianRef, effortHours: effort }
+  after commit notifyTaskOwner(clinicianRef)
+}
+
+transaction function closeCareTask(taskRef: CareTask) writes CareTask retry 3 {
+  let task = load taskRef for update
+  task.status = Done
+  save task
+  enqueue CareTaskClosed { task: taskRef }
+  after commit notifyTaskClosed(taskRef)
+}

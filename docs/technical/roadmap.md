@@ -15,7 +15,7 @@ Implemented today:
 - PostgreSQL runtime helpers for migrations, compiled queries, transaction execution, seed resets, and outbox processing with delayed retries, dead-lettering, stale-claim recovery, status summaries, and worker observability counters.
 - CLI workflows for checking, diagnosis, migration planning, migration safety checks, migration review/rollback guidance, SQL inspection, API generation, worker generation, and seed validation.
 - A hosted commerce and logistics pilot demo with isolated public sessions and public reset flow.
-- A logistics pilot source showing the same language subset applied outside commerce.
+- Logistics and clinic pilot sources showing the same language subset applied outside commerce.
 
 ## Demo-Ready Milestones
 
@@ -30,6 +30,8 @@ These are the milestones that make the prototype usable by public testers and ea
 | Session isolation tests | Complete | Fast unit coverage now protects browser session ID normalization and schema derivation. |
 | Logistics pilot source | Complete | `examples/logistics_reux.dl` validates that Reux can model dispatch workflows. |
 | Logistics executable walkthrough | Complete | `npm run demo:logistics` shows diagnostics, SQL, generated scaffolds, and seed validation without a database. |
+| Clinic pilot source | Complete | `examples/clinic_reux.dl` validates that Reux can model appointment and care-task workflows. |
+| Clinic executable walkthrough | Complete | `npm run demo:clinic` shows diagnostics, SQL, generated scaffolds, and seed validation without a database. |
 | Production monitoring | Started | Hosted health exists, `npm run demo:healthcheck -- <url>` validates the public service, `npm run demo:healthcheck -- <url> --deep` validates queue stats endpoints, `npm run demo:healthcheck -- <url> --smoke` validates public reset/transaction/outbox behavior in an isolated session, `npm run demo:monitor -- <url> --deep` provides repeatable uptime watching with optional JSON webhook alerts, `npm run verify:demo:smoke` boots the compiled demo server against PostgreSQL in CI, the public dashboard shows domain-scoped queue health, the public UI now includes tester guidance and clearer empty states, `outbox-stats` and demo API queue endpoints summarize queue health, and worker logs expose retry/dead-letter/stale-requeue counters. DB maintenance is still manual. |
 
 ## Full-Completion Priorities
@@ -42,7 +44,7 @@ The next big engineering work should move in this order.
 4. Migration authoring workflow: complete for the prototype with generated review notes, rollback notes, synthesized rollback SQL for safe reversible operations, deployment checklists, environment-specific safety gates, and pre-create diff safety checks; future work is multi-schema deployment stories.
 5. Project packaging: complete for the prototype with typed package entrypoints, packaged docs/examples/editor assets, tarball guidance, versioning notes, release preflight checks, package dry-run command, public release plan, and cross-repo upgrade guidance.
 6. Editor tooling: complete for the prototype with CLI formatting, a local VS Code grammar, CLI-backed line-aware diagnostics, heuristic symbol/field diagnostic targeting, CLI-backed document formatting, lightweight completions, query-alias field completions, insert/enqueue object-field completions, hover text, and current-file go-to-definition for `.dl` and `.reux` files; future work is compiler-backed semantic completion, cross-file navigation, rename, and a proper language-server process.
-7. Additional pilots: add one more non-commerce domain to keep the language honest after commerce and logistics.
+7. Additional pilots: complete for this prototype with logistics and clinic domains validating Reux beyond commerce; future work is deeper product-specific pilots for PLOS and enterprise operations.
 8. Query expressiveness follow-through: broaden expression typing beyond simple projections, add reusable join fragments, support multi-column cursors, and deepen aggregate semantics.
 
 ## Deliberately Out Of Scope For Now

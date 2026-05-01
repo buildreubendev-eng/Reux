@@ -34,6 +34,9 @@ npm run verify:cli
 npm run verify:package
 npm run demo:pilot
 npm run demo:logistics
+npm run demo:clinic
+node dist/cli.js check examples/clinic_reux.dl
+node dist/cli.js seed-check examples/clinic_reux.dl examples/seeds/clinic_smoke.json
 node dist/cli.js simulation-ir examples/simulations/personal_finance.reux
 node dist/cli.js simulation-run examples/simulations/workforce_change.reux
 node dist/cli.js simulation-run examples/simulations/habit_consistency.reux
@@ -140,6 +143,7 @@ Technical documentation:
 - [Pilot application](docs/technical/pilot-application.md)
 - [Pilot demo deployment](docs/technical/demo-deployment.md)
 - [Logistics pilot](docs/technical/logistics-pilot.md)
+- [Clinic pilot](docs/technical/clinic-pilot.md)
 - [Pilot demo walkthrough](docs/tutorial/demo-walkthrough.md)
 - [Public demo testing guide](docs/public/reux-demo-testing-guide.md)
 - [Public Reux roadmap](docs/public/reux-roadmap.md)

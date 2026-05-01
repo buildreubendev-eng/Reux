@@ -94,6 +94,8 @@ The current commerce examples remain compiler/runtime fixtures. The first pilot 
 
 A second non-commerce pilot source now lives at `examples/logistics_reux.dl`. It models driver dispatch, vehicles, shipments, shipment lifecycle transitions, driver payout credits, and logistics outbox events.
 
+A third non-commerce pilot source now lives at `examples/clinic_reux.dl`. It models clinic appointments, clinicians, patients, care tasks, visit lifecycle transitions, task lifecycle transitions, and clinic outbox events.
+
 Phase 6 coverage:
 
 - Accounts/orders/payments domain modeled in Reux source.
@@ -112,5 +114,6 @@ Phase 6 coverage:
 - CI runs the same smoke path against a PostgreSQL-backed demo server through `npm run verify:demo:smoke`.
 - Isolated public demo sessions map each visitor to a session schema and expose a public `Reset My Session` flow, avoiding shared-state collisions in the hosted demo.
 - Logistics pilot coverage shows the same Reux subset applied to dispatch workflows rather than commerce.
+- Clinic pilot coverage shows the same Reux subset applied to appointment and care-task workflows rather than commerce or logistics.
 
 The remaining gaps are beyond Phase 6 rather than blockers for it: richer query composition, deeper aggregation semantics, broader fixture/seed workflows, more production-grade worker supervision/dead-letter behavior, deeper simulation semantics, and eventually switching `dl.json` from commerce fixtures to the pilot source when the project is ready to treat the pilot as the active application. See [Roadmap](roadmap.md) for the current demo-readiness and full-completion priorities.
