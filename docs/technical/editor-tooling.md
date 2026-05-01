@@ -7,6 +7,7 @@ Reux now has a first editor-support slice:
 - Local VS Code syntax package under `editors/vscode`.
 - File-level VS Code diagnostics backed by the Reux CLI.
 - VS Code document formatting backed by the Reux CLI.
+- Lightweight VS Code completions, hover text, and current-file go-to-definition.
 
 ## Formatting
 
@@ -34,7 +35,7 @@ The local VS Code language package lives at:
 editors/vscode
 ```
 
-It provides `.reux` and `.dl` file association, syntax highlighting, bracket/quote pairing, compiler diagnostics, and document formatting. Diagnostics run:
+It provides `.reux` and `.dl` file association, syntax highlighting, bracket/quote pairing, compiler diagnostics, document formatting, lightweight completions, hover text, and current-file go-to-definition. Diagnostics run:
 
 ```bash
 reux diagnose <file> --json
@@ -57,4 +58,4 @@ node dist/cli.js check examples/pilot_reux.dl
 
 ## Next Editor Work
 
-The next editor milestone is a proper language-server process with document formatting, go-to-definition for declarations, completion, and hover text for fields and transaction parameters.
+The next editor milestone is a proper language-server process with compiler-backed semantic completion, cross-file navigation, rename, and precise diagnostic ranges.

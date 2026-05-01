@@ -9,8 +9,11 @@ It currently provides:
 - Basic bracket and quote pairing.
 - File-level compiler diagnostics by running `reux diagnose <file> --json`.
 - Document formatting by running `reux format <file>`.
+- Lightweight completions for Reux keywords, current-file declarations, and loaded entity fields.
+- Hover text for common Reux keywords and current-file declarations.
+- Go-to-definition for declarations in the current file.
 
-It does not yet provide completion, rename, hover, or go-to-definition.
+It does not yet provide rename, cross-file navigation, or compiler-backed semantic completion.
 
 ```bash
 npm run build

@@ -8,6 +8,7 @@ function activate(context) {
   const diagnostics = vscode.languages.createDiagnosticCollection("reux");
   const runner = new ReuxDiagnosticsRunner(diagnostics, output);
   const formatter = new ReuxFormatter(output);
+  const intelligence = new ReuxLanguageIntelligence();
 
   context.subscriptions.push(output, diagnostics);
   context.subscriptions.push(vscode.workspace.onDidOpenTextDocument((document) => runner.schedule(document)));
@@ -20,6 +21,9 @@ function activate(context) {
   context.subscriptions.push(vscode.commands.registerCommand("reux.restartDiagnostics", () => runner.refreshOpenDocuments()));
   context.subscriptions.push(vscode.commands.registerCommand("reux.formatDocument", () => formatter.formatActiveDocument()));
   context.subscriptions.push(vscode.languages.registerDocumentFormattingEditProvider(languageId, formatter));
+  context.subscriptions.push(vscode.languages.registerCompletionItemProvider(languageId, intelligence, ".", " "));
+  context.subscriptions.push(vscode.languages.registerDefinitionProvider(languageId, intelligence));
+  context.subscriptions.push(vscode.languages.registerHoverProvider(languageId, intelligence));
 
   runner.refreshOpenDocuments();
 }
@@ -170,6 +174,53 @@ class ReuxFormatter {
   }
 }
 
+class ReuxLanguageIntelligence {
+  provideCompletionItems(document, position) {
+    if (!isReuxDocument(document)) return [];
+    const symbols = parseDocumentSymbols(document);
+    const completions = keywordCompletions();
+    for (const symbol of symbols) {
+      const item = new vscode.CompletionItem(symbol.name, symbol.kind === "function" ? vscode.CompletionItemKind.Function : vscode.CompletionItemKind.Class);
+      item.detail = `Reux ${symbol.kind}`;
+      item.documentation = symbol.detail;
+      completions.push(item);
+    }
+
+    const fieldTarget = fieldCompletionTarget(document, position, symbols);
+    if (fieldTarget) {
+      return fieldTarget.fields.map((field) => {
+        const item = new vscode.CompletionItem(field.name, vscode.CompletionItemKind.Field);
+        item.detail = field.detail;
+        return item;
+      });
+    }
+
+    return completions;
+  }
+
+  provideDefinition(document, position) {
+    if (!isReuxDocument(document)) return undefined;
+    const word = wordAt(document, position);
+    if (!word) return undefined;
+    const symbol = parseDocumentSymbols(document).find((candidate) => candidate.name === word);
+    if (!symbol) return undefined;
+    return new vscode.Location(document.uri, symbol.range);
+  }
+
+  provideHover(document, position) {
+    if (!isReuxDocument(document)) return undefined;
+    const word = wordAt(document, position);
+    if (!word) return undefined;
+    const symbol = parseDocumentSymbols(document).find((candidate) => candidate.name === word);
+    if (symbol) {
+      return new vscode.Hover(new vscode.MarkdownString(`**${symbol.name}**\n\n${symbol.detail}`), symbol.range);
+    }
+    const keyword = keywordDetails.get(word);
+    if (!keyword) return undefined;
+    return new vscode.Hover(new vscode.MarkdownString(`**${word}**\n\n${keyword}`));
+  }
+}
+
 function parseDiagnosticReport(stdout) {
   try {
     const value = JSON.parse(stdout);
@@ -200,6 +251,156 @@ function fullDocumentRange(document) {
   const lastLine = document.lineAt(Math.max(document.lineCount - 1, 0));
   return new vscode.Range(new vscode.Position(0, 0), lastLine.range.end);
 }
+
+function parseDocumentSymbols(document) {
+  const symbols = [];
+  for (let lineNumber = 0; lineNumber < document.lineCount; lineNumber += 1) {
+    const text = document.lineAt(lineNumber).text;
+    const range = document.lineAt(lineNumber).range;
+    const declaration = text.match(/^\s*(entity|enum|event|simulate)\s+([A-Za-z_][A-Za-z0-9_]*)\b/);
+    if (declaration) {
+      symbols.push({
+        kind: declaration[1],
+        name: declaration[2],
+        range,
+        detail: `${declaration[1]} declared in this file.`,
+        fields: parseBlockFields(document, lineNumber),
+      });
+      continue;
+    }
+
+    const transition = text.match(/^\s*transition\s+([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)\b/);
+    if (transition) {
+      symbols.push({
+        kind: "transition",
+        name: `${transition[1]}.${transition[2]}`,
+        range,
+        detail: `Transition rules for ${transition[1]}.${transition[2]}.`,
+        fields: [],
+      });
+      continue;
+    }
+
+    const query = text.match(/^\s*query(?:\s+fragment)?\s+([A-Za-z_][A-Za-z0-9_]*)\b/);
+    if (query) {
+      symbols.push({
+        kind: "query",
+        name: query[1],
+        range,
+        detail: "Query declaration.",
+        fields: [],
+      });
+      continue;
+    }
+
+    const transaction = text.match(/^\s*transaction\s+function\s+([A-Za-z_][A-Za-z0-9_]*)\b/);
+    if (transaction) {
+      symbols.push({
+        kind: "function",
+        name: transaction[1],
+        range,
+        detail: "Transaction function.",
+        fields: [],
+      });
+    }
+  }
+  return symbols;
+}
+
+function parseBlockFields(document, startLine) {
+  const fields = [];
+  let depth = 0;
+  for (let lineNumber = startLine; lineNumber < document.lineCount; lineNumber += 1) {
+    const text = document.lineAt(lineNumber).text;
+    depth += countChar(text, "{");
+    depth -= countChar(text, "}");
+    if (lineNumber > startLine && depth <= 0) break;
+    const field = text.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([^,\n]+)/);
+    if (field) {
+      fields.push({
+        name: field[1],
+        detail: field[2].trim(),
+      });
+    }
+  }
+  return fields;
+}
+
+function fieldCompletionTarget(document, position, symbols) {
+  const linePrefix = document.lineAt(position.line).text.slice(0, position.character);
+  const match = linePrefix.match(/\b([A-Za-z_][A-Za-z0-9_]*)\.$/);
+  if (!match) return undefined;
+  const localType = localBindingType(document, position.line, match[1]);
+  if (!localType) return undefined;
+  return symbols.find((symbol) => symbol.kind === "entity" && symbol.name === localType);
+}
+
+function localBindingType(document, beforeLine, localName) {
+  for (let lineNumber = beforeLine; lineNumber >= 0; lineNumber -= 1) {
+    const text = document.lineAt(lineNumber).text;
+    const load = text.match(new RegExp(`\\blet\\s+${escapeRegExp(localName)}\\s*=\\s*load\\s+([A-Za-z_][A-Za-z0-9_]*)\\s+for\\s+update\\b`));
+    if (load) return parameterTypeNear(document, lineNumber, load[1]);
+    const insert = text.match(new RegExp(`\\blet\\s+${escapeRegExp(localName)}\\s*=\\s*insert\\s+([A-Za-z_][A-Za-z0-9_]*)\\b`));
+    if (insert) return insert[1];
+  }
+  return undefined;
+}
+
+function parameterTypeNear(document, beforeLine, parameterName) {
+  for (let lineNumber = beforeLine; lineNumber >= 0; lineNumber -= 1) {
+    const text = document.lineAt(lineNumber).text;
+    const transaction = text.match(/transaction\s+function\s+[A-Za-z_][A-Za-z0-9_]*\(([^)]*)\)/);
+    if (!transaction) continue;
+    for (const parameter of transaction[1].split(",")) {
+      const match = parameter.trim().match(/^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([A-Za-z_][A-Za-z0-9_]*)/);
+      if (match && match[1] === parameterName) return match[2];
+    }
+  }
+  return undefined;
+}
+
+function keywordCompletions() {
+  return [...keywordDetails.entries()].map(([keyword, detail]) => {
+    const item = new vscode.CompletionItem(keyword, vscode.CompletionItemKind.Keyword);
+    item.detail = "Reux keyword";
+    item.documentation = detail;
+    return item;
+  });
+}
+
+function wordAt(document, position) {
+  const range = document.getWordRangeAtPosition(position, /[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)?/);
+  return range ? document.getText(range) : undefined;
+}
+
+function countChar(source, char) {
+  return [...source].filter((candidate) => candidate === char).length;
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+const keywordDetails = new Map([
+  ["module", "Declares the module name for this Reux source file."],
+  ["entity", "Declares a durable data model lowered into the schema IR."],
+  ["enum", "Declares a closed set of literal values."],
+  ["event", "Declares a typed outbox payload contract."],
+  ["query", "Declares a typed read model lowered to SQL."],
+  ["simulate", "Declares a prototype simulation forecast model."],
+  ["transition", "Declares allowed enum-state transitions for an entity field."],
+  ["transaction", "Starts a transaction function declaration."],
+  ["writes", "Declares the entities a transaction may mutate or insert."],
+  ["retry", "Declares retry attempts for retryable transaction failures."],
+  ["require", "Declares a transaction guard that aborts when false."],
+  ["abort", "Rolls back the current transaction."],
+  ["enqueue", "Persists a typed durable outbox event."],
+  ["after", "Used with `commit` to declare a post-commit hook."],
+  ["forecast", "Declares the period length for a simulation."],
+  ["scenario", "Declares an alternate simulation path."],
+  ["formula", "Declares a derived simulation metric."],
+  ["objective", "Declares whether a simulation metric should be maximized or minimized."],
+]);
 
 module.exports = {
   activate,
