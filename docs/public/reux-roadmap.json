@@ -3,8 +3,8 @@
   "headline": "A data-native language for reliable backend workflows and simulation-driven applications.",
   "status": {
     "demoReadinessPercent": 99,
-    "fullCompletionPercent": 91,
-    "summary": "The public demo is live with commerce and logistics workflows, in-page tester guidance, clearer empty states, visible domain-scoped queue health, hosted smoke checks for reset, transaction, queue, and outbox behavior, and CI smoke automation against PostgreSQL. Simulation domain packs now report coverage and suggested assumptions, metrics, scenarios, and objectives, with executable PLOS finance and habit examples. The deeper language, tooling, simulation, and production-hardening layers are still maturing."
+    "fullCompletionPercent": 92,
+    "summary": "The public demo is live with commerce and logistics workflows, in-page tester guidance, clearer empty states, visible domain-scoped queue health, hosted smoke checks for reset, transaction, queue, and outbox behavior, and CI smoke automation against PostgreSQL. Simulation domain packs now report coverage and suggested assumptions, metrics, scenarios, and objectives, with executable PLOS finance and habit examples plus generated catalog helpers for product apps. The deeper language, tooling, simulation, and production-hardening layers are still maturing."
   },
   "liveNow": [
     "Public commerce workflow demo",
@@ -19,7 +19,8 @@
     "CI smoke automation that boots the demo server against PostgreSQL and runs the same public smoke path on every push",
     "Early simulation syntax for PLOS and business-simulation research",
     "Advisory simulation domain-pack coverage for PLOS and business models, including suggested assumptions, metrics, scenarios, and objectives",
-    "Executable PLOS habit-consistency example alongside the personal-finance example"
+    "Executable PLOS habit-consistency example alongside the personal-finance example",
+    "Generated simulation catalog helpers for product apps"
   ],
   "milestones": [
     {
@@ -50,7 +51,7 @@
         "Add richer time-series and assumption modeling",
         "Add stronger unit and formula validation",
         "Improve comparison reports and explanation output",
-        "Prepare simulation APIs that product apps can call directly"
+        "Expand simulation APIs from generated catalog discovery into full product-facing execution services"
       ]
     },
     {

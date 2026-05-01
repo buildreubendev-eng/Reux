@@ -602,6 +602,10 @@ simulate support_cost {
     expect(types).toContain("productivity_gain: number;");
     expect(types).toContain("export type WorkforceChangeRun = ReuxSimulationRun<WorkforceChangeSimulationName, WorkforceChangeScenarioName, WorkforceChangeAssumptions, WorkforceChangeMetrics, WorkforceChangeMetricName>;");
     expect(types).toContain("export const workforceChangeSimulation = {");
+    expect(types).toContain("} as const satisfies ReuxSimulationMetadata;");
+    expect(types).toContain("export const reuxSimulationCatalog = [workforceChangeSimulation] as const;");
+    expect(types).toContain("export function listReuxSimulationNames(): Array<ReuxGeneratedSimulationMetadata[\"name\"]>");
+    expect(types).toContain("export function findReuxSimulationMetadata(name: string): ReuxGeneratedSimulationMetadata | undefined");
     expect(types).toContain("\"dimensions\": [");
     expect(types).toContain("\"direction\": \"maximize\"");
   });

@@ -106,6 +106,16 @@ export function emitTypeScriptSimulationContracts(source: string): string {
     "  comparison?: ReuxSimulationComparison<ScenarioName, Metrics, MetricName>;",
     "}",
     "",
+    "export interface ReuxSimulationMetadata {",
+    "  name: string;",
+    "  dimensions: readonly ReuxSimulationDimension[];",
+    "  forecast: ReuxSimulationForecast;",
+    "  assumptions: readonly { name: string; type: \"boolean\" | \"number\" | \"string\"; unit?: string }[];",
+    "  metrics: readonly string[];",
+    "  objectives: readonly ReuxSimulationObjective[];",
+    "  scenarios: readonly string[];",
+    "}",
+    "",
     "export function formatReuxSimulationDelta(delta: number | undefined, unit?: string): string {",
     "  if (delta === undefined) return \"-\";",
     "  const value = Number(delta.toFixed(6));",
@@ -164,6 +174,17 @@ export function emitTypeScriptSimulationContracts(source: string): string {
     "}",
     "",
     ...simulations.flatMap((simulation) => simulationContractLines(simulation)),
+    `export const reuxSimulationCatalog = [${simulations.map((simulation) => `${camelCase(simulation.name)}Simulation`).join(", ")}] as const;`,
+    "",
+    "export type ReuxGeneratedSimulationMetadata = typeof reuxSimulationCatalog[number];",
+    "",
+    "export function listReuxSimulationNames(): Array<ReuxGeneratedSimulationMetadata[\"name\"]> {",
+    "  return reuxSimulationCatalog.map((simulation) => simulation.name);",
+    "}",
+    "",
+    "export function findReuxSimulationMetadata(name: string): ReuxGeneratedSimulationMetadata | undefined {",
+    "  return reuxSimulationCatalog.find((simulation) => simulation.name === name);",
+    "}",
   ];
 
   return `${lines.join("\n")}\n`;
@@ -193,7 +214,7 @@ function simulationContractLines(simulation: SimulationIr): string[] {
     "",
     `export type ${typeName}Run = ReuxSimulationRun<${typeName}SimulationName, ${typeName}ScenarioName, ${typeName}Assumptions, ${typeName}Metrics, ${typeName}MetricName>;`,
     "",
-    `export const ${camelCase(simulation.name)}Simulation = ${JSON.stringify(simulationMetadata(simulation, run), null, 2)} as const;`,
+    `export const ${camelCase(simulation.name)}Simulation = ${JSON.stringify(simulationMetadata(simulation, run), null, 2)} as const satisfies ReuxSimulationMetadata;`,
     "",
   ];
 }
