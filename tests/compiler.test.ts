@@ -14,6 +14,7 @@ import {
   emitQuerySql,
   emitSchemaManifest,
   emitSimulationIr,
+  emitSimulationPacks,
   emitSimulationRun,
   emitSimulationTypes,
   emitTransitionRules,
@@ -603,6 +604,24 @@ simulate support_cost {
     expect(types).toContain("export const workforceChangeSimulation = {");
     expect(types).toContain("\"dimensions\": [");
     expect(types).toContain("\"direction\": \"maximize\"");
+  });
+
+  it("reports simulation domain pack coverage", () => {
+    const report = JSON.parse(emitSimulationPacks(readFileSync("examples/simulations/workforce_change.reux", "utf8"), undefined, "json"));
+
+    expect(report.simulations[0].pack).toEqual({
+      id: "business_simulation.workforce.enterprise",
+      title: "Business workforce simulation",
+      description: "Workforce, productivity, overtime, and staffing-decision simulations.",
+    });
+    expect(report.simulations[0].dimensions).toEqual({
+      product: "business_simulation",
+      domain: "workforce",
+      audience: "enterprise",
+    });
+    expect(report.simulations[0].missingDimensions).toEqual([]);
+    expect(report.simulations[0].missingSuggestedAssumptions).toEqual(["average_hourly_cost"]);
+    expect(report.simulations[0].missingSuggestedMetrics).toEqual(["labor_cost_delta", "capacity_delta"]);
   });
 
   it("applies simulation assumption changes by forecast period", () => {

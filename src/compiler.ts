@@ -16,6 +16,7 @@ import { buildQueryIr } from "./query-ir.js";
 import { buildSchema, SchemaIr, TransitionIr } from "./schema.js";
 import { buildTransactionIr } from "./transaction-ir.js";
 import { buildSimulationCatalog, runSimulationIr, SimulationIr } from "./simulation-ir.js";
+import { describeSimulationPacks, formatSimulationPackReports } from "./simulation-packs.js";
 import { DlAggregateError } from "./errors.js";
 import {
   emitTypeScriptApi,
@@ -170,6 +171,13 @@ export function emitSimulationRun(source: string, simulationName?: string): stri
 
 export function emitSimulationTypes(source: string): string {
   return emitTypeScriptSimulationContracts(source);
+}
+
+export function emitSimulationPacks(source: string, simulationName?: string, format: "text" | "json" = "text"): string {
+  const { simulations } = compileSource(source);
+  const selected = simulationName ? [findSimulation(simulations, simulationName)] : simulations;
+  const reports = describeSimulationPacks(selected);
+  return format === "json" ? `${JSON.stringify({ simulations: reports }, null, 2)}\n` : formatSimulationPackReports(reports);
 }
 
 export function emitApiClient(source: string, options?: TypeScriptApiOptions): string {

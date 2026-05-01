@@ -201,11 +201,14 @@ Inspect and run simulations with:
 node dist/cli.js simulation-ir examples/simulations/personal_finance.reux
 node dist/cli.js simulation-run examples/simulations/workforce_change.reux
 node dist/cli.js simulation-types-ts examples/simulations/workforce_change.reux
+node dist/cli.js simulation-packs examples/simulations/workforce_change.reux
 ```
 
 Generated simulation TypeScript contracts include typed dimension names, typed assumption maps, metric maps, scenario names, run/result shapes, explanation summaries, summary helper types, runtime helper functions, and a small metadata constant for each simulation. This lets a frontend or product backend consume simulation output without treating it as unstructured JSON.
 
-This is not yet the full simulation language. The next layers are named domain dimensions, domain packs for PLOS/business use cases, deeper generated TypeScript clients, and eventually integration with Reux data modules.
+Domain pack reports use dimensions such as `product`, `domain`, and `audience` to classify a simulation against the built-in PLOS and business simulation pack catalog. The report is advisory: it names a matching pack when one exists and lists suggested assumptions or metrics that would make the model more complete for that pack. This gives PLOS and business simulations a shared vocabulary without forcing every model to use the same shape.
+
+This is not yet the full simulation language. The next layers are richer domain packs for PLOS/business use cases, deeper generated TypeScript clients, and eventually integration with Reux data modules.
 
 ## Transition Rules
 
