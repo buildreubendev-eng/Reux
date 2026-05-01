@@ -4,7 +4,7 @@ if (args.includes("--help") || args.includes("-h")) {
 
 Modes:
   default              Check /api/health only.
-  --deep              Also check commerce and logistics outbox stats endpoints.
+  --deep              Also check outbox stats, CORS, and Business Simulator API endpoints.
   --smoke             Run deep checks plus a public reset/transaction/outbox smoke in an isolated session.
 
 Options:
@@ -33,10 +33,15 @@ try {
   const baseUrl = new URL(target);
   const health = await fetchJson(baseUrl, "/api/health");
   const checks = [health];
+  let commerceOutbox = null;
+  let logisticsOutbox = null;
+  let businessReport = null;
   let smokeReport = null;
   if (deep) {
-    checks.push(await fetchJson(baseUrl, "/api/outbox/stats"));
-    checks.push(await fetchJson(baseUrl, "/api/logistics/outbox/stats"));
+    commerceOutbox = await fetchJson(baseUrl, "/api/outbox/stats");
+    logisticsOutbox = await fetchJson(baseUrl, "/api/logistics/outbox/stats");
+    businessReport = await runBusinessSimulatorApiCheck(baseUrl);
+    checks.push(commerceOutbox, logisticsOutbox, ...businessReport.checks);
   }
   if (smoke) {
     smokeReport = await runSmokeCheck(baseUrl, health.body);
@@ -44,8 +49,9 @@ try {
   }
   const diagnostics = [
     ...validateHealth(health.response, health.body),
-    ...(deep ? validateOutboxStats(checks[1]?.response, checks[1]?.body, "commerce") : []),
-    ...(deep ? validateOutboxStats(checks[2]?.response, checks[2]?.body, "logistics") : []),
+    ...(deep ? validateOutboxStats(commerceOutbox?.response, commerceOutbox?.body, "commerce") : []),
+    ...(deep ? validateOutboxStats(logisticsOutbox?.response, logisticsOutbox?.body, "logistics") : []),
+    ...(businessReport?.diagnostics ?? []),
     ...(smokeReport?.diagnostics ?? []),
   ];
   const report = {
@@ -54,6 +60,7 @@ try {
     mode: smoke ? "smoke" : deep ? "deep" : "health",
     latencyMs: Date.now() - startedAt,
     diagnostics,
+    businessSimulator: businessReport?.summary,
     smoke: smokeReport?.summary,
     checks: checks.map((check) => ({
       path: check.path,
@@ -99,6 +106,89 @@ async function readJson(response) {
   } catch {
     return { raw: text };
   }
+}
+
+async function runBusinessSimulatorApiCheck(baseUrl) {
+  const diagnostics = [];
+  const checks = [];
+
+  const preflight = await fetchJson(baseUrl, "/api/simulations/run", {
+    method: "OPTIONS",
+    headers: {
+      origin: "https://reuben-web.vercel.app",
+      "access-control-request-method": "POST",
+      "access-control-request-headers": "content-type",
+    },
+  });
+  checks.push(preflight);
+  diagnostics.push(...validateBusinessSimulatorCors(preflight.response));
+
+  const list = await fetchJson(baseUrl, "/api/simulations");
+  checks.push(list);
+  diagnostics.push(...validateSimulationList(list.response, list.body));
+
+  const templateId = list.body?.simulations?.[0]?.id ?? "operations-decision";
+  const template = await fetchJson(baseUrl, `/api/simulations/${encodeURIComponent(templateId)}`);
+  checks.push(template);
+  diagnostics.push(...validateSimulationTemplate(template.response, template.body, templateId));
+
+  const runRequest = {
+    simulationId: templateId,
+    baseline: template.body?.defaultAssumptions ?? {
+      employees: 50,
+      averageHourlyCost: 32,
+      weeklyDemand: 1200,
+      averageOrderValue: 85,
+      grossMarginRate: 0.42,
+      productivityGainRate: 0.08,
+      overtimeReductionRate: 0.1,
+      supplierDelayRiskRate: 0.12,
+      defectRate: 0.025,
+      forecastPeriods: 12,
+      forecastUnit: "week",
+    },
+    scenarios: template.body?.exampleScenarios?.slice(0, 2) ?? [
+      {
+        id: "process-improvement",
+        name: "Process Improvement",
+        assumptions: {
+          productivityGainRate: 0.12,
+          overtimeReductionRate: 0.18,
+        },
+      },
+    ],
+    options: {
+      includeTimeline: true,
+      includeReuxSource: true,
+    },
+  };
+  const run = await fetchJson(baseUrl, "/api/simulations/run", {
+    method: "POST",
+    body: runRequest,
+  });
+  checks.push(run);
+  diagnostics.push(...validateSimulationRun(run.response, run.body, templateId));
+
+  const compare = await fetchJson(baseUrl, "/api/scenarios/compare", {
+    method: "POST",
+    body: {
+      baseline: run.body?.baseline,
+      scenarios: run.body?.scenarios,
+    },
+  });
+  checks.push(compare);
+  diagnostics.push(...validateScenarioCompare(compare.response, compare.body, run.body?.scenarios));
+
+  return {
+    diagnostics,
+    checks,
+    summary: {
+      templateId,
+      scenarioCount: run.body?.scenarios?.length ?? 0,
+      recommendedScenarioId: run.body?.comparison?.recommendedScenarioId ?? null,
+      reuxSource: typeof run.body?.reuxSource === "string" && run.body.reuxSource.includes("simulate operations_decision"),
+    },
+  };
 }
 
 async function runSmokeCheck(baseUrl, healthBody) {
@@ -210,6 +300,89 @@ function validateOutboxStats(response, body, domain) {
   if (typeof body?.summary?.active !== "number") diagnostics.push(`${domain} outbox stats body did not include numeric summary.active`);
   if (typeof body?.summary?.pending !== "number") diagnostics.push(`${domain} outbox stats body did not include numeric summary.pending`);
   if (!body?.summary?.health) diagnostics.push(`${domain} outbox stats body did not include summary.health`);
+  return diagnostics;
+}
+
+function validateBusinessSimulatorCors(response) {
+  const diagnostics = [];
+  if (response.status !== 204) diagnostics.push(`business simulator CORS preflight expected 204, got ${response.status}`);
+  const allowOrigin = response.headers.get("access-control-allow-origin");
+  if (!allowOrigin) diagnostics.push("business simulator CORS preflight did not include access-control-allow-origin");
+  const allowMethods = response.headers.get("access-control-allow-methods") ?? "";
+  if (!allowMethods.includes("POST") || !allowMethods.includes("OPTIONS")) {
+    diagnostics.push("business simulator CORS preflight did not allow POST and OPTIONS");
+  }
+  const allowHeaders = response.headers.get("access-control-allow-headers") ?? "";
+  if (!allowHeaders.toLowerCase().includes("content-type")) {
+    diagnostics.push("business simulator CORS preflight did not allow content-type");
+  }
+  return diagnostics;
+}
+
+function validateSimulationList(response, body) {
+  const diagnostics = [];
+  if (!response.ok) diagnostics.push(`business simulator list expected 2xx, got ${response.status}`);
+  if (!Array.isArray(body?.simulations) || body.simulations.length === 0) {
+    diagnostics.push("business simulator list did not include simulations");
+  }
+  if (!body?.simulations?.some((simulation) => simulation.id === "operations-decision")) {
+    diagnostics.push("business simulator list did not include operations-decision");
+  }
+  return diagnostics;
+}
+
+function validateSimulationTemplate(response, body, expectedId) {
+  const diagnostics = [];
+  if (!response.ok) diagnostics.push(`business simulator template expected 2xx, got ${response.status}`);
+  if (body?.simulation?.id !== expectedId) {
+    diagnostics.push(`business simulator template expected id=${expectedId}, got ${body?.simulation?.id ?? "missing"}`);
+  }
+  for (const field of ["employees", "averageHourlyCost", "weeklyDemand", "averageOrderValue", "grossMarginRate", "forecastPeriods", "forecastUnit"]) {
+    if (body?.defaultAssumptions?.[field] === undefined) {
+      diagnostics.push(`business simulator template defaultAssumptions missing ${field}`);
+    }
+  }
+  if (!Array.isArray(body?.exampleScenarios) || body.exampleScenarios.length === 0) {
+    diagnostics.push("business simulator template did not include exampleScenarios");
+  }
+  return diagnostics;
+}
+
+function validateSimulationRun(response, body, expectedId) {
+  const diagnostics = [];
+  if (!response.ok) diagnostics.push(`business simulator run expected 2xx, got ${response.status}`);
+  if (body?.simulation?.id !== expectedId) {
+    diagnostics.push(`business simulator run expected simulation id=${expectedId}, got ${body?.simulation?.id ?? "missing"}`);
+  }
+  if (body?.baseline?.id !== "baseline") diagnostics.push("business simulator run did not include baseline result");
+  if (!Array.isArray(body?.baseline?.timeline) || body.baseline.timeline.length === 0) {
+    diagnostics.push("business simulator run baseline did not include a timeline");
+  }
+  if (!Array.isArray(body?.scenarios) || body.scenarios.length === 0) {
+    diagnostics.push("business simulator run did not include scenario results");
+  }
+  if (!body?.comparison?.recommendedScenarioId) {
+    diagnostics.push("business simulator run did not include a recommended scenario");
+  }
+  if (typeof body?.reuxSource !== "string" || !body.reuxSource.includes("simulate operations_decision")) {
+    diagnostics.push("business simulator run did not include Reux source transparency output");
+  }
+  if (!body?.generatedAt) diagnostics.push("business simulator run did not include generatedAt");
+  return diagnostics;
+}
+
+function validateScenarioCompare(response, body, scenarios) {
+  const diagnostics = [];
+  if (!response.ok) diagnostics.push(`business simulator compare expected 2xx, got ${response.status}`);
+  if (body?.comparison?.baselineScenarioId !== "baseline") {
+    diagnostics.push("business simulator compare did not identify baseline");
+  }
+  for (const scenario of scenarios ?? []) {
+    if (!Array.isArray(body?.comparison?.metricDeltasByScenario?.[scenario.id])) {
+      diagnostics.push(`business simulator compare did not include deltas for ${scenario.id}`);
+    }
+  }
+  if (!body?.generatedAt) diagnostics.push("business simulator compare did not include generatedAt");
   return diagnostics;
 }
 

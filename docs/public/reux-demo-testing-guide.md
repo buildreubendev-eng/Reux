@@ -8,6 +8,7 @@ The current demo is a public preview of Reux as a data-native workflow layer. It
 
 The demo currently includes:
 
+- A Business Simulator API used by the Reuben website to run operational scenario forecasts.
 - Commerce workflows for accounts, orders, payments, account credits, and durable events.
 - Logistics workflows for dispatch-style operations.
 - Isolated visitor sessions so public testers do not overwrite each other's demo state.
@@ -27,6 +28,8 @@ The demo currently includes:
 8. Switch to the logistics demo.
 9. Reset the logistics session.
 10. Run a logistics transaction and confirm the visible state changes.
+11. Open the Business Simulator from the Reuben website.
+12. Run a sample simulation and confirm the results page shows a recommendation, metric deltas, forecast data, and Reux source transparency.
 
 ## Expected Results
 
@@ -40,6 +43,7 @@ The demo is behaving correctly when:
 - Commerce and logistics sessions do not interfere with each other.
 - Commerce and logistics queue health only counts the events for the active tab.
 - Reloading the page keeps the same visitor session unless the browser storage is cleared.
+- The Business Simulator returns a recommended scenario, comparison deltas, a forecast timeline, and Reux source text without requiring an admin token.
 
 ## Release Smoke Check
 
@@ -50,6 +54,8 @@ npm run demo:healthcheck -- https://your-demo-host.example.com --smoke
 ```
 
 That command tests the same public flow with the isolated `healthcheck` session: reset, transaction, queue health, outbox processing, and final clear state for both Commerce and Logistics.
+
+It also checks the Business Simulator API contract that the Reuben website uses: CORS preflight, template loading, simulation run, scenario comparison, recommendation output, and Reux source transparency.
 
 For lightweight uptime watching, maintainers can also run:
 

@@ -28,7 +28,16 @@ After a deploy that includes the queue stats endpoints, run a deeper smoke check
 npm run demo:healthcheck -- https://your-demo-host.example.com --deep
 ```
 
-Deep mode also checks `/api/outbox/stats` and `/api/logistics/outbox/stats`.
+Deep mode also checks `/api/outbox/stats`, `/api/logistics/outbox/stats`, the Business Simulator CORS preflight, and the public Business Simulator API flow:
+
+```text
+GET /api/simulations
+GET /api/simulations/operations-decision
+POST /api/simulations/run
+POST /api/scenarios/compare
+```
+
+This is the quickest backend-side check that the Reuben website can still run the public simulator after a deploy.
 
 The hosted service also exposes a small operations dashboard:
 
@@ -53,7 +62,7 @@ For release validation after a production redeploy, run the full public smoke pa
 npm run demo:healthcheck -- https://your-demo-host.example.com --smoke
 ```
 
-Smoke mode runs the health and deep checks, uses an isolated `healthcheck` browser session, resets commerce and logistics demo data, runs one transaction in each domain, confirms queue health moves to `working`, processes outbox events, and confirms queue health returns to `clear`. Reusing the `healthcheck` session prevents each redeploy check from creating a new schema forever. Override the session with `--session-id=<id>` or `REUX_HEALTHCHECK_SESSION_ID` if needed. Smoke mode refuses to run against shared-session demos unless `--allow-shared-smoke` is passed, because shared smoke would mutate the shared demo state.
+Smoke mode runs the health and deep checks, uses an isolated `healthcheck` browser session, resets commerce and logistics demo data, runs one transaction in each domain, confirms queue health moves to `working`, processes outbox events, and confirms queue health returns to `clear`. Because deep checks include the Business Simulator API, smoke mode now validates both the website-facing simulation contract and the PostgreSQL-backed workflow demo. Reusing the `healthcheck` session prevents each redeploy check from creating a new schema forever. Override the session with `--session-id=<id>` or `REUX_HEALTHCHECK_SESSION_ID` if needed. Smoke mode refuses to run against shared-session demos unless `--allow-shared-smoke` is passed, because shared smoke would mutate the shared demo state.
 
 For local or CI validation against a PostgreSQL-backed demo service, use:
 
