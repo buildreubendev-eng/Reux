@@ -13,6 +13,7 @@ const expectedPaths = [
   pkg.exports?.["./business-simulator"]?.import,
   pkg.exports?.["./business-simulator"]?.types,
   "docs/technical/business-simulator-api.md",
+  "docs/technical/demo-deployment.md",
   "docs/technical/package-distribution.md",
   "docs/technical/public-release-plan.md",
   "docs/technical/editor-tooling.md",

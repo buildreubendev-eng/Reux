@@ -23,7 +23,9 @@ const requiredScripts = [
   "verify:postgres:full",
   "verify:demo:smoke",
   "demo:healthcheck",
+  "demo:monitor",
   "release:preflight",
+  "release:pack-dry-run",
 ];
 
 const failures = [];
