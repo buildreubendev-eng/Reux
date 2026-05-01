@@ -30,7 +30,7 @@ These are the milestones that make the prototype usable by public testers and ea
 | Session isolation tests | Complete | Fast unit coverage now protects browser session ID normalization and schema derivation. |
 | Logistics pilot source | Complete | `examples/logistics_reux.dl` validates that Reux can model dispatch workflows. |
 | Logistics executable walkthrough | Complete | `npm run demo:logistics` shows diagnostics, SQL, generated scaffolds, and seed validation without a database. |
-| Production monitoring | Not started | Hosted health exists, but logs, alerting, uptime tracking, and DB maintenance are still manual. |
+| Production monitoring | Started | Hosted health exists and `npm run demo:healthcheck -- <url>` validates the public service. Logs, alerting, uptime tracking, and DB maintenance are still manual. |
 
 ## Full-Completion Priorities
 
@@ -60,7 +60,7 @@ The prototype should not try to become a complete general-purpose language yet. 
 
 As of this document:
 
-- Demo readiness: roughly 90%. The commerce and logistics demos are public-UI ready; the remaining demo gap is mainly polish, monitoring, and hosted redeployment validation.
+- Demo readiness: roughly 92%. The commerce and logistics demos are public-UI ready and now have a command-line hosted health check; the remaining demo gap is mainly polish, alerting, uptime tracking, DB maintenance, and hosted redeployment validation.
 - Full completion: roughly 84%. The foundation is real, query expressiveness has moved forward, transaction functions now have the first serious safety layer, outbox workers have delayed retry and dead-letter protection, migration tooling has review/rollback guidance and production gates, package distribution has typed entrypoints and tarball guidance, editor tooling has formatting, syntax highlighting, CLI-backed diagnostics, VS Code format integration, completions, hover text, and current-file definition jumps, and Reux has its first simulation syntax with domain dimensions, advisory PLOS/business domain pack reports, formulas, unit-compatibility checks, shared scheduled changes, scenario-specific timelines, declared objectives, period-level scenario comparison, objective-aware metric rankings, explanation summaries, generated simulation contracts, and typed comparison helpers. The largest remaining gaps are deeper semantic editor intelligence, public publishing, richer control flow, deeper expression typing, production-grade simulation semantics, richer worker observability, and deeper rollback SQL synthesis.
 
 Use [Phase status](phase-status.md) for implementation-by-phase details, [Ecosystem architecture](ecosystem-architecture.md) for the Reuben/Reux/PLOS/business simulation boundary, and [Pilot demo deployment](demo-deployment.md) for hosted demo operations.

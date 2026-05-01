@@ -14,6 +14,14 @@ Health check: /api/health
 
 The service reads the platform `PORT` variable automatically and binds to `0.0.0.0` by default so public hosts can route traffic to it.
 
+You can verify a hosted deployment from a terminal with:
+
+```bash
+npm run demo:healthcheck -- https://your-demo-host.example.com
+```
+
+The health check calls `/api/health`, verifies the service identifies the pilot module, confirms both `commerce` and `logistics` domains are listed, and exits nonzero if the deployment is not ready.
+
 ## Railway
 
 1. Create a new Railway project from `benn4105/Reux`.
@@ -57,6 +65,12 @@ After deployment:
 3. Confirm `/api/dashboard` returns seeded orders, payments, balances, and outbox events.
 4. Switch to the `Logistics` tab, click `Reset My Session`, and confirm `/api/logistics/dashboard` returns seeded shipments, driver manifest rows, status summary rows, and logistics outbox events.
 5. For admin/shared setup, open the collapsed `Admin` menu, enter the private token if `REUX_DEMO_SETUP_TOKEN` is set, and click `Apply Schema + Reset Seed`.
+
+For a quick command-line check after setup or redeploy:
+
+```bash
+npm run demo:healthcheck -- https://your-demo-host.example.com
+```
 
 Regular visitors can reset only their own session and use the dashboard and transaction buttons after setup. Keep the token private so the shared/admin demo database cannot be reset by everyone visiting the public site.
 
