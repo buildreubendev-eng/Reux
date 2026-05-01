@@ -5,6 +5,7 @@ const allowDirty = process.argv.includes("--allow-dirty");
 
 const requiredDocs = [
   "README.md",
+  "docs/technical/business-simulator-api.md",
   "docs/technical/release.md",
   "docs/technical/package-distribution.md",
   "docs/technical/public-release-plan.md",
@@ -40,8 +41,8 @@ if (!pkg.bin?.reux || !pkg.bin?.dl) {
   failures.push("package must expose both reux and dl binaries");
 }
 
-if (!pkg.exports?.["."]?.import || !pkg.exports?.["./runtime"]?.import) {
-  failures.push("package exports must include compiler and runtime entrypoints");
+if (!pkg.exports?.["."]?.import || !pkg.exports?.["./runtime"]?.import || !pkg.exports?.["./business-simulator"]?.import) {
+  failures.push("package exports must include compiler, runtime, and business simulator entrypoints");
 }
 
 const status = roadmap.status ?? {};

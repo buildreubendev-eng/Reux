@@ -28,6 +28,32 @@ import {
 } from "./api-generator.js";
 import { emitTypeScriptSimulationContracts } from "./simulation-generator.js";
 
+export {
+  businessSimulatorContractVersion,
+  businessSimulatorDefaultAssumptions,
+  businessSimulatorEndpoints,
+} from "./business-simulator-contract.js";
+export type {
+  BusinessSimulatorAssumptions,
+  BusinessSimulatorCompareRequest,
+  BusinessSimulatorCompareResponse,
+  BusinessSimulatorComparison,
+  BusinessSimulatorEndpointName,
+  BusinessSimulatorForecastUnit,
+  BusinessSimulatorMetricDelta,
+  BusinessSimulatorMetricName,
+  BusinessSimulatorMetricSnapshot,
+  BusinessSimulatorRecommendation,
+  BusinessSimulatorRunRequest,
+  BusinessSimulatorRunResponse,
+  BusinessSimulatorScenarioInput,
+  BusinessSimulatorScenarioResult,
+  BusinessSimulatorSummary,
+  BusinessSimulatorTimelinePoint,
+  GetBusinessSimulationResponse,
+  ListBusinessSimulationsResponse,
+} from "./business-simulator-contract.js";
+
 export interface CompileResult {
   program: Program;
   schema: SchemaIr;

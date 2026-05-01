@@ -1,0 +1,110 @@
+# Business Simulator API Contract
+
+This contract is the handoff point between the Business Simulator frontend and the Reux backend. The frontend can mock these shapes today, then swap the mock service for hosted Reux endpoints later.
+
+The TypeScript source of truth lives in `src/business-simulator-contract.ts`.
+
+## Endpoints
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /api/simulations` | List available business simulation templates. |
+| `GET /api/simulations/:id` | Load one simulation template, its default assumptions, and starter scenarios. |
+| `POST /api/simulations/run` | Run a baseline plus one or more scenarios and return metrics, timeline, and recommendation output. |
+| `POST /api/scenarios/compare` | Compare already-run scenario results without rerunning the simulation model. |
+
+## Core Assumptions
+
+The first Business Simulator model should cover the controls the frontend is building:
+
+- `employees`
+- `averageHourlyCost`
+- `weeklyDemand`
+- `averageOrderValue`
+- `grossMarginRate`
+- `productivityGainRate`
+- `overtimeReductionRate`
+- `supplierDelayRiskRate`
+- `defectRate`
+- `forecastPeriods`
+- `forecastUnit`
+
+Rate values use decimal form. For example, `0.08` means 8%.
+
+## Run Request
+
+```json
+{
+  "simulationId": "operations-throughput",
+  "baseline": {
+    "employees": 50,
+    "averageHourlyCost": 32,
+    "weeklyDemand": 1200,
+    "averageOrderValue": 85,
+    "grossMarginRate": 0.42,
+    "productivityGainRate": 0.08,
+    "overtimeReductionRate": 0.1,
+    "supplierDelayRiskRate": 0.12,
+    "defectRate": 0.025,
+    "forecastPeriods": 12,
+    "forecastUnit": "week"
+  },
+  "scenarios": [
+    {
+      "id": "process-improvement",
+      "name": "Process Improvement",
+      "description": "Higher productivity and lower overtime after workflow cleanup.",
+      "assumptions": {
+        "productivityGainRate": 0.12,
+        "overtimeReductionRate": 0.18
+      }
+    }
+  ],
+  "options": {
+    "includeTimeline": true,
+    "includeReuxSource": true
+  }
+}
+```
+
+## Run Response
+
+`POST /api/simulations/run` returns:
+
+- `simulation`: template metadata.
+- `baseline`: baseline scenario result.
+- `scenarios`: scenario results.
+- `comparison`: deltas and recommendation.
+- `reuxSource`: optional read-only Reux source used for transparency panels.
+- `generatedAt`: ISO timestamp.
+
+Metric snapshots include:
+
+- `revenue`
+- `operatingCost`
+- `laborCost`
+- `productivity`
+- `workforceLoad`
+- `margin`
+- `marginDelta`
+- `riskScore`
+- `defectCost`
+
+## Frontend Integration Notes
+
+- The frontend should keep using a mock service until the backend endpoint exists.
+- Mock data should use the exact TypeScript types from `src/business-simulator-contract.ts`.
+- UI labels can display rate values as percentages, but requests should send decimal values.
+- Scenario IDs should be stable slugs because they are used as keys in comparison maps.
+- The `reuxSource` field is read-only display text for the Reux transparency panel.
+
+## Backend Integration Notes
+
+The first backend implementation can adapt the existing Reux simulation runner:
+
+1. Convert `baseline` and each scenario override into a Reux simulation model.
+2. Run the simulation through the Reux simulation runtime.
+3. Normalize Reux output into `BusinessSimulatorRunResponse`.
+4. Keep recommendation scoring deterministic and explainable.
+
+The endpoint should not require admin tokens. Public demos can rate-limit and session-isolate requests separately from this contract.
