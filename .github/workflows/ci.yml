@@ -62,3 +62,6 @@ jobs:
 
       - name: Verify PostgreSQL runtime
         run: npm run verify:postgres:full
+
+      - name: Verify hosted demo smoke path
+        run: npm run verify:demo:smoke

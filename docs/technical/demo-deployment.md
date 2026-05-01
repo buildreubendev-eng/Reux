@@ -38,6 +38,14 @@ npm run demo:healthcheck -- https://your-demo-host.example.com --smoke
 
 Smoke mode runs the health and deep checks, uses an isolated `healthcheck` browser session, resets commerce and logistics demo data, runs one transaction in each domain, confirms queue health moves to `working`, processes outbox events, and confirms queue health returns to `clear`. Reusing the `healthcheck` session prevents each redeploy check from creating a new schema forever. Override the session with `--session-id=<id>` or `REUX_HEALTHCHECK_SESSION_ID` if needed. Smoke mode refuses to run against shared-session demos unless `--allow-shared-smoke` is passed, because shared smoke would mutate the shared demo state.
 
+For local or CI validation against a PostgreSQL-backed demo service, use:
+
+```bash
+npm run verify:demo:smoke
+```
+
+That command starts the demo server on `REUX_DEMO_SMOKE_PORT` or `4185`, waits for `/api/health`, runs the same `--smoke` healthcheck with the `healthcheckci` session, and stops the server afterward. The GitHub Actions PostgreSQL job runs this after `npm run verify:postgres:full`, so every push verifies the compiled demo server can boot and execute the public smoke flow.
+
 ## Railway
 
 1. Create a new Railway project from `benn4105/Reux`.

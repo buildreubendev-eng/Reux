@@ -100,6 +100,7 @@ Phase 6 coverage:
 - Production-like verification path documented for WSL PostgreSQL through `npm run test:postgres`.
 - Browser demo app deployed as a Node/PostgreSQL service path with public-safe admin setup controls, schema-isolated outbox state, domain-scoped queue health, and a worker-style outbox processing loop.
 - Hosted demo validation includes health, deep queue stats, and an opt-in smoke mode that exercises public reset, transactions, queue health transitions, and outbox processing for commerce and logistics.
+- CI runs the same smoke path against a PostgreSQL-backed demo server through `npm run verify:demo:smoke`.
 - Isolated public demo sessions map each visitor to a session schema and expose a public `Reset My Session` flow, avoiding shared-state collisions in the hosted demo.
 - Logistics pilot coverage shows the same Reux subset applied to dispatch workflows rather than commerce.
 
