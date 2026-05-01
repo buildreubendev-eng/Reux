@@ -195,6 +195,16 @@ class ReuxLanguageIntelligence {
       });
     }
 
+    const objectTarget = objectLiteralCompletionTarget(document, position, symbols);
+    if (objectTarget) {
+      return objectTarget.fields.map((field) => {
+        const item = new vscode.CompletionItem(field.name, vscode.CompletionItemKind.Field);
+        item.detail = `${objectTarget.name}.${field.name}: ${field.detail}`;
+        item.insertText = `${field.name}: `;
+        return item;
+      });
+    }
+
     return completions;
   }
 
@@ -236,15 +246,29 @@ function isReuxDocument(document) {
 }
 
 function fileDiagnostic(document, message) {
-  const range = firstLineRange(document);
+  const range = diagnosticRange(document, message);
   const diagnostic = new vscode.Diagnostic(range, message, vscode.DiagnosticSeverity.Error);
   diagnostic.source = "reux";
   return diagnostic;
 }
 
+function diagnosticRange(document, message) {
+  const lineMatch = message.match(/\bline\s+(\d+)\b/i);
+  if (!lineMatch) return firstLineRange(document);
+  const lineNumber = Math.max(0, Math.min(document.lineCount - 1, Number.parseInt(lineMatch[1], 10) - 1));
+  return trimmedLineRange(document, lineNumber);
+}
+
 function firstLineRange(document) {
   const line = document.lineAt(Math.min(document.lineCount - 1, 0));
   return new vscode.Range(line.range.start, line.range.end);
+}
+
+function trimmedLineRange(document, lineNumber) {
+  const line = document.lineAt(lineNumber);
+  const firstNonWhitespace = line.text.search(/\S/);
+  if (firstNonWhitespace < 0) return line.range;
+  return new vscode.Range(new vscode.Position(lineNumber, firstNonWhitespace), line.range.end);
 }
 
 function fullDocumentRange(document) {
@@ -335,6 +359,31 @@ function fieldCompletionTarget(document, position, symbols) {
   return symbols.find((symbol) => symbol.kind === "entity" && symbol.name === localType);
 }
 
+function objectLiteralCompletionTarget(document, position, symbols) {
+  const source = currentStatementPrefix(document, position);
+  const insert = source.match(/\binsert\s+([A-Za-z_][A-Za-z0-9_]*)\s*\{[^}]*$/);
+  if (insert) {
+    return symbols.find((symbol) => symbol.kind === "entity" && symbol.name === insert[1]);
+  }
+  const enqueue = source.match(/\benqueue\s+([A-Za-z_][A-Za-z0-9_]*)\s*\{[^}]*$/);
+  if (enqueue) {
+    return symbols.find((symbol) => symbol.kind === "event" && symbol.name === enqueue[1]);
+  }
+  return undefined;
+}
+
+function currentStatementPrefix(document, position) {
+  const lines = [];
+  for (let lineNumber = position.line; lineNumber >= 0; lineNumber -= 1) {
+    const text = document.lineAt(lineNumber).text;
+    const slice = lineNumber === position.line ? text.slice(0, position.character) : text;
+    lines.unshift(slice);
+    if (lineNumber !== position.line && /^\s*(transaction\s+function|query|simulate|entity|event|enum|transition)\b/.test(text)) break;
+    if (lineNumber !== position.line && text.includes("{")) break;
+  }
+  return lines.join("\n");
+}
+
 function localBindingType(document, beforeLine, localName) {
   for (let lineNumber = beforeLine; lineNumber >= 0; lineNumber -= 1) {
     const text = document.lineAt(lineNumber).text;
@@ -342,6 +391,32 @@ function localBindingType(document, beforeLine, localName) {
     if (load) return parameterTypeNear(document, lineNumber, load[1]);
     const insert = text.match(new RegExp(`\\blet\\s+${escapeRegExp(localName)}\\s*=\\s*insert\\s+([A-Za-z_][A-Za-z0-9_]*)\\b`));
     if (insert) return insert[1];
+    const alias = queryAliasType(document, lineNumber, localName);
+    if (alias) return alias;
+  }
+  return undefined;
+}
+
+function queryAliasType(document, beforeLine, localName) {
+  const startLine = nearestQueryStart(document, beforeLine);
+  if (startLine === undefined) return undefined;
+  for (let lineNumber = startLine; lineNumber <= beforeLine; lineNumber += 1) {
+    const text = document.lineAt(lineNumber).text;
+    const from = text.match(new RegExp(`\\bfrom\\s+${escapeRegExp(localName)}\\s+in\\s+([A-Za-z_][A-Za-z0-9_]*)\\b`));
+    if (from) return from[1];
+    const join = text.match(new RegExp(`\\bjoin\\s+${escapeRegExp(localName)}\\s+in\\s+([A-Za-z_][A-Za-z0-9_]*)\\b`));
+    if (join) return join[1];
+    const leftJoin = text.match(new RegExp(`\\bleft\\s+join\\s+${escapeRegExp(localName)}\\s+in\\s+([A-Za-z_][A-Za-z0-9_]*)\\b`));
+    if (leftJoin) return leftJoin[1];
+  }
+  return undefined;
+}
+
+function nearestQueryStart(document, beforeLine) {
+  for (let lineNumber = beforeLine; lineNumber >= 0; lineNumber -= 1) {
+    const text = document.lineAt(lineNumber).text;
+    if (/^\s*query(?:\s+fragment)?\s+/.test(text)) return lineNumber;
+    if (/^\s*(transaction\s+function|simulate|entity|event|enum|transition)\b/.test(text)) return undefined;
   }
   return undefined;
 }
@@ -392,11 +467,24 @@ const keywordDetails = new Map([
   ["transaction", "Starts a transaction function declaration."],
   ["writes", "Declares the entities a transaction may mutate or insert."],
   ["retry", "Declares retry attempts for retryable transaction failures."],
+  ["load", "Loads an entity reference for update inside a transaction."],
+  ["save", "Marks a loaded transaction binding as saved."],
+  ["insert", "Inserts a new entity row inside a transaction."],
   ["require", "Declares a transaction guard that aborts when false."],
   ["abort", "Rolls back the current transaction."],
   ["enqueue", "Persists a typed durable outbox event."],
   ["after", "Used with `commit` to declare a post-commit hook."],
+  ["commit", "Used with `after` to declare a post-commit hook."],
+  ["from", "Starts a query source range."],
+  ["join", "Adds a query join."],
+  ["where", "Filters query rows."],
+  ["select", "Declares a query projection."],
+  ["group", "Used with `by` to group query rows."],
+  ["order", "Used with `by` to order query rows."],
+  ["limit", "Bounds query result count."],
+  ["dimension", "Adds classification metadata to a simulation."],
   ["forecast", "Declares the period length for a simulation."],
+  ["change", "Declares a scheduled simulation assumption change."],
   ["scenario", "Declares an alternate simulation path."],
   ["formula", "Declares a derived simulation metric."],
   ["objective", "Declares whether a simulation metric should be maximized or minimized."],

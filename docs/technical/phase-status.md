@@ -71,7 +71,7 @@ Status: implemented for the MVP workflow.
 - `simulation-types-ts` and `project-simulation-types-ts` emit TypeScript contracts for simulation dimensions, assumptions, metrics, scenarios, objectives, run results, comparisons, explanations, comparison summaries, helper functions, and metadata constants.
 - `simulation-packs` and `project-simulation-packs` report advisory PLOS/business domain pack matches and suggested assumptions or metrics to add.
 - `format` and `project-format` provide conservative stdout formatting for `.dl` and `.reux` files.
-- A local VS Code language package under `editors/vscode` provides `.dl`/`.reux` file association, syntax highlighting, bracket pairing, file-level diagnostics backed by `reux diagnose --json`, formatting backed by `reux format`, lightweight completions, hover text, and current-file go-to-definition.
+- A local VS Code language package under `editors/vscode` provides `.dl`/`.reux` file association, syntax highlighting, bracket pairing, line-aware diagnostics backed by `reux diagnose --json`, formatting backed by `reux format`, lightweight completions, query-alias field completions, insert/enqueue object-field completions, hover text, and current-file go-to-definition.
 - Package distribution now has typed ESM entrypoints, runtime subpath exports, package dry-run coverage for editor assets, and tarball installation documentation.
 - `scripts/demo-pilot-worker.mjs` provides a runnable pilot outbox worker process for hosted and local demo environments.
 - Seed tooling supports schema-only checks with enum validation, PostgreSQL dry runs, rerunnable upserts, deletes, and transactional resets.

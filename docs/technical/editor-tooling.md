@@ -5,7 +5,7 @@ Reux now has a first editor-support slice:
 - CLI formatter for `.dl` and `.reux` files.
 - Project-scoped formatter for the single-source `dl.json` workflow.
 - Local VS Code syntax package under `editors/vscode`.
-- File-level VS Code diagnostics backed by the Reux CLI.
+- CLI-backed VS Code diagnostics with line-aware ranges when compiler messages include a source line.
 - VS Code document formatting backed by the Reux CLI.
 - Lightweight VS Code completions, hover text, and current-file go-to-definition.
 
@@ -56,6 +56,14 @@ node dist/cli.js diagnose examples/pilot_reux.dl --json
 node dist/cli.js check examples/pilot_reux.dl
 ```
 
+Current editor intelligence includes:
+
+- Keyword completions for schema, query, transaction, and simulation syntax.
+- Current-file symbol completions and go-to-definition.
+- Dotted field completions for transaction bindings such as `account.` after `let account = load accountRef for update`.
+- Dotted field completions for query range aliases such as `order.` and `account.` inside query bodies.
+- Object-field completions inside `insert Entity { ... }` and `enqueue Event { ... }` payloads.
+
 ## Next Editor Work
 
-The next editor milestone is a proper language-server process with compiler-backed semantic completion, cross-file navigation, rename, and precise diagnostic ranges.
+The next editor milestone is a proper language-server process with compiler-backed semantic completion, cross-file navigation, rename, and expression-aware diagnostic ranges.
