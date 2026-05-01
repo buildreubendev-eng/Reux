@@ -136,6 +136,7 @@ Technical documentation:
 - [Logistics pilot](docs/technical/logistics-pilot.md)
 - [Pilot demo walkthrough](docs/tutorial/demo-walkthrough.md)
 - [Public Reux roadmap](docs/public/reux-roadmap.md)
+- [Public Reux roadmap data](docs/public/reux-roadmap.json)
 - [Public Reux positioning guide](docs/public/reux-positioning.md)
 
 GitHub Actions runs `npm run verify` and PostgreSQL-backed `npm run verify:postgres` on pushes and pull requests to `main`.

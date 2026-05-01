@@ -1,0 +1,89 @@
+{
+  "project": "Reux",
+  "headline": "A data-native language for reliable backend workflows and simulation-driven applications.",
+  "status": {
+    "demoReadinessPercent": 95,
+    "fullCompletionPercent": 86,
+    "summary": "The public demo is live with commerce and logistics workflows. The deeper language, tooling, simulation, and production-hardening layers are still maturing."
+  },
+  "liveNow": [
+    "Public commerce workflow demo",
+    "Public logistics workflow demo",
+    "Hosted Railway backend connected to PostgreSQL",
+    "Reuben website embed/link for public testing",
+    "Compiler checks for schema, query, transaction, migration, seed, and simulation files",
+    "Generated TypeScript client, server, and worker scaffolds",
+    "Outbox queue processing with retry, dead-letter, stale-claim recovery, queue stats, and worker observability counters",
+    "Early simulation syntax for PLOS and business-simulation research"
+  ],
+  "milestones": [
+    {
+      "title": "Demo Hardening",
+      "goal": "Make the public demo feel stable, explainable, and safe for repeat visitors.",
+      "items": [
+        "Improve public demo copy and empty states",
+        "Add clearer visible status for queue/outbox processing",
+        "Add uptime and post-deploy monitoring",
+        "Add richer hosted health checks for demo regressions",
+        "Document public reset/session behavior for testers"
+      ]
+    },
+    {
+      "title": "Reux Language Depth",
+      "goal": "Turn the current useful subset into a stronger application language foundation.",
+      "items": [
+        "Broaden transaction control flow",
+        "Deepen expression typing",
+        "Improve generated worker contracts",
+        "Expand reusable query patterns",
+        "Continue tightening compiler diagnostics and safety checks"
+      ]
+    },
+    {
+      "title": "Simulation Foundation",
+      "goal": "Make Reux useful for structured forecasting and scenario comparison.",
+      "items": [
+        "Expand simulation domain packs for PLOS and business operations",
+        "Add richer time-series and assumption modeling",
+        "Add stronger unit and formula validation",
+        "Improve comparison reports and explanation output",
+        "Prepare simulation APIs that product apps can call directly"
+      ]
+    },
+    {
+      "title": "Product Ecosystem",
+      "goal": "Keep Reux grounded in real products instead of building language features in isolation.",
+      "items": [
+        "Build PLOS as a personal simulation product using normal web technology first",
+        "Build the real-time business simulation engine as an enterprise product prototype",
+        "Use Reux underneath both products as the rule, workflow, and simulation layer as it matures",
+        "Add more non-commerce pilots to prove the language outside a single domain"
+      ]
+    },
+    {
+      "title": "Developer Experience",
+      "goal": "Make Reux approachable for technical reviewers and early users.",
+      "items": [
+        "Improve editor completions, definitions, and diagnostics",
+        "Publish clearer examples and tutorials",
+        "Prepare package distribution and installation docs",
+        "Add concise getting-started flows for local development and hosted demos"
+      ]
+    }
+  ],
+  "longTermDirection": [
+    "Data models",
+    "Queries",
+    "Transactions",
+    "Events",
+    "Migrations",
+    "Simulation declarations",
+    "Decision logic that needs to be auditable and explainable"
+  ],
+  "ecosystem": {
+    "reuben": "The public home for the work.",
+    "reux": "The language and runtime layer.",
+    "plos": "The personal simulation product that validates individual planning use cases.",
+    "businessSimulationEngine": "The enterprise product that validates operational and financial decision use cases."
+  }
+}
