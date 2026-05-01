@@ -186,6 +186,52 @@ input {
   gap: 12px;
 }
 
+.queue-strip {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.4fr) repeat(4, minmax(90px, 0.65fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--line);
+}
+
+.queue-strip > div {
+  min-height: 68px;
+  background: var(--panel);
+  padding: 13px 16px;
+}
+
+.queue-strip span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+  text-transform: uppercase;
+}
+
+.queue-strip strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 18px;
+}
+
+#queueHealth[data-health="clear"] {
+  color: var(--green);
+}
+
+#queueHealth[data-health="working"] {
+  color: var(--blue);
+}
+
+#queueHealth[data-health="needs retry"] {
+  color: var(--amber);
+}
+
+#queueHealth[data-health="blocked"] {
+  color: var(--red);
+}
+
 .notice {
   border: 1px solid #f1c57c;
   border-radius: 8px;
@@ -361,6 +407,7 @@ td code {
   .workbench,
   .data-grid,
   .status-grid,
+  .queue-strip,
   .form-grid {
     grid-template-columns: 1fr;
   }

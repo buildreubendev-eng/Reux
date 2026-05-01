@@ -8,7 +8,6 @@ import {
   applyMigrations,
   createPostgresDatabase,
   migrationStatus,
-  outboxStats,
   processOutboxEvents,
   runSqlQuery,
   runTransactionSql,
@@ -22,6 +21,7 @@ import {
   sessionInfo,
   sessionSchema,
 } from "./session.mjs";
+import { emptyOutboxSummary, summarizeOutboxStats } from "./status.mjs";
 
 const rootDir = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 const publicDir = join(rootDir, "demo", "pilot-app", "public");
@@ -223,6 +223,7 @@ async function commerceDashboard(request) {
   await ensureDemoSchema(context);
   await ensureDemoOutboxTable(context);
   const status = await domainStatus(context, domains.commerce);
+  const queue = summarizeOutboxStats(await domainOutboxStats(context, domains.commerce));
   let queryResults;
   try {
     queryResults = await Promise.all([
@@ -239,7 +240,7 @@ async function commerceDashboard(request) {
     ]);
   } catch (error) {
     if (isMissingRelation(error)) {
-      return emptyDashboard(domains.commerce, status, context);
+      return emptyDashboard(domains.commerce, status, context, queue);
     }
     throw error;
   }
@@ -254,6 +255,7 @@ async function commerceDashboard(request) {
       applied: status.applied.length,
       pending: status.pending.map((migration) => migration.filename),
     },
+    queue,
     orders: orders.rows,
     balances: balances.rows,
     payments: payments.rows,
@@ -268,6 +270,7 @@ async function logisticsDashboard(request) {
   await ensureDemoSchema(context);
   await ensureDemoOutboxTable(context);
   const status = await domainStatus(context, domains.logistics);
+  const queue = summarizeOutboxStats(await domainOutboxStats(context, domains.logistics));
   let queryResults;
   try {
     queryResults = await Promise.all([
@@ -282,7 +285,7 @@ async function logisticsDashboard(request) {
     ]);
   } catch (error) {
     if (isMissingRelation(error)) {
-      return emptyDashboard(domains.logistics, status, context);
+      return emptyDashboard(domains.logistics, status, context, queue);
     }
     throw error;
   }
@@ -297,6 +300,7 @@ async function logisticsDashboard(request) {
       applied: status.applied.length,
       pending: status.pending.map((migration) => migration.filename),
     },
+    queue,
     activeShipments: activeShipments.rows,
     driverManifest: driverManifest.rows,
     statusSummary: statusSummary.rows,
@@ -304,7 +308,7 @@ async function logisticsDashboard(request) {
   };
 }
 
-function emptyDashboard(domain, status, context) {
+function emptyDashboard(domain, status, context, queue = emptyOutboxSummary()) {
   const common = {
     domain: domain.key,
     ids: domain.ids,
@@ -314,6 +318,7 @@ function emptyDashboard(domain, status, context) {
       applied: status.applied.length,
       pending: status.pending.map((migration) => migration.filename),
     },
+    queue,
     outbox: [],
   };
   if (domain.key === "logistics") {
@@ -387,11 +392,43 @@ async function demoOutboxStats(request, domain) {
   const context = requestContext(request);
   await ensureDemoSchema(context);
   await ensureDemoOutboxTable(context);
+  const stats = await domainOutboxStats(context, domain);
   return {
     ok: true,
     domain: domain.key,
     session: sessionInfo(context),
-    outbox: await outboxStats(context.db),
+    outbox: stats,
+    summary: summarizeOutboxStats(stats),
+  };
+}
+
+async function domainOutboxStats(context, domain) {
+  const eventTypes = Object.keys(domain.outboxHandlers);
+  const placeholders = eventTypes.map((_, index) => `$${index + 1}`).join(", ");
+  const result = await context.db.query(
+    `
+SELECT status,
+       count(*) AS count,
+       COALESCE(sum(attempts), 0) AS attempts,
+       min(created_at) AS oldest_created_at,
+       max(created_at) AS newest_created_at
+FROM ${context.outboxTable}
+WHERE event_type IN (${placeholders})
+GROUP BY status
+ORDER BY status ASC;
+`,
+    eventTypes,
+  );
+  const byStatus = result.rows.map((row) => ({
+    status: row.status,
+    count: Number(row.count),
+    attempts: Number(row.attempts ?? 0),
+    oldestCreatedAt: timestampValue(row.oldest_created_at),
+    newestCreatedAt: timestampValue(row.newest_created_at),
+  }));
+  return {
+    total: byStatus.reduce((sum, status) => sum + status.count, 0),
+    byStatus,
   };
 }
 
@@ -524,6 +561,11 @@ async function domainStatus(context, domain) {
 async function tableExists(db, tableName) {
   const result = await db.query("SELECT to_regclass($1) AS name;", [tableName]);
   return Boolean(result.rows[0]?.name);
+}
+
+function timestampValue(value) {
+  if (value === null || value === undefined) return null;
+  return value instanceof Date ? value.toISOString() : String(value);
 }
 
 async function ensureDemoOutboxTable(context) {

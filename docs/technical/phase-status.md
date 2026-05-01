@@ -98,7 +98,7 @@ Phase 6 coverage:
 - Transaction-local generated ID behavior represented by `capturePayment`, which binds the inserted payment and includes `payment.id` in the durable outbox payload.
 - Transaction conflict behavior represented by `creditAccount`, which lowers to `SELECT ... FOR UPDATE`, a balance update, retry metadata, and an outbox event.
 - Production-like verification path documented for WSL PostgreSQL through `npm run test:postgres`.
-- Browser demo app deployed as a Node/PostgreSQL service path with public-safe admin setup controls, schema-isolated outbox state, and a worker-style outbox processing loop.
+- Browser demo app deployed as a Node/PostgreSQL service path with public-safe admin setup controls, schema-isolated outbox state, domain-scoped queue health, and a worker-style outbox processing loop.
 - Isolated public demo sessions map each visitor to a session schema and expose a public `Reset My Session` flow, avoiding shared-state collisions in the hosted demo.
 - Logistics pilot coverage shows the same Reux subset applied to dispatch workflows rather than commerce.
 

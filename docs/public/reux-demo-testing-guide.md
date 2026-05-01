@@ -22,7 +22,7 @@ The demo currently includes:
 4. Run a payment or account-credit transaction.
 5. Refresh the data and confirm balances, payments, or orders changed as expected.
 6. Process outbox events.
-7. Confirm queue/outbox counts move down after processing.
+7. Confirm the queue health strip moves pending events down after processing.
 8. Switch to the logistics demo.
 9. Reset the logistics session.
 10. Run a logistics transaction and confirm the visible state changes.
@@ -35,8 +35,9 @@ The demo is behaving correctly when:
 - Transactions update the visible state.
 - Refresh shows the latest PostgreSQL-backed data.
 - Outbox events appear after transactions that emit durable events.
-- Processing outbox events reduces pending queue counts.
+- Processing outbox events reduces pending queue counts and returns the queue health to `Clear`.
 - Commerce and logistics sessions do not interfere with each other.
+- Commerce and logistics queue health only counts the events for the active tab.
 - Reloading the page keeps the same visitor session unless the browser storage is cleared.
 
 ## What Is Not Final Yet
@@ -47,7 +48,6 @@ Known remaining polish areas:
 
 - More guided in-page explanations.
 - Cleaner empty states.
-- Better visible queue status.
 - Hosted uptime monitoring.
 - Richer public examples for simulations.
 - More product-focused flows for PLOS and business simulation use cases.

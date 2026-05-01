@@ -15,7 +15,7 @@ const domains = {
       ["Applied Migrations", (dashboard) => dashboard.migrations.applied],
       ["Pending Migrations", (dashboard) => dashboard.migrations.pending.length],
       ["Open Orders", (dashboard) => dashboard.openOrders.length],
-      ["Outbox Events", (dashboard) => dashboard.outbox.length],
+      ["Active Events", (dashboard) => queueSummary(dashboard).active],
     ],
     actions: {
       capture: {
@@ -61,7 +61,7 @@ const domains = {
       ["Schema State", (dashboard) => (dashboard.setupRequired ? "Pending" : "Ready")],
       ["Pending Setup", (dashboard) => dashboard.migrations.pending.length],
       ["Active Shipments", (dashboard) => dashboard.activeShipments.length],
-      ["Outbox Events", (dashboard) => dashboard.outbox.length],
+      ["Active Events", (dashboard) => queueSummary(dashboard).active],
     ],
     actions: {
       startShipment: {
@@ -131,6 +131,11 @@ const elements = {
     document.querySelector("#metricThreeCount"),
     document.querySelector("#metricFourCount"),
   ],
+  queueHealth: document.querySelector("#queueHealth"),
+  queuePending: document.querySelector("#queuePending"),
+  queueProcessing: document.querySelector("#queueProcessing"),
+  queueFailed: document.querySelector("#queueFailed"),
+  queueDead: document.querySelector("#queueDead"),
   summaryTitle: document.querySelector("#summaryTitle"),
   summaryTable: document.querySelector("#summaryTable"),
   dataOnePanel: document.querySelector("#dataOnePanel"),
@@ -231,6 +236,7 @@ async function refresh() {
     elements.metricCounts[index].textContent = String(count(dashboard));
   });
 
+  renderQueueSummary(dashboard);
   renderDomainTables(config, dashboard);
   setActionAvailability();
 }
@@ -251,6 +257,27 @@ function renderDomainTables(config, dashboard) {
   renderConfiguredTable(config.tables.dataTwo, elements.dataTwoTitle, elements.dataTwoTable, dashboard, elements.dataTwoPanel);
   renderConfiguredTable(config.tables.dataThree, elements.dataThreeTitle, elements.dataThreeTable, dashboard, elements.dataThreePanel);
   renderConfiguredTable(config.tables.outbox, null, elements.outboxTable, dashboard);
+}
+
+function renderQueueSummary(dashboard) {
+  const queue = queueSummary(dashboard);
+  elements.queueHealth.textContent = titleCase(queue.health);
+  elements.queueHealth.dataset.health = queue.health;
+  elements.queuePending.textContent = String(queue.pending);
+  elements.queueProcessing.textContent = String(queue.processing);
+  elements.queueFailed.textContent = String(queue.failed);
+  elements.queueDead.textContent = String(queue.dead);
+}
+
+function queueSummary(dashboard) {
+  return {
+    health: dashboard.queue?.health ?? "clear",
+    active: Number(dashboard.queue?.active ?? dashboard.outbox?.length ?? 0),
+    pending: Number(dashboard.queue?.pending ?? 0),
+    processing: Number(dashboard.queue?.processing ?? 0),
+    failed: Number(dashboard.queue?.failed ?? 0),
+    dead: Number(dashboard.queue?.dead ?? 0),
+  };
 }
 
 function renderConfiguredTable(tableConfig, titleTarget, tableTarget, dashboard, panelTarget) {
@@ -396,6 +423,14 @@ function notify(message, error = false) {
 function label(value) {
   if (displayLabels[value]) return displayLabels[value];
   return value.replace(/_/g, " ").replace(/([a-z])([A-Z])/g, "$1 $2");
+}
+
+function titleCase(value) {
+  return String(value)
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+    .join(" ");
 }
 
 function escapeHtml(value) {

@@ -83,7 +83,7 @@ npm run demo:healthcheck -- https://your-demo-host.example.com --deep
 
 Regular visitors can reset only their own session and use the dashboard and transaction buttons after setup. Keep the token private so the shared/admin demo database cannot be reset by everyone visiting the public site.
 
-The public UI keeps admin setup inside a collapsed `Admin` menu and exposes `Reset My Session` for each tab. The dashboard can still load before setup and will show a setup-required state instead of failing with a database error. Public visitors do not need the token after the seeded data has been initialized. The `Process Outbox` button runs demo event handlers over pending outbox rows so visitors can see transaction events move from `pending` to `processed`. The app creates and queries `_dl_outbox` inside `REUX_DEMO_SCHEMA`, avoiding accidental reads from another schema in a shared database.
+The public UI keeps admin setup inside a collapsed `Admin` menu and exposes `Reset My Session` for each tab. The dashboard can still load before setup and will show a setup-required state instead of failing with a database error. Public visitors do not need the token after the seeded data has been initialized. The `Process Outbox` button runs demo event handlers over pending outbox rows so visitors can see transaction events move from `pending` to `processed`. The dashboard shows a domain-scoped queue health strip for pending, processing, failed, and dead-lettered events, so testers can tell whether each tab is clear, working, retrying, or blocked. The app creates and queries `_dl_outbox` inside `REUX_DEMO_SCHEMA`, avoiding accidental reads from another schema in a shared database.
 
 The hosted service also exposes session-scoped queue health endpoints for lightweight operations checks:
 
@@ -93,6 +93,11 @@ GET /api/logistics/outbox/stats
 ```
 
 They return the current visitor session plus outbox totals grouped by status.
+
+The stats endpoints are domain-scoped by event type:
+
+- `/api/outbox/stats` reports `AccountCredited`, `OrderPaid`, and `PaymentCaptured`.
+- `/api/logistics/outbox/stats` reports `ShipmentStarted`, `ShipmentDelivered`, and `DriverCredited`.
 
 For a separate worker process, deploy the same repo with:
 
