@@ -2,9 +2,9 @@
   "project": "Reux",
   "headline": "A data-native language for reliable backend workflows and simulation-driven applications.",
   "status": {
-    "demoReadinessPercent": 96,
-    "fullCompletionPercent": 86,
-    "summary": "The public demo is live with commerce and logistics workflows plus visible domain-scoped queue health. The deeper language, tooling, simulation, and production-hardening layers are still maturing."
+    "demoReadinessPercent": 97,
+    "fullCompletionPercent": 87,
+    "summary": "The public demo is live with commerce and logistics workflows, visible domain-scoped queue health, and hosted smoke checks for reset, transaction, queue, and outbox behavior. The deeper language, tooling, simulation, and production-hardening layers are still maturing."
   },
   "liveNow": [
     "Public commerce workflow demo",
@@ -14,6 +14,7 @@
     "Compiler checks for schema, query, transaction, migration, seed, and simulation files",
     "Generated TypeScript client, server, and worker scaffolds",
     "Outbox queue processing with retry, dead-letter, stale-claim recovery, domain-scoped queue health, queue stats, and worker observability counters",
+    "Hosted smoke checks that validate public reset, transactions, queue health, and outbox processing for both demo domains",
     "Early simulation syntax for PLOS and business-simulation research"
   ],
   "milestones": [
@@ -23,7 +24,6 @@
       "items": [
         "Improve public demo copy and empty states",
         "Add uptime and post-deploy monitoring",
-        "Add richer hosted health checks for demo regressions",
         "Document public reset/session behavior for testers"
       ]
     },

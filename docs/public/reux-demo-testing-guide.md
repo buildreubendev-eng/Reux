@@ -40,6 +40,16 @@ The demo is behaving correctly when:
 - Commerce and logistics queue health only counts the events for the active tab.
 - Reloading the page keeps the same visitor session unless the browser storage is cleared.
 
+## Release Smoke Check
+
+After a hosted redeploy, maintainers can run:
+
+```bash
+npm run demo:healthcheck -- https://your-demo-host.example.com --smoke
+```
+
+That command tests the same public flow with the isolated `healthcheck` session: reset, transaction, queue health, outbox processing, and final clear state for both Commerce and Logistics.
+
 ## What Is Not Final Yet
 
 The demo is not the finished Reux product experience. It is intentionally closer to a working technical preview than a polished customer app.

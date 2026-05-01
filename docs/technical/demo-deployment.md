@@ -30,6 +30,14 @@ npm run demo:healthcheck -- https://your-demo-host.example.com --deep
 
 Deep mode also checks `/api/outbox/stats` and `/api/logistics/outbox/stats`.
 
+For release validation after a production redeploy, run the full public smoke path:
+
+```bash
+npm run demo:healthcheck -- https://your-demo-host.example.com --smoke
+```
+
+Smoke mode runs the health and deep checks, uses an isolated `healthcheck` browser session, resets commerce and logistics demo data, runs one transaction in each domain, confirms queue health moves to `working`, processes outbox events, and confirms queue health returns to `clear`. Reusing the `healthcheck` session prevents each redeploy check from creating a new schema forever. Override the session with `--session-id=<id>` or `REUX_HEALTHCHECK_SESSION_ID` if needed. Smoke mode refuses to run against shared-session demos unless `--allow-shared-smoke` is passed, because shared smoke would mutate the shared demo state.
+
 ## Railway
 
 1. Create a new Railway project from `benn4105/Reux`.
@@ -79,6 +87,7 @@ For a quick command-line check after setup or redeploy:
 ```bash
 npm run demo:healthcheck -- https://your-demo-host.example.com
 npm run demo:healthcheck -- https://your-demo-host.example.com --deep
+npm run demo:healthcheck -- https://your-demo-host.example.com --smoke
 ```
 
 Regular visitors can reset only their own session and use the dashboard and transaction buttons after setup. Keep the token private so the shared/admin demo database cannot be reset by everyone visiting the public site.

@@ -4,7 +4,7 @@ Reux is a data-native language for applications that need reliable workflows, au
 
 Current status:
 
-- Demo readiness: roughly 96%.
+- Demo readiness: roughly 97%.
 - Full platform completion: roughly 86%.
 - Public demo scope: commerce workflows, logistics workflows, isolated visitor sessions, transaction execution, PostgreSQL-backed state, queue/outbox processing, and health checks.
 - Core language scope: schema declarations, typed queries, transaction functions, durable events, conservative migrations, generated TypeScript integration, and early simulation declarations.
@@ -18,6 +18,7 @@ Current status:
 - Reux compiler checks for schema, query, transaction, migration, seed, and simulation files.
 - Generated TypeScript client/server/worker scaffolds.
 - Outbox queue processing with retry, dead-letter, stale-claim recovery, domain-scoped queue health, queue stats, and worker observability counters.
+- Hosted smoke checks that validate public reset, transactions, queue health, and outbox processing for both demo domains.
 - Early simulation syntax for PLOS and business-simulation research.
 
 ## Next Milestones
@@ -30,7 +31,6 @@ Planned work:
 
 - Improve public demo copy and empty states.
 - Add uptime and post-deploy monitoring.
-- Add richer hosted health checks for demo regressions.
 - Document the public reset/session behavior for testers.
 
 ### 2. Reux Language Depth
