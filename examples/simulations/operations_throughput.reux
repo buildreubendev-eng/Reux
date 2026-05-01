@@ -1,0 +1,46 @@
+module business_operations
+
+simulate operations_throughput {
+  dimension product = business_simulation
+  dimension domain = operations
+  dimension audience = enterprise
+
+  volume = 1000
+  unit_cost = 12 USD
+  revenue_per_unit = 18 USD
+  cycle_time = 4
+  failure_rate = 5 percent
+
+  formula throughput = volume / cycle_time
+  formula operating_cost = volume * unit_cost
+  formula risk_score = failure_rate * 100
+  formula margin_delta = volume * (revenue_per_unit - unit_cost)
+
+  objective maximize throughput
+  objective minimize operating_cost
+  objective minimize risk_score
+  objective maximize margin_delta
+
+  change at 3 weeks {
+    failure_rate = 4 percent
+  }
+
+  scenario higher_volume {
+    volume = 1250
+  }
+
+  scenario supplier_delay {
+    cycle_time = 6
+  }
+
+  scenario quality_issue {
+    failure_rate = 12 percent
+  }
+
+  scenario process_improvement {
+    unit_cost = 11 USD
+    cycle_time = 3
+  }
+
+  forecast 4 weeks
+}

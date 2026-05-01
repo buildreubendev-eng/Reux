@@ -5,7 +5,7 @@ Reux is a data-native language for applications that need reliable workflows, au
 Current status:
 
 - Demo readiness: roughly 99%.
-- Full platform completion: roughly 92%.
+- Full platform completion: roughly 93%.
 - Public demo scope: commerce workflows, logistics workflows, isolated visitor sessions, transaction execution, PostgreSQL-backed state, queue/outbox processing, and health checks.
 - Core language scope: schema declarations, typed queries, transaction functions, durable events, conservative migrations, generated TypeScript integration, and early simulation declarations.
 
@@ -24,6 +24,7 @@ Current status:
 - Early simulation syntax for PLOS and business-simulation research.
 - Advisory simulation domain-pack coverage for PLOS and business models, including suggested assumptions, metrics, scenarios, and objectives.
 - Executable PLOS habit-consistency example alongside the personal-finance example.
+- Executable business operations simulation example alongside the workforce example.
 - Generated simulation catalog helpers so product apps can discover available Reux simulation models.
 
 ## Next Milestones

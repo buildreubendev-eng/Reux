@@ -37,6 +37,7 @@ npm run demo:logistics
 node dist/cli.js simulation-ir examples/simulations/personal_finance.reux
 node dist/cli.js simulation-run examples/simulations/workforce_change.reux
 node dist/cli.js simulation-run examples/simulations/habit_consistency.reux
+node dist/cli.js simulation-run examples/simulations/operations_throughput.reux
 $env:DATABASE_URL='postgres://datalang:datalang@127.0.0.1:5432/datalang_dev'
 npm run demo:pilot-app
 npm run demo:pilot-worker

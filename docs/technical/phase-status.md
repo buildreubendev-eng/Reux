@@ -71,7 +71,7 @@ Status: implemented for the MVP workflow.
 - `simulation-types-ts` and `project-simulation-types-ts` emit TypeScript contracts for simulation dimensions, assumptions, metrics, scenarios, objectives, run results, comparisons, explanations, comparison summaries, helper functions, and metadata constants.
 - Generated simulation TypeScript now includes a catalog helper API for listing and finding simulation metadata from product code.
 - `simulation-packs` and `project-simulation-packs` report advisory PLOS/business domain pack matches, coverage scoring, and suggested assumptions, metrics, scenarios, or objectives to add.
-- PLOS simulation examples now cover both personal finance and habit consistency.
+- Simulation examples now cover PLOS personal finance, PLOS habit consistency, business workforce, and business operations.
 - `format` and `project-format` provide conservative stdout formatting for `.dl` and `.reux` files.
 - A local VS Code language package under `editors/vscode` provides `.dl`/`.reux` file association, syntax highlighting, bracket pairing, line-aware diagnostics backed by `reux diagnose --json`, formatting backed by `reux format`, lightweight completions, query-alias field completions, insert/enqueue object-field completions, hover text, and current-file go-to-definition.
 - Package distribution now has typed ESM entrypoints, runtime subpath exports, package dry-run coverage for editor assets, and tarball installation documentation.

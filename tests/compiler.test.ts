@@ -676,6 +676,37 @@ simulate support_cost {
     expect(report.simulations[0].missingSuggestedObjectives).toEqual([]);
   });
 
+  it("reports enterprise operations simulation pack coverage", () => {
+    const source = readFileSync("examples/simulations/operations_throughput.reux", "utf8");
+    const run = JSON.parse(emitSimulationRun(source, "operations_throughput"));
+    const report = JSON.parse(emitSimulationPacks(source, undefined, "json"));
+
+    expect(run.name).toBe("operations_throughput");
+    expect(run.dimensions).toEqual({ product: "business_simulation", domain: "operations", audience: "enterprise" });
+    expect(run.periods[0].metrics).toMatchObject({
+      throughput: 250,
+      operating_cost: 12000,
+      risk_score: 5,
+      margin_delta: 6000,
+    });
+    expect(run.periods[2].metrics.risk_score).toBe(4);
+    expect(run.comparison.metricRankings.find((ranking: { metric: string }) => ranking.metric === "throughput").scenarios[0]).toEqual({
+      name: "process_improvement",
+      delta: 83.333333,
+      rank: 1,
+    });
+    expect(report.simulations[0].pack).toEqual({
+      id: "business_simulation.operations.enterprise",
+      title: "Business operations simulation",
+      description: "Operational throughput, cost, risk, and scenario-comparison simulations.",
+    });
+    expect(report.simulations[0].coverage.overallPercent).toBe(100);
+    expect(report.simulations[0].missingSuggestedAssumptions).toEqual([]);
+    expect(report.simulations[0].missingSuggestedMetrics).toEqual([]);
+    expect(report.simulations[0].missingSuggestedScenarios).toEqual([]);
+    expect(report.simulations[0].missingSuggestedObjectives).toEqual([]);
+  });
+
   it("applies simulation assumption changes by forecast period", () => {
     const run = JSON.parse(
       emitSimulationRun(`module personal_life
