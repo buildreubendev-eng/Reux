@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import {
   businessSimulatorContractVersion,
   businessSimulatorDefaultAssumptions,
   businessSimulatorEndpoints,
   type BusinessSimulatorRunRequest,
 } from "../src/business-simulator-contract.js";
+import { compileSource, emitSimulationRun } from "../src/compiler.js";
 
 describe("business simulator API contract", () => {
   it("defines the first public endpoint set", () => {
@@ -51,5 +53,46 @@ describe("business simulator API contract", () => {
 
     expect(request.scenarios[0].assumptions.productivityGainRate).toBe(0.12);
     expect(businessSimulatorContractVersion).toBe("2026-05-01");
+  });
+
+  it("keeps the Reux business simulator model aligned with frontend assumptions and metrics", () => {
+    const source = readFileSync("examples/simulations/business_simulator.reux", "utf8");
+    const compiled = compileSource(source);
+    const simulation = compiled.simulations[0];
+    const assumptionNames = simulation.assumptions.map((assumption) => assumption.name);
+    const metricNames = simulation.formulas.map((formula) => formula.name);
+
+    expect(assumptionNames).toEqual([
+      "employees",
+      "averageHourlyCost",
+      "weeklyDemand",
+      "averageOrderValue",
+      "grossMarginRate",
+      "productivityGainRate",
+      "overtimeReductionRate",
+      "supplierDelayRiskRate",
+      "defectRate",
+    ]);
+    expect(metricNames).toEqual([
+      "revenue",
+      "laborCost",
+      "productivity",
+      "workforceLoad",
+      "defectCost",
+      "operatingCost",
+      "margin",
+      "marginDelta",
+      "riskScore",
+    ]);
+
+    const run = JSON.parse(emitSimulationRun(source));
+    expect(run.comparison.metricRankings.some((ranking: { metric: string }) => ranking.metric === "marginDelta")).toBe(true);
+    expect(run.scenarios.map((scenario: { name: string }) => scenario.name)).toEqual([
+      "baseline",
+      "processImprovement",
+      "demandIncrease",
+      "qualityIssue",
+      "staffingIncrease",
+    ]);
   });
 });

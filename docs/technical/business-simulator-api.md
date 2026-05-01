@@ -3,6 +3,7 @@
 This contract is the handoff point between the Business Simulator frontend and the Reux backend. The frontend can mock these shapes today, then swap the mock service for hosted Reux endpoints later.
 
 The TypeScript source of truth lives in `src/business-simulator-contract.ts`.
+The first Reux model that matches this contract lives in `examples/simulations/business_simulator.reux`.
 
 ## Endpoints
 
@@ -102,9 +103,36 @@ Metric snapshots include:
 
 The first backend implementation can adapt the existing Reux simulation runner:
 
-1. Convert `baseline` and each scenario override into a Reux simulation model.
-2. Run the simulation through the Reux simulation runtime.
-3. Normalize Reux output into `BusinessSimulatorRunResponse`.
-4. Keep recommendation scoring deterministic and explainable.
+1. Start from `examples/simulations/business_simulator.reux`.
+2. Convert `baseline` and each scenario override into Reux assumption values.
+3. Run the simulation through the Reux simulation runtime.
+4. Normalize Reux output into `BusinessSimulatorRunResponse`.
+5. Keep recommendation scoring deterministic and explainable.
+
+The initial model maps API assumptions to Reux assumptions directly:
+
+| API field | Reux assumption |
+| --- | --- |
+| `employees` | `employees` |
+| `averageHourlyCost` | `averageHourlyCost` |
+| `weeklyDemand` | `weeklyDemand` |
+| `averageOrderValue` | `averageOrderValue` |
+| `grossMarginRate` | `grossMarginRate` |
+| `productivityGainRate` | `productivityGainRate` |
+| `overtimeReductionRate` | `overtimeReductionRate` |
+| `supplierDelayRiskRate` | `supplierDelayRiskRate` |
+| `defectRate` | `defectRate` |
+
+The model emits these frontend-facing metric names:
+
+- `revenue`
+- `operatingCost`
+- `laborCost`
+- `productivity`
+- `workforceLoad`
+- `margin`
+- `marginDelta`
+- `riskScore`
+- `defectCost`
 
 The endpoint should not require admin tokens. Public demos can rate-limit and session-isolate requests separately from this contract.

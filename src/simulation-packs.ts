@@ -3,6 +3,7 @@ import { SimulationIr } from "./simulation-ir.js";
 export interface SimulationDomainPack {
   id: string;
   title: string;
+  simulation?: string;
   product: string;
   domain: string;
   audience: string;
@@ -118,6 +119,49 @@ export const simulationDomainPacks: SimulationDomainPack[] = [
     ],
   },
   {
+    id: "business_simulation.operations_decision.enterprise",
+    title: "Business simulator operations decision",
+    simulation: "operations_decision",
+    product: "business_simulation",
+    domain: "operations",
+    audience: "enterprise",
+    description: "Frontend-facing business simulator model for cost, margin, productivity, workforce load, and risk decisions.",
+    suggestedAssumptions: [
+      "employees",
+      "averageHourlyCost",
+      "weeklyDemand",
+      "averageOrderValue",
+      "grossMarginRate",
+      "productivityGainRate",
+      "overtimeReductionRate",
+      "supplierDelayRiskRate",
+      "defectRate",
+    ],
+    suggestedMetrics: [
+      "revenue",
+      "operatingCost",
+      "laborCost",
+      "productivity",
+      "workforceLoad",
+      "margin",
+      "marginDelta",
+      "riskScore",
+      "defectCost",
+    ],
+    suggestedScenarios: [
+      { name: "processImprovement", purpose: "Compare productivity lift and overtime reduction against the baseline." },
+      { name: "demandIncrease", purpose: "Stress-test demand growth against staffing, margin, and supplier risk." },
+      { name: "qualityIssue", purpose: "Estimate cost and risk impact from higher defects and supplier delay." },
+      { name: "staffingIncrease", purpose: "Compare additional headcount against productivity, load, and labor cost." },
+    ],
+    suggestedObjectives: [
+      { metric: "marginDelta", direction: "maximize" },
+      { metric: "productivity", direction: "maximize" },
+      { metric: "operatingCost", direction: "minimize" },
+      { metric: "riskScore", direction: "minimize" },
+    ],
+  },
+  {
     id: "business_simulation.operations.enterprise",
     title: "Business operations simulation",
     product: "business_simulation",
@@ -150,6 +194,13 @@ export function describeSimulationPack(simulation: SimulationIr): SimulationPack
   const missingDimensions = ["product", "domain", "audience"].filter((name) => !dimensions[name]);
   const pack = simulationDomainPacks.find(
     (candidate) =>
+      candidate.simulation === simulation.name &&
+      candidate.product === dimensions.product &&
+      candidate.domain === dimensions.domain &&
+      candidate.audience === dimensions.audience,
+  ) ?? simulationDomainPacks.find(
+    (candidate) =>
+      !candidate.simulation &&
       candidate.product === dimensions.product &&
       candidate.domain === dimensions.domain &&
       candidate.audience === dimensions.audience,

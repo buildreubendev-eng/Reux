@@ -1,0 +1,54 @@
+module business_simulator
+
+simulate operations_decision {
+  dimension product = business_simulation
+  dimension domain = operations
+  dimension audience = enterprise
+
+  employees = 50
+  averageHourlyCost = 32 USD
+  weeklyDemand = 1200
+  averageOrderValue = 85 USD
+  grossMarginRate = 42 percent
+  productivityGainRate = 8 percent
+  overtimeReductionRate = 10 percent
+  supplierDelayRiskRate = 12 percent
+  defectRate = 2.5 percent
+
+  formula revenue = weeklyDemand * averageOrderValue
+  formula laborCost = employees * averageHourlyCost
+  formula productivity = (weeklyDemand / employees) * (1 + productivityGainRate)
+  formula workforceLoad = weeklyDemand / (employees * (1 + productivityGainRate))
+  formula defectCost = revenue * defectRate
+  formula operatingCost = (laborCost * (1 - overtimeReductionRate)) + defectCost
+  formula margin = (revenue * grossMarginRate) - operatingCost
+  formula marginDelta = margin
+  formula riskScore = (supplierDelayRiskRate + defectRate) * 100
+
+  objective maximize marginDelta
+  objective maximize productivity
+  objective minimize operatingCost
+  objective minimize riskScore
+
+  scenario processImprovement {
+    productivityGainRate = 12 percent
+    overtimeReductionRate = 18 percent
+  }
+
+  scenario demandIncrease {
+    weeklyDemand = 1450
+    supplierDelayRiskRate = 15 percent
+  }
+
+  scenario qualityIssue {
+    defectRate = 6 percent
+    supplierDelayRiskRate = 18 percent
+  }
+
+  scenario staffingIncrease {
+    employees = 56
+    overtimeReductionRate = 20 percent
+  }
+
+  forecast 12 weeks
+}
