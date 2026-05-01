@@ -30,7 +30,7 @@ npm run release:preflight
 npm run release:pack-dry-run
 ```
 
-`npm run build` first clears `dist/` so stale compiled files cannot leak into the package. `verify:package` runs a package smoke check around `npm pack --dry-run --json`; it fails if exported JavaScript files, generated declaration files, docs, or editor assets are missing from disk or missing from the dry-run tarball.
+`npm run build` first clears `dist/` so stale compiled files cannot leak into the package. `verify:package` runs a package smoke check around `npm pack --dry-run --json`; it fails if exported JavaScript files, generated declaration files, docs, examples, or editor assets are missing from disk or missing from the dry-run tarball. It also creates a real tarball in a temporary directory, installs it into a temporary consumer project, verifies the shipped `reux` binary, and imports the compiler, runtime, and business-simulator package entrypoints.
 
 `npm run release:preflight` is the final local release gate. It runs the normal verification and package smoke check, then confirms that release docs exist, package entrypoints are present, public roadmap percentages are synchronized between Markdown and JSON, and the working tree is clean. During development, the script itself can be tested without the clean-tree gate:
 
@@ -69,7 +69,7 @@ Before tagging a prototype release:
 
 1. Run `npm run verify`, including CLI smoke checks for the root commerce seed and pilot seed fixture.
 2. Run `npm run verify:postgres:full` against a live PostgreSQL database.
-3. Run `npm run verify:package`.
+3. Run `npm run verify:package` and confirm the installed CLI/import smoke passes.
 4. Run `npm run release:preflight`.
 5. Run `npm run release:pack-dry-run`.
 6. Check `docs/technical/package-distribution.md`.

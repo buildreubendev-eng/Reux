@@ -21,7 +21,7 @@ npm run release:preflight
 npm run release:pack-dry-run
 ```
 
-`release:preflight` verifies the compiler, demo checks, editor syntax, tests, build, CLI smoke checks, package smoke check, release docs, roadmap synchronization, package entrypoints, and clean working tree. `release:pack-dry-run` rebuilds and prints the npm tarball contents without publishing.
+`release:preflight` verifies the compiler, demo checks, editor syntax, tests, build, CLI smoke checks, package smoke check, release docs, roadmap synchronization, package entrypoints, and clean working tree. The package smoke check validates dry-run contents, installs a real tarball into a temporary consumer project, runs the shipped `reux` binary, and imports the compiler/runtime/business-simulator entrypoints. `release:pack-dry-run` rebuilds and prints the npm tarball contents without publishing.
 
 ## Publishing Steps
 

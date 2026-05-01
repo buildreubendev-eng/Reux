@@ -1,5 +1,7 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 
 const pkg = JSON.parse(readFileSync("package.json", "utf8"));
 const expectedPaths = [
@@ -16,6 +18,10 @@ const expectedPaths = [
   "docs/technical/demo-deployment.md",
   "docs/technical/package-distribution.md",
   "docs/technical/public-release-plan.md",
+  "docs/technical/developer-onboarding.md",
+  "docs/technical/clinic-pilot.md",
+  "examples/clinic_reux.dl",
+  "examples/seeds/clinic_smoke.json",
   "docs/technical/editor-tooling.md",
   "editors/vscode/extension.js",
   "editors/vscode/package.json",
@@ -42,4 +48,65 @@ if (missingFromPack.length > 0) {
   process.exit(1);
 }
 
-console.log(`package smoke ok: ${pack.filename} includes ${pack.files.length} files`);
+const tempRoot = mkdtempSync(join(tmpdir(), "reux-package-smoke-"));
+try {
+  const packInstallOutput = execFileSync("npm", ["pack", "--json", "--pack-destination", tempRoot], {
+    encoding: "utf8",
+    shell: process.platform === "win32",
+  });
+  const [packedArtifact] = JSON.parse(packInstallOutput);
+  const tarballPath = join(tempRoot, packedArtifact.filename);
+  writeFileSync(join(tempRoot, "package.json"), JSON.stringify({ type: "module" }));
+  execFileSync("npm", ["install", "--ignore-scripts", "--no-audit", "--no-fund", tarballPath], {
+    cwd: tempRoot,
+    encoding: "utf8",
+    stdio: "pipe",
+    shell: process.platform === "win32",
+  });
+
+  const binPath = join(tempRoot, "node_modules", ".bin", process.platform === "win32" ? "reux.cmd" : "reux");
+  const versionOutput = execFileSync(binPath, ["version"], {
+    cwd: tempRoot,
+    encoding: "utf8",
+    shell: process.platform === "win32",
+  }).trim();
+  if (versionOutput !== `${pkg.name} ${pkg.version}`) {
+    console.error(`Package smoke check failed. Expected CLI version "${pkg.name} ${pkg.version}", got "${versionOutput}".`);
+    process.exit(1);
+  }
+
+  writeFileSync(
+    join(tempRoot, "consumer-smoke.mjs"),
+    `import { compileSource, emitPostgresSchema } from "${pkg.name}";
+import { businessSimulatorContractVersion } from "${pkg.name}/business-simulator";
+import { createPostgresDatabase } from "${pkg.name}/runtime";
+
+const source = \`module smoke
+
+entity Account {
+  id: Id<Account> primary generated
+  email: String unique
+}
+\`;
+const compiled = compileSource(source);
+const sql = emitPostgresSchema(source);
+if (compiled.schema.entities.length !== 1) throw new Error("compiler import failed");
+if (!sql.includes("CREATE TABLE accounts")) throw new Error("schema emitter import failed");
+if (typeof businessSimulatorContractVersion !== "string") throw new Error("business simulator export failed");
+if (typeof createPostgresDatabase !== "function") throw new Error("runtime export failed");
+console.log("consumer import smoke ok");
+`,
+  );
+  const importOutput = execFileSync(process.execPath, ["consumer-smoke.mjs"], {
+    cwd: tempRoot,
+    encoding: "utf8",
+  }).trim();
+  if (importOutput !== "consumer import smoke ok") {
+    console.error(`Package smoke check failed. Unexpected consumer import output: ${importOutput}`);
+    process.exit(1);
+  }
+
+  console.log(`package smoke ok: ${pack.filename} includes ${pack.files.length} files; installed CLI/import smoke passed`);
+} finally {
+  rmSync(tempRoot, { recursive: true, force: true });
+}
