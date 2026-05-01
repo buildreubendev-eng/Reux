@@ -648,6 +648,30 @@ simulate support_cost {
     expect(report).toContain("suggested objectives to add: minimize labor_cost_delta, maximize capacity_delta");
   });
 
+  it("reports PLOS habit simulation pack coverage", () => {
+    const source = readFileSync("examples/simulations/habit_consistency.reux", "utf8");
+    const run = JSON.parse(emitSimulationRun(source, "habit_consistency"));
+    const report = JSON.parse(emitSimulationPacks(source, undefined, "json"));
+
+    expect(run.name).toBe("habit_consistency");
+    expect(run.dimensions).toEqual({ product: "PLOS", domain: "habits", audience: "personal" });
+    expect(run.periods[0].metrics.completion_rate).toBe(0.68);
+    expect(run.periods[0].metrics.missed_sessions).toBe(1.6);
+    expect(run.periods[2].metrics.completion_rate).toBe(0.7);
+    expect(report.simulations[0].pack).toEqual({
+      id: "plos.habits.personal",
+      title: "PLOS habit consistency",
+      description: "Habit adherence, friction reduction, reminders, and routine-resilience simulations.",
+    });
+    expect(report.simulations[0].coverage.overallPercent).toBe(95);
+    expect(report.simulations[0].missingSuggestedAssumptions).toEqual([]);
+    expect(report.simulations[0].missingSuggestedMetrics).toEqual([]);
+    expect(report.simulations[0].missingSuggestedScenarios).toEqual([
+      { name: "travel_week", purpose: "Stress-test the routine against a predictable disruption." },
+    ]);
+    expect(report.simulations[0].missingSuggestedObjectives).toEqual([]);
+  });
+
   it("applies simulation assumption changes by forecast period", () => {
     const run = JSON.parse(
       emitSimulationRun(`module personal_life

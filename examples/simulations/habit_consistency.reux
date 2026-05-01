@@ -1,0 +1,42 @@
+module personal_life
+
+simulate habit_consistency {
+  dimension product = PLOS
+  dimension domain = habits
+  dimension audience = personal
+
+  baseline_completion = 55 percent
+  habit_frequency = 5 count
+  reminder_lift = 8 percent
+  friction_reduction = 5 percent
+  formula completion_rate = baseline_completion + reminder_lift + friction_reduction
+  formula consistency_index = 100 * (1 + completion_rate)
+  formula missed_sessions = habit_frequency * (1 - completion_rate)
+  formula habit_momentum = completion_rate * habit_frequency
+  objective maximize completion_rate
+  objective maximize consistency_index
+  objective minimize missed_sessions
+  objective maximize habit_momentum
+
+  change at 3 weeks {
+    friction_reduction = 7 percent
+  }
+
+  scenario reduced_friction {
+    friction_reduction = 10 percent
+
+    change at 3 weeks {
+      friction_reduction = 12 percent
+    }
+  }
+
+  scenario no_reminders {
+    reminder_lift = 0 percent
+  }
+
+  scenario higher_frequency {
+    habit_frequency = 6 count
+  }
+
+  forecast 8 weeks
+}

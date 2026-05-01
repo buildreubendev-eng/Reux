@@ -74,6 +74,28 @@ export const simulationDomainPacks: SimulationDomainPack[] = [
     ],
   },
   {
+    id: "plos.habits.personal",
+    title: "PLOS habit consistency",
+    product: "PLOS",
+    domain: "habits",
+    audience: "personal",
+    description: "Habit adherence, friction reduction, reminders, and routine-resilience simulations.",
+    suggestedAssumptions: ["baseline_completion", "habit_frequency", "reminder_lift", "friction_reduction"],
+    suggestedMetrics: ["completion_rate", "consistency_index", "missed_sessions", "habit_momentum"],
+    suggestedScenarios: [
+      { name: "reduced_friction", purpose: "Estimate the effect of making the habit easier to start." },
+      { name: "no_reminders", purpose: "Separate reminder effects from intrinsic routine strength." },
+      { name: "higher_frequency", purpose: "Compare a more ambitious schedule against completion risk." },
+      { name: "travel_week", purpose: "Stress-test the routine against a predictable disruption." },
+    ],
+    suggestedObjectives: [
+      { metric: "completion_rate", direction: "maximize" },
+      { metric: "consistency_index", direction: "maximize" },
+      { metric: "missed_sessions", direction: "minimize" },
+      { metric: "habit_momentum", direction: "maximize" },
+    ],
+  },
+  {
     id: "business_simulation.workforce.enterprise",
     title: "Business workforce simulation",
     product: "business_simulation",
