@@ -2,13 +2,14 @@
   "project": "Reux",
   "headline": "A data-native language for reliable backend workflows and simulation-driven applications.",
   "status": {
-    "demoReadinessPercent": 98,
-    "fullCompletionPercent": 90,
-    "summary": "The public demo is live with commerce and logistics workflows, visible domain-scoped queue health, hosted smoke checks for reset, transaction, queue, and outbox behavior, and CI smoke automation against PostgreSQL. Simulation domain packs now report coverage and suggested assumptions, metrics, scenarios, and objectives, with executable PLOS finance and habit examples. The deeper language, tooling, simulation, and production-hardening layers are still maturing."
+    "demoReadinessPercent": 99,
+    "fullCompletionPercent": 91,
+    "summary": "The public demo is live with commerce and logistics workflows, in-page tester guidance, clearer empty states, visible domain-scoped queue health, hosted smoke checks for reset, transaction, queue, and outbox behavior, and CI smoke automation against PostgreSQL. Simulation domain packs now report coverage and suggested assumptions, metrics, scenarios, and objectives, with executable PLOS finance and habit examples. The deeper language, tooling, simulation, and production-hardening layers are still maturing."
   },
   "liveNow": [
     "Public commerce workflow demo",
     "Public logistics workflow demo",
+    "In-page public testing guide and clearer empty states",
     "Hosted Railway backend connected to PostgreSQL",
     "Reuben website embed/link for public testing",
     "Compiler checks for schema, query, transaction, migration, seed, and simulation files",
@@ -25,7 +26,7 @@
       "title": "Demo Hardening",
       "goal": "Make the public demo feel stable, explainable, and safe for repeat visitors.",
       "items": [
-        "Improve public demo copy and empty states",
+        "Keep improving public demo copy as new domains are added",
         "Add uptime and post-deploy monitoring",
         "Document public reset/session behavior for testers"
       ]

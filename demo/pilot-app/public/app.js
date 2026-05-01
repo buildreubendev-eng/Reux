@@ -161,6 +161,14 @@ const displayLabels = {
   trackingnumber: "Tracking Number",
 };
 
+const emptyStates = {
+  summary: "No summary rows yet. Reset this session to load the seed data.",
+  dataOne: "No primary records yet. Reset this session, then run a transaction.",
+  dataTwo: "No related records yet. Capture a payment or process a logistics update to create rows.",
+  dataThree: "No balance rows yet. Reset this session to load accounts or drivers.",
+  outbox: "No queued events. Run a transaction that emits an event, then process the outbox.",
+};
+
 const domainTabs = [...document.querySelectorAll("[data-domain]")];
 const demoActionButtons = [...document.querySelectorAll("[data-action]")];
 
@@ -252,11 +260,11 @@ function syncDomainChrome(config) {
 }
 
 function renderDomainTables(config, dashboard) {
-  renderConfiguredTable(config.tables.summary, elements.summaryTitle, elements.summaryTable, dashboard);
-  renderConfiguredTable(config.tables.dataOne, elements.dataOneTitle, elements.dataOneTable, dashboard, elements.dataOnePanel);
-  renderConfiguredTable(config.tables.dataTwo, elements.dataTwoTitle, elements.dataTwoTable, dashboard, elements.dataTwoPanel);
-  renderConfiguredTable(config.tables.dataThree, elements.dataThreeTitle, elements.dataThreeTable, dashboard, elements.dataThreePanel);
-  renderConfiguredTable(config.tables.outbox, null, elements.outboxTable, dashboard);
+  renderConfiguredTable(config.tables.summary, elements.summaryTitle, elements.summaryTable, dashboard, undefined, emptyStates.summary);
+  renderConfiguredTable(config.tables.dataOne, elements.dataOneTitle, elements.dataOneTable, dashboard, elements.dataOnePanel, emptyStates.dataOne);
+  renderConfiguredTable(config.tables.dataTwo, elements.dataTwoTitle, elements.dataTwoTable, dashboard, elements.dataTwoPanel, emptyStates.dataTwo);
+  renderConfiguredTable(config.tables.dataThree, elements.dataThreeTitle, elements.dataThreeTable, dashboard, elements.dataThreePanel, emptyStates.dataThree);
+  renderConfiguredTable(config.tables.outbox, null, elements.outboxTable, dashboard, undefined, emptyStates.outbox);
 }
 
 function renderQueueSummary(dashboard) {
@@ -280,7 +288,7 @@ function queueSummary(dashboard) {
   };
 }
 
-function renderConfiguredTable(tableConfig, titleTarget, tableTarget, dashboard, panelTarget) {
+function renderConfiguredTable(tableConfig, titleTarget, tableTarget, dashboard, panelTarget, emptyMessage) {
   if (!tableConfig) {
     if (panelTarget) panelTarget.hidden = true;
     tableTarget.innerHTML = "";
@@ -289,12 +297,12 @@ function renderConfiguredTable(tableConfig, titleTarget, tableTarget, dashboard,
   if (panelTarget) panelTarget.hidden = false;
   const [title, key, columns] = tableConfig;
   if (titleTarget) titleTarget.textContent = title;
-  renderTable(tableTarget, dashboard[key] ?? [], columns);
+  renderTable(tableTarget, dashboard[key] ?? [], columns, emptyMessage);
 }
 
-function renderTable(target, rows, preferredColumns) {
+function renderTable(target, rows, preferredColumns, emptyMessage = "No rows yet.") {
   if (!rows.length) {
-    target.innerHTML = '<div class="empty">No rows</div>';
+    target.innerHTML = `<div class="empty">${escapeHtml(emptyMessage)}</div>`;
     return;
   }
   const columns = preferredColumns.filter((column) => Object.prototype.hasOwnProperty.call(rows[0], column));

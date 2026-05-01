@@ -12,6 +12,7 @@ The demo currently includes:
 - Logistics workflows for dispatch-style operations.
 - Isolated visitor sessions so public testers do not overwrite each other's demo state.
 - Public reset controls that rebuild only the current visitor's session.
+- In-page testing guidance for reset, transaction, and outbox verification.
 - Queue/outbox processing that demonstrates how durable events move through the system.
 
 ## Recommended Test Flow
@@ -56,8 +57,6 @@ The demo is not the finished Reux product experience. It is intentionally closer
 
 Known remaining polish areas:
 
-- More guided in-page explanations.
-- Cleaner empty states.
 - Hosted uptime monitoring.
 - Richer public examples for simulations.
 - More product-focused flows for PLOS and business simulation use cases.

@@ -131,6 +131,13 @@ button:disabled {
   padding: 12px;
 }
 
+.admin-menu p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 input {
   width: 100%;
   min-height: 36px;
@@ -239,6 +246,45 @@ input {
   color: #654100;
   font-weight: 650;
   padding: 12px 16px;
+}
+
+.tester-guide {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.tester-guide > div {
+  min-height: 96px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  padding: 14px 16px;
+}
+
+.tester-guide strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 15px;
+}
+
+.tester-guide p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.guide-step {
+  display: inline-grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: 999px;
+  background: #e8f1fb;
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .action-summary {
@@ -407,6 +453,7 @@ td code {
   .workbench,
   .data-grid,
   .status-grid,
+  .tester-guide,
   .queue-strip,
   .form-grid {
     grid-template-columns: 1fr;
