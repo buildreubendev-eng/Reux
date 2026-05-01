@@ -7,12 +7,8 @@ import {
   BusinessSimulatorMetricName,
   BusinessSimulatorRunRequest,
   BusinessSimulatorScenarioResult,
+  BusinessSimulatorValidationIssue,
 } from "./business-simulator-contract.js";
-
-export interface BusinessSimulatorValidationIssue {
-  path: string;
-  message: string;
-}
 
 export class BusinessSimulatorValidationError extends Error {
   readonly issues: BusinessSimulatorValidationIssue[];

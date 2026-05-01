@@ -95,6 +95,7 @@ Metric snapshots include:
 - `defectCost`
 
 The source of truth also exports `businessSimulatorForecastUnits` and `businessSimulatorMetricNames` so product apps can build controls and charts without hand-copying enum values.
+It also exports `businessSimulatorErrorCodes`, `BusinessSimulatorErrorResponse`, and `BusinessSimulatorValidationErrorResponse` so clients can handle backend failures without inventing their own error envelopes.
 
 ## Frontend Integration Notes
 
@@ -111,6 +112,7 @@ node dist/cli.js business-simulator-contract
 ```
 
 That command emits the endpoint map, template response, sample run request, sample run response, sample compare request, sample compare response, and frontend mapping notes. It is useful when checking that a website mock, API client, or demo fixture still matches the Reux backend contract.
+The same fixture includes `invalidRunResponse`, a deterministic example of the validation error envelope the hosted API returns for malformed simulator inputs.
 
 For public API handlers, call `assertBusinessSimulatorRunRequest(body)` before running a simulation and `assertBusinessSimulatorCompareRequest(body)` before comparing existing results. Validation failures throw `BusinessSimulatorValidationError` with stable `issues[].path` values such as `$.baseline.grossMarginRate`, which lets frontends display field-level errors instead of a generic failed request.
 

@@ -4,6 +4,7 @@ import {
   businessSimulatorContractVersion,
   businessSimulatorDefaultAssumptions,
   businessSimulatorEndpoints,
+  businessSimulatorErrorCodes,
   businessSimulatorForecastUnits,
   businessSimulatorMetricNames,
   type BusinessSimulatorRunRequest,
@@ -31,6 +32,7 @@ describe("business simulator API contract", () => {
     });
     expect(businessSimulatorForecastUnits).toEqual(["week", "month", "quarter"]);
     expect(businessSimulatorMetricNames).toContain("marginDelta");
+    expect(businessSimulatorErrorCodes).toContain("business_simulator_validation_failed");
   });
 
   it("keeps frontend assumption defaults in the public contract", () => {
@@ -186,10 +188,13 @@ describe("business simulator API contract", () => {
     expect(fixture.runResponse.comparison.recommendedScenarioId).toBeTruthy();
     expect(fixture.compareResponse.comparison.metricDeltasByScenario["process-improvement"]).toBeTruthy();
     expect(fixture.frontendMapping.ratesAreDecimals).toBe(true);
+    expect(fixture.invalidRunResponse.code).toBe("business_simulator_validation_failed");
+    expect(fixture.invalidRunResponse.issues[0].path).toBe("$.baseline.grossMarginRate");
 
     const emitted = JSON.parse(emitBusinessSimulatorContractFixture(new Date("2026-05-01T00:00:00.000Z")));
     expect(emitted.generatedAt).toBe("2026-05-01T00:00:00.000Z");
     expect(emitted.runResponse.generatedAt).toBe("2026-05-01T00:00:00.000Z");
+    expect(emitted.invalidRunResponse.issues[0].message).toBe("must be between 0 and 1");
   });
 
   it("rejects malformed run requests with stable validation paths", () => {

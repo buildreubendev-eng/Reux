@@ -1,6 +1,7 @@
 import {
   businessSimulatorContractVersion,
   businessSimulatorEndpoints,
+  BusinessSimulatorValidationErrorResponse,
   BusinessSimulatorCompareRequest,
   BusinessSimulatorCompareResponse,
   BusinessSimulatorRunRequest,
@@ -31,6 +32,7 @@ export interface BusinessSimulatorContractFixture {
     scenarioOverridesArePartial: true;
     reuxSourceField: "reuxSource";
   };
+  invalidRunResponse: BusinessSimulatorValidationErrorResponse;
 }
 
 export const businessSimulatorContractFixtureDate = "2026-05-01T00:00:00.000Z";
@@ -69,6 +71,18 @@ export function createBusinessSimulatorContractFixture(now: Date = new Date(busi
       forecastUnits: ["week", "month", "quarter"],
       scenarioOverridesArePartial: true,
       reuxSourceField: "reuxSource",
+    },
+    invalidRunResponse: {
+      ok: false,
+      error: "$.baseline.grossMarginRate: must be between 0 and 1",
+      message: "$.baseline.grossMarginRate: must be between 0 and 1",
+      code: "business_simulator_validation_failed",
+      issues: [
+        {
+          path: "$.baseline.grossMarginRate",
+          message: "must be between 0 and 1",
+        },
+      ],
     },
   };
 }

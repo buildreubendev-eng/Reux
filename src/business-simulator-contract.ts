@@ -6,6 +6,18 @@ export const businessSimulatorEndpoints = {
 } as const;
 
 export type BusinessSimulatorEndpointName = keyof typeof businessSimulatorEndpoints;
+export type BusinessSimulatorErrorCode =
+  | "business_simulator_validation_failed"
+  | "not_found"
+  | "method_not_allowed"
+  | "request_failed";
+export const businessSimulatorErrorCodes = [
+  "business_simulator_validation_failed",
+  "not_found",
+  "method_not_allowed",
+  "request_failed",
+] as const satisfies readonly BusinessSimulatorErrorCode[];
+
 export type BusinessSimulatorForecastUnit = "week" | "month" | "quarter";
 export const businessSimulatorForecastUnits = ["week", "month", "quarter"] as const satisfies readonly BusinessSimulatorForecastUnit[];
 
@@ -43,6 +55,23 @@ export interface BusinessSimulatorAssumptions {
   defectRate: number;
   forecastPeriods: number;
   forecastUnit: BusinessSimulatorForecastUnit;
+}
+
+export interface BusinessSimulatorValidationIssue {
+  path: string;
+  message: string;
+}
+
+export interface BusinessSimulatorErrorResponse {
+  ok: false;
+  error: string;
+  message: string;
+  code: BusinessSimulatorErrorCode;
+}
+
+export interface BusinessSimulatorValidationErrorResponse extends BusinessSimulatorErrorResponse {
+  code: "business_simulator_validation_failed";
+  issues: BusinessSimulatorValidationIssue[];
 }
 
 export interface BusinessSimulatorScenarioInput {

@@ -32,6 +32,7 @@ export {
   businessSimulatorContractVersion,
   businessSimulatorDefaultAssumptions,
   businessSimulatorEndpoints,
+  businessSimulatorErrorCodes,
   businessSimulatorForecastUnits,
   businessSimulatorMetricNames,
 } from "./business-simulator-contract.js";
@@ -59,6 +60,8 @@ export type {
   BusinessSimulatorCompareResponse,
   BusinessSimulatorComparison,
   BusinessSimulatorEndpointName,
+  BusinessSimulatorErrorCode,
+  BusinessSimulatorErrorResponse,
   BusinessSimulatorForecastUnit,
   BusinessSimulatorMetricDelta,
   BusinessSimulatorMetricName,
@@ -70,10 +73,11 @@ export type {
   BusinessSimulatorScenarioResult,
   BusinessSimulatorSummary,
   BusinessSimulatorTimelinePoint,
+  BusinessSimulatorValidationErrorResponse,
+  BusinessSimulatorValidationIssue,
   GetBusinessSimulationResponse,
   ListBusinessSimulationsResponse,
 } from "./business-simulator-contract.js";
-export type { BusinessSimulatorValidationIssue } from "./business-simulator-validation.js";
 
 export interface CompileResult {
   program: Program;
