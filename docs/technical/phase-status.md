@@ -54,7 +54,7 @@ Status: implemented for conservative schema diffs.
 - Applies migrations with hash recording and hash mismatch refusal.
 - Provides project-scoped migration planning and diff creation.
 - Provides migration safety checks that fail deployment gates on unsafe or destructive operations unless explicitly allowed.
-- Includes review notes, rollback notes, deployment checklists, production environment gates, and pre-create safety checks for generated diff migrations.
+- Includes review notes, rollback notes, synthesized rollback SQL for safe reversible operations, deployment checklists, production environment gates, and pre-create safety checks for generated diff migrations.
 
 ## Phase 5: Tooling
 

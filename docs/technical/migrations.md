@@ -65,6 +65,8 @@ node dist/cli.js migrate-check old-manifest.json examples/commerce_v2.dl
 
 The generated diff migration includes SQL for safe operations and comments for unsafe/destructive operations. Unsafe comments are intentional: they force a human-authored migration step instead of hiding a risky schema change.
 
+Diff migrations also include synthesized rollback SQL for safe reversible operations such as added nullable/defaulted columns, newly created indexes, newly created tables, and newly created enum types. Operations that are unsafe, destructive, or not safely reversible in PostgreSQL, such as enum value removal or rollback of added enum values, remain explicit review notes instead of pretending an automatic rollback is safe.
+
 The planner classifies each operation:
 
 - `safe`: SQL can be emitted by the prototype.

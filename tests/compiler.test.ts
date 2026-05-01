@@ -1333,6 +1333,9 @@ query users(): Query<User> =
     expect(plan).toContain("[safe] add field User.displayName");
     expect(plan).toContain("[safe] create index User.byEmail");
     expect(plan).toContain("ALTER TABLE users ADD COLUMN display_name text NULL;");
+    expect(plan).toContain("Rollback SQL:");
+    expect(plan).toContain("DROP INDEX users_by_email;");
+    expect(plan).toContain("ALTER TABLE users DROP COLUMN display_name;");
     expect(plan).toContain("Deployment checklist:");
   });
 
@@ -1373,6 +1376,7 @@ enum OrderStatus {
     expect(plan.summary.unsafe).toBeGreaterThan(0);
     expect(plan.review.required).toBe(true);
     expect(plan.review.rollback).toContainEqual(expect.stringContaining("requiredCode"));
+    expect(plan.review.rollbackSql).not.toContainEqual(expect.stringContaining("required_code"));
     expect(plan.operations).toContainEqual(
       expect.objectContaining({
         kind: "add_field",
@@ -1939,6 +1943,8 @@ transaction function reopen(orderRef: Order) writes Order {
 
     expect(migration.filename).toMatch(/^\d{14}_commerce_v2\.sql$/);
     expect(migration.sql).toContain("-- Kind: schema diff");
+    expect(migration.sql).toContain("-- Rollback SQL:");
+    expect(migration.sql).toContain("--   ALTER TABLE users DROP COLUMN display_name;");
     expect(migration.sql).toContain("ALTER TYPE order_status ADD VALUE 'Refunded';");
     expect(migration.sql).toContain("ALTER TABLE users ADD COLUMN display_name text NULL;");
   });

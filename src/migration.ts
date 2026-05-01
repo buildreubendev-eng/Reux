@@ -26,6 +26,7 @@ export interface MigrationReview {
   required: boolean;
   warnings: string[];
   rollback: string[];
+  rollbackSql: string[];
   checklist: string[];
 }
 
@@ -80,6 +81,8 @@ export function createDiffMigration(plan: MigrationPlan, name: string, now = new
       ...unsafeBlocks,
       unsafeBlocks.length ? "" : undefined,
       ...plan.review.rollback.map((note) => `-- Rollback: ${note}`),
+      plan.review.rollbackSql.length ? "-- Rollback SQL:" : undefined,
+      ...plan.review.rollbackSql.map((statement) => `--   ${statement}`),
       plan.review.rollback.length ? "" : undefined,
       ...sqlStatements,
       "",
@@ -136,6 +139,9 @@ export function migrationPlanText(plan: MigrationPlan): string {
     "Rollback notes:",
     ...formatReviewLines(plan.review.rollback),
     "",
+    "Rollback SQL:",
+    ...formatReviewLines(plan.review.rollbackSql),
+    "",
     "Deployment checklist:",
     ...formatReviewLines(plan.review.checklist),
   ];
@@ -153,10 +159,12 @@ function migrationReview(
   const rollback = operations.length === 0
     ? ["No schema operations are planned."]
     : operations.map((operation) => rollbackNote(operation));
+  const rollbackSql = [...operations].reverse().flatMap((operation) => rollbackSqlForOperation(operation));
   return {
     required: summary.unsafe > 0 || summary.destructive > 0,
     warnings,
     rollback,
+    rollbackSql,
     checklist: [
       "Run migrate-check before creating or applying the migration.",
       "Run the generated SQL against a disposable database or staging clone.",
@@ -176,8 +184,33 @@ function rollbackNote(operation: MigrationOperation): string {
   if (operation.kind === "create_entity") return `${operation.description}: drop the created table if rollback is required before data is written.`;
   if (operation.kind === "add_field") return `${operation.description}: drop the added column if rollback is required.`;
   if (operation.kind === "create_index") return `${operation.description}: drop the created index if rollback is required.`;
+  if (operation.kind === "create_enum") return `${operation.description}: drop the created type if no table or column depends on it.`;
   if (operation.kind === "add_enum_value") return `${operation.description}: PostgreSQL enum value rollback requires a manual type rebuild.`;
   return `${operation.description}: verify whether a reverse SQL statement is needed.`;
+}
+
+function rollbackSqlForOperation(operation: MigrationOperation): string[] {
+  if (operation.safety !== "safe") return [];
+  switch (operation.kind) {
+    case "create_enum": {
+      const enumName = operation.sql?.[0]?.match(/^CREATE TYPE ([a-z0-9_]+)/)?.[1];
+      return enumName ? [`DROP TYPE ${enumName};`] : [];
+    }
+    case "create_entity": {
+      const tableName = operation.sql?.[0]?.match(/^CREATE TABLE ([a-z0-9_]+)/)?.[1];
+      return tableName ? [`DROP TABLE ${tableName};`] : [];
+    }
+    case "add_field": {
+      const match = operation.sql?.[0]?.match(/^ALTER TABLE ([a-z0-9_]+) ADD COLUMN ([a-z0-9_]+)/);
+      return match ? [`ALTER TABLE ${match[1]} DROP COLUMN ${match[2]};`] : [];
+    }
+    case "create_index": {
+      const indexName = operation.sql?.[0]?.match(/^CREATE INDEX ([a-z0-9_]+)/)?.[1];
+      return indexName ? [`DROP INDEX ${indexName};`] : [];
+    }
+    default:
+      return [];
+  }
 }
 
 function formatReviewLines(lines: string[]): string[] {
