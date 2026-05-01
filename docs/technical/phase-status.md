@@ -68,6 +68,7 @@ Status: implemented for the MVP workflow.
 - `api-server-ts` and `project-api-server-ts` emit a minimal HTTP server scaffold around the generated client.
 - `worker-ts` and `project-worker-ts` emit an outbox worker scaffold with typed payload contracts, retry/dead-letter environment controls, declared event handlers, and named after-commit handler contracts.
 - `simulation-ir` and `simulation-run` emit and execute the first prototype formula-based simulation forecast model with domain dimensions, lightweight units, formula unit-compatibility diagnostics, maximize/minimize objectives, shared scheduled assumption changes, scenario-specific scheduled changes, scenario overrides, final-period deltas, period-by-period deltas, first-divergence reporting, objective-aware metric rankings, and explanation summaries.
+- Simulation runs now reject non-finite formula output and report shared/scenario scheduled changes deterministically.
 - `simulation-types-ts` and `project-simulation-types-ts` emit TypeScript contracts for simulation dimensions, assumptions, metrics, scenarios, objectives, run results, comparisons, explanations, comparison summaries, helper functions, and metadata constants.
 - Generated simulation TypeScript now includes a catalog helper API for listing and finding simulation metadata from product code.
 - `simulation-packs` and `project-simulation-packs` report advisory PLOS/business domain pack matches, coverage scoring, and suggested assumptions, metrics, scenarios, or objectives to add.

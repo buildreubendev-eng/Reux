@@ -178,9 +178,9 @@ Objectives declare whether a metric should be maximized or minimized. Objective 
 
 Scenarios declare alternate assumption values against the same formulas and forecast window. Scenario overrides must reference existing assumptions and keep the same primitive type and unit as the baseline value. Scenarios may also declare their own `change at` blocks. Scenario-specific changes are applied after the shared baseline changes for that scenario only, which lets a model compare paths such as "baseline training improves in month 4" against "stronger training improves more in month 4."
 
-Changes declare time-varying assumption values that take effect at a forecast period and continue for later periods. Change blocks must use the same forecast unit, must occur inside the forecast window, and must keep the same primitive type and unit as the baseline assumption.
+Changes declare time-varying assumption values that take effect at a forecast period and continue for later periods. Change blocks must use the same forecast unit, must occur inside the forecast window, and must keep the same primitive type and unit as the baseline assumption. When shared and scenario-specific changes apply in the same period, the runner reports a single applied change marker for that period while still applying all overrides deterministically.
 
-The compiler emits Simulation IR and can run a prototype formula forecast. The runner repeats the declared assumptions for each period, applies any scheduled changes, carries simulation dimensions into the run output, emits formula results as metrics with `metricUnits` when known, and compares scenarios against the baseline.
+The compiler emits Simulation IR and can run a prototype formula forecast. The runner repeats the declared assumptions for each period, applies any scheduled changes, carries simulation dimensions into the run output, emits formula results as metrics with `metricUnits` when known, rejects non-finite numeric output such as divide-by-zero results, and compares scenarios against the baseline.
 
 Scenario comparison reports include:
 

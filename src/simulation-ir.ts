@@ -472,8 +472,20 @@ function applyChangesForPeriod(
   return {
     assumptions: applicable.reduce((current, change) => mergeAssumptions(current, change.overrides), assumptions),
     assumptionUnits: applicable.reduce((current, change) => mergeAssumptionUnits(current, change.overrides), assumptionUnits),
-    appliedChanges: applicable.map((change) => ({ period: change.period, unit: change.unit })),
+    appliedChanges: uniqueAppliedChanges(applicable),
   };
+}
+
+function uniqueAppliedChanges(changes: SimulationChangeIr[]): Array<{ period: number; unit: SimulationDeclaration["forecast"]["unit"] }> {
+  const seen = new Set<string>();
+  return changes
+    .map((change) => ({ period: change.period, unit: change.unit }))
+    .filter((change) => {
+      const key = `${change.period}:${change.unit}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 }
 
 function mergeAssumptions(
@@ -693,6 +705,7 @@ function evaluateNumericExpression(expression: string, values: Map<string, numbe
     while (tokens[index] === "*" || tokens[index] === "/") {
       const operator = tokens[index++];
       const right = parseFactor();
+      if (operator === "/" && right === 0) throw new Error(`formula expression '${expression}' divides by zero`);
       value = operator === "*" ? value * right : value / right;
     }
     return value;
@@ -715,6 +728,7 @@ function evaluateNumericExpression(expression: string, values: Map<string, numbe
 
   const value = parseExpression();
   if (index !== tokens.length) throw new Error(`invalid formula expression '${expression}'`);
+  if (!Number.isFinite(value)) throw new Error(`formula expression '${expression}' produced a non-finite value`);
   return Number(value.toFixed(6));
 }
 

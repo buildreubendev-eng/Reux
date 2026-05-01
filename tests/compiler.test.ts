@@ -662,6 +662,9 @@ simulate support_cost {
     expect(run.periods[0].metrics.completion_rate).toBe(0.68);
     expect(run.periods[0].metrics.missed_sessions).toBe(1.6);
     expect(run.periods[2].metrics.completion_rate).toBe(0.7);
+    expect(run.scenarios.find((scenario: { name: string }) => scenario.name === "reduced_friction").periods[2].appliedChanges).toEqual([
+      { period: 3, unit: "week" },
+    ]);
     expect(report.simulations[0].pack).toEqual({
       id: "plos.habits.personal",
       title: "PLOS habit consistency",
@@ -891,6 +894,20 @@ simulate bad {
 }
 `),
     ).toThrow(DlAggregateError);
+  });
+
+  it("rejects non-finite simulation formula output", () => {
+    expect(() =>
+      emitSimulationRun(`module broken
+
+simulate bad_math {
+  income = 5000 USD
+  zero = 0
+  formula impossible = income / zero
+  forecast 1 month
+}
+`),
+    ).toThrow(/divides by zero/);
   });
 
   it("builds Schema IR for transition rules", () => {

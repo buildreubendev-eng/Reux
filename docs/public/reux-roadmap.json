@@ -3,8 +3,8 @@
   "headline": "A data-native language for reliable backend workflows and simulation-driven applications.",
   "status": {
     "demoReadinessPercent": 99,
-    "fullCompletionPercent": 97,
-    "summary": "The public demo is live with commerce and logistics workflows, in-page tester guidance, clearer empty states, visible domain-scoped queue health, hosted smoke checks for reset, transaction, queue, and outbox behavior, CI smoke automation against PostgreSQL, a reusable monitor for uptime checks, and an operations dashboard for queue and worker health. Simulation domain packs now report coverage and suggested assumptions, metrics, scenarios, and objectives, with executable PLOS finance/habit and business workforce/operations examples plus generated catalog helpers for product apps. Release preflight now checks package entrypoints, release docs, roadmap sync, and clean-tree readiness, and migrations synthesize rollback SQL for safe reversible schema changes. The deeper language, tooling, simulation, and production-hardening layers are still maturing."
+    "fullCompletionPercent": 98,
+    "summary": "The public demo is live with commerce and logistics workflows, in-page tester guidance, clearer empty states, visible domain-scoped queue health, hosted smoke checks for reset, transaction, queue, and outbox behavior, CI smoke automation against PostgreSQL, a reusable monitor for uptime checks, and an operations dashboard for queue and worker health. Simulation domain packs now report coverage and suggested assumptions, metrics, scenarios, and objectives, with executable PLOS finance/habit and business workforce/operations examples, deterministic scheduled-change reporting, non-finite formula rejection, and generated catalog helpers for product apps. Release preflight now checks package entrypoints, release docs, roadmap sync, and clean-tree readiness, and migrations synthesize rollback SQL for safe reversible schema changes. The deeper language, tooling, simulation, and production-hardening layers are still maturing."
   },
   "liveNow": [
     "Public commerce workflow demo",
@@ -22,6 +22,7 @@
     "Hosted operations dashboard for cross-domain queue and worker health",
     "CI smoke automation that boots the demo server against PostgreSQL and runs the same public smoke path on every push",
     "Early simulation syntax for PLOS and business-simulation research",
+    "Deterministic simulation change reporting and non-finite formula rejection",
     "Advisory simulation domain-pack coverage for PLOS and business models, including suggested assumptions, metrics, scenarios, and objectives",
     "Executable PLOS habit-consistency example alongside the personal-finance example",
     "Executable business operations simulation example alongside the workforce example",
