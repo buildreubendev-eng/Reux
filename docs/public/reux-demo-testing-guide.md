@@ -51,6 +51,14 @@ npm run demo:healthcheck -- https://your-demo-host.example.com --smoke
 
 That command tests the same public flow with the isolated `healthcheck` session: reset, transaction, queue health, outbox processing, and final clear state for both Commerce and Logistics.
 
+For lightweight uptime watching, maintainers can also run:
+
+```bash
+npm run demo:monitor -- https://your-demo-host.example.com --deep
+```
+
+The monitor repeats the hosted health/deep check and exits nonzero after repeated failures.
+
 ## What Is Not Final Yet
 
 The demo is not the finished Reux product experience. It is intentionally closer to a working technical preview than a polished customer app.

@@ -30,6 +30,14 @@ npm run demo:healthcheck -- https://your-demo-host.example.com --deep
 
 Deep mode also checks `/api/outbox/stats` and `/api/logistics/outbox/stats`.
 
+For lightweight uptime watching, run:
+
+```bash
+npm run demo:monitor -- https://your-demo-host.example.com --deep --interval-seconds 60 --max-failures 3
+```
+
+The monitor wraps `demo:healthcheck`, records timestamped pass/fail output, and exits nonzero after the configured number of consecutive failures. Use `--once` for cron-style checks, or set `REUX_DEMO_MONITOR_URL`, `REUX_DEMO_MONITOR_INTERVAL_SECONDS`, and `REUX_DEMO_MONITOR_MAX_FAILURES` in the environment.
+
 For release validation after a production redeploy, run the full public smoke path:
 
 ```bash
@@ -96,6 +104,7 @@ For a quick command-line check after setup or redeploy:
 npm run demo:healthcheck -- https://your-demo-host.example.com
 npm run demo:healthcheck -- https://your-demo-host.example.com --deep
 npm run demo:healthcheck -- https://your-demo-host.example.com --smoke
+npm run demo:monitor -- https://your-demo-host.example.com --deep
 ```
 
 Regular visitors can reset only their own session and use the dashboard and transaction buttons after setup. Keep the token private so the shared/admin demo database cannot be reset by everyone visiting the public site.

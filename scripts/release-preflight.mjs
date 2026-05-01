@@ -47,8 +47,8 @@ const status = roadmap.status ?? {};
 if (Number(status.demoReadinessPercent) < 99) {
   failures.push("public roadmap demo readiness must be at least 99 before this release track");
 }
-if (Number(status.fullCompletionPercent) < 93) {
-  failures.push("public roadmap full completion must be at least 93 before this release track");
+if (Number(status.fullCompletionPercent) < 95) {
+  failures.push("public roadmap full completion must be at least 95 before this release track");
 }
 
 const roadmapMarkdown = readFileSync("docs/public/reux-roadmap.md", "utf8");

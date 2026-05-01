@@ -104,6 +104,7 @@ Phase 6 coverage:
 - Browser demo app deployed as a Node/PostgreSQL service path with public-safe admin setup controls, schema-isolated outbox state, domain-scoped queue health, and a worker-style outbox processing loop.
 - Public demo UI includes in-page tester guidance and clearer empty states so visitors understand reset, transaction, and outbox behavior without an admin token.
 - Hosted demo validation includes health, deep queue stats, and an opt-in smoke mode that exercises public reset, transactions, queue health transitions, and outbox processing for commerce and logistics.
+- Hosted demo monitoring includes a repeatable `demo:monitor` wrapper for continuous or cron-style health/deep/smoke checks.
 - CI runs the same smoke path against a PostgreSQL-backed demo server through `npm run verify:demo:smoke`.
 - Isolated public demo sessions map each visitor to a session schema and expose a public `Reset My Session` flow, avoiding shared-state collisions in the hosted demo.
 - Logistics pilot coverage shows the same Reux subset applied to dispatch workflows rather than commerce.
