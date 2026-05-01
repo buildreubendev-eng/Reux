@@ -93,9 +93,13 @@ DATABASE_URL=postgres://...
 REUX_DEMO_SCHEMA=reux_demo
 REUX_DEMO_SETUP_TOKEN=<private admin token>
 REUX_DEMO_SESSION_MODE=isolated
+REUX_DEMO_ALLOWED_ORIGINS=*
+REUX_DEMO_CORS_MAX_AGE_SECONDS=600
 ```
 
 `DATABASE_URL` is required. `REUX_DEMO_SCHEMA` defaults to `reux_demo`, which keeps demo objects separate from other tables in the same database. `REUX_DEMO_SESSION_MODE` defaults to `isolated`, which maps each browser session to its own schema derived from `REUX_DEMO_SCHEMA`; set it to `shared` only for local debugging. `REUX_DEMO_SETUP_TOKEN` is optional for local development but should be set on public deployments; when set, the admin setup/reset endpoint requires the token before applying migrations or resetting shared seed data.
+
+`REUX_DEMO_ALLOWED_ORIGINS` controls browser access to `/api/*` routes. It defaults to `*` for the public demo, which lets the Reuben website call the Business Simulator endpoints from Vercel. Set it to a comma-separated allowlist such as `https://reuben-web.vercel.app,https://www.reuben.example` when the public hostnames are stable. The API also answers `OPTIONS` preflight requests for `GET`, `POST`, `content-type`, `x-reux-demo-session`, and `x-reux-demo-token`.
 
 ## First Setup
 
@@ -153,3 +157,14 @@ NEXT_PUBLIC_REUX_DEMO_URL=https://your-demo-host.example.com
 Use a normal link for the safest launch path. An iframe also works because the demo app does not set frame-blocking headers, but a full-page link is easier to debug across hosting providers.
 
 Use `?domain=logistics` to open the logistics tab directly, or `?domain=commerce` for the commerce tab.
+
+The website can call the Business Simulator API routes directly from the browser:
+
+```text
+GET /api/simulations
+GET /api/simulations/operations-decision
+POST /api/simulations/run
+POST /api/scenarios/compare
+```
+
+If the website is hosted on another origin, keep `REUX_DEMO_ALLOWED_ORIGINS=*` during early testing or add the website origin to the comma-separated allowlist.

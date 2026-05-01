@@ -41,6 +41,8 @@ const host = process.env.HOST ?? "0.0.0.0";
 const publicHost = host === "0.0.0.0" ? "127.0.0.1" : host;
 const port = Number.parseInt(process.env.PORT ?? process.env.REUX_DEMO_PORT ?? "4173", 10);
 const sessionMode = process.env.REUX_DEMO_SESSION_MODE ?? "isolated";
+const allowedOrigins = parseAllowedOrigins(process.env.REUX_DEMO_ALLOWED_ORIGINS ?? "*");
+const corsMaxAgeSeconds = Number.parseInt(process.env.REUX_DEMO_CORS_MAX_AGE_SECONDS ?? "600", 10);
 const baseDatabaseUrl = process.env[config.databaseUrlEnv];
 const databases = new Map();
 
@@ -114,6 +116,13 @@ for (const signal of ["SIGINT", "SIGTERM"]) {
 async function route(request, response) {
   const method = request.method ?? "GET";
   const url = new URL(request.url ?? "/", `http://127.0.0.1:${port}`);
+  if (url.pathname.startsWith("/api/")) {
+    applyCorsHeaders(request, response);
+    if (method === "OPTIONS") {
+      sendNoContent(response);
+      return;
+    }
+  }
 
   if (url.pathname === "/api/health") {
     sendJson(response, 200, { ok: true, module: "pilot", databaseUrlEnv: config.databaseUrlEnv, schema: demoSchema, sessionMode, domains: Object.keys(domains) });
@@ -546,6 +555,33 @@ function readJson(request) {
 function sendJson(response, statusCode, body) {
   response.writeHead(statusCode, { "content-type": "application/json" });
   response.end(`${JSON.stringify(body, null, 2)}\n`);
+}
+
+function sendNoContent(response) {
+  response.writeHead(204);
+  response.end();
+}
+
+function parseAllowedOrigins(value) {
+  return value.split(",").map((origin) => origin.trim()).filter(Boolean);
+}
+
+function applyCorsHeaders(request, response) {
+  const origin = request.headers.origin;
+  const allowedOrigin = corsOrigin(origin);
+  if (allowedOrigin) {
+    response.setHeader("access-control-allow-origin", allowedOrigin);
+    if (allowedOrigin !== "*") response.setHeader("vary", "Origin");
+  }
+  response.setHeader("access-control-allow-methods", "GET, POST, OPTIONS");
+  response.setHeader("access-control-allow-headers", "content-type, x-reux-demo-session, x-reux-demo-token");
+  response.setHeader("access-control-max-age", String(corsMaxAgeSeconds));
+}
+
+function corsOrigin(origin) {
+  if (allowedOrigins.includes("*")) return "*";
+  if (!origin) return undefined;
+  return allowedOrigins.includes(origin) ? origin : undefined;
 }
 
 function contentType(pathname) {
