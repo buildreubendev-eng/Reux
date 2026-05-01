@@ -57,6 +57,8 @@ That command tests the same public flow with the isolated `healthcheck` session:
 
 It also checks the Business Simulator API contract that the Reuben website uses: CORS preflight, template loading, simulation run, scenario comparison, recommendation output, and Reux source transparency.
 
+The deep check also sends one intentionally malformed Business Simulator request. A healthy deployment returns a public-safe `400` response with `code: "business_simulator_validation_failed"` and field paths in `issues`, which helps the website show useful input errors instead of a generic failure.
+
 For lightweight uptime watching, maintainers can also run:
 
 ```bash

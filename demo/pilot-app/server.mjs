@@ -3,6 +3,7 @@ import { createServer } from "node:http";
 import { extname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  BusinessSimulatorValidationError,
   compareBusinessSimulatorScenarios,
   emitPostgresSchema,
   emitQuerySql,
@@ -97,7 +98,7 @@ const server = createServer(async (request, response) => {
     await route(request, response);
   } catch (error) {
     const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
-    sendJson(response, statusCode, { error: error instanceof Error ? error.message : String(error) });
+    sendJson(response, statusCode, errorResponseBody(error, statusCode));
   }
 });
 
@@ -555,6 +556,25 @@ function readJson(request) {
 function sendJson(response, statusCode, body) {
   response.writeHead(statusCode, { "content-type": "application/json" });
   response.end(`${JSON.stringify(body, null, 2)}\n`);
+}
+
+function errorResponseBody(error, statusCode) {
+  const message = error instanceof Error ? error.message : String(error);
+  if (error instanceof BusinessSimulatorValidationError) {
+    return {
+      ok: false,
+      error: message,
+      message,
+      code: "business_simulator_validation_failed",
+      issues: error.issues,
+    };
+  }
+  return {
+    ok: false,
+    error: message,
+    message,
+    code: statusCode === 404 ? "not_found" : statusCode === 405 ? "method_not_allowed" : "request_failed",
+  };
 }
 
 function sendNoContent(response) {

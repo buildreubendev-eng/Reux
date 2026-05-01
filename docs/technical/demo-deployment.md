@@ -35,9 +35,10 @@ GET /api/simulations
 GET /api/simulations/operations-decision
 POST /api/simulations/run
 POST /api/scenarios/compare
+POST /api/simulations/run with invalid input
 ```
 
-This is the quickest backend-side check that the Reuben website can still run the public simulator after a deploy.
+This is the quickest backend-side check that the Reuben website can still run the public simulator after a deploy. The invalid-input check confirms the API returns `400` with `code: "business_simulator_validation_failed"` and stable `issues[].path` entries, which the website can use for helpful field-level errors.
 
 The hosted service also exposes a small operations dashboard:
 
@@ -175,5 +176,7 @@ GET /api/simulations/operations-decision
 POST /api/simulations/run
 POST /api/scenarios/compare
 ```
+
+If a simulator request is malformed, the API returns a public-safe `400` response with `ok: false`, `message`, `error`, `code`, and `issues`. For Business Simulator request validation, `code` is `business_simulator_validation_failed` and every issue includes a stable path such as `$.baseline.grossMarginRate`.
 
 If the website is hosted on another origin, keep `REUX_DEMO_ALLOWED_ORIGINS=*` during early testing or add the website origin to the comma-separated allowlist.

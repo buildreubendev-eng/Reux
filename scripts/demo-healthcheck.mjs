@@ -179,6 +179,28 @@ async function runBusinessSimulatorApiCheck(baseUrl) {
   checks.push(compare);
   diagnostics.push(...validateScenarioCompare(compare.response, compare.body, run.body?.scenarios));
 
+  const invalidRun = await fetchJson(baseUrl, "/api/simulations/run", {
+    method: "POST",
+    body: {
+      simulationId: templateId,
+      baseline: {
+        ...(template.body?.defaultAssumptions ?? runRequest.baseline),
+        grossMarginRate: 1.5,
+      },
+      scenarios: [
+        {
+          id: "",
+          name: "Invalid Scenario",
+          assumptions: {
+            forecastPeriods: 6,
+          },
+        },
+      ],
+    },
+  });
+  checks.push(invalidRun);
+  diagnostics.push(...validateBusinessSimulatorValidationError(invalidRun.response, invalidRun.body, "$.baseline.grossMarginRate"));
+
   return {
     diagnostics,
     checks,
@@ -187,6 +209,7 @@ async function runBusinessSimulatorApiCheck(baseUrl) {
       scenarioCount: run.body?.scenarios?.length ?? 0,
       recommendedScenarioId: run.body?.comparison?.recommendedScenarioId ?? null,
       reuxSource: typeof run.body?.reuxSource === "string" && run.body.reuxSource.includes("simulate operations_decision"),
+      validationIssues: invalidRun.body?.issues?.length ?? 0,
     },
   };
 }
@@ -383,6 +406,25 @@ function validateScenarioCompare(response, body, scenarios) {
     }
   }
   if (!body?.generatedAt) diagnostics.push("business simulator compare did not include generatedAt");
+  return diagnostics;
+}
+
+function validateBusinessSimulatorValidationError(response, body, expectedPath) {
+  const diagnostics = [];
+  if (response.status !== 400) diagnostics.push(`business simulator invalid run expected 400, got ${response.status}`);
+  if (body?.ok !== false) diagnostics.push("business simulator validation error did not include ok=false");
+  if (body?.code !== "business_simulator_validation_failed") {
+    diagnostics.push(`business simulator validation error had unexpected code=${body?.code ?? "missing"}`);
+  }
+  if (!Array.isArray(body?.issues) || body.issues.length === 0) {
+    diagnostics.push("business simulator validation error did not include issues");
+  }
+  if (!body?.issues?.some((issue) => issue.path === expectedPath)) {
+    diagnostics.push(`business simulator validation error did not include issue path ${expectedPath}`);
+  }
+  if (typeof body?.message !== "string" || !body.message.includes(expectedPath)) {
+    diagnostics.push("business simulator validation error message did not include the expected issue path");
+  }
   return diagnostics;
 }
 

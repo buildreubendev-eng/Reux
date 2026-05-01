@@ -114,6 +114,25 @@ That command emits the endpoint map, template response, sample run request, samp
 
 For public API handlers, call `assertBusinessSimulatorRunRequest(body)` before running a simulation and `assertBusinessSimulatorCompareRequest(body)` before comparing existing results. Validation failures throw `BusinessSimulatorValidationError` with stable `issues[].path` values such as `$.baseline.grossMarginRate`, which lets frontends display field-level errors instead of a generic failed request.
 
+The hosted demo server serializes those failures as `400` responses:
+
+```json
+{
+  "ok": false,
+  "error": "$.baseline.grossMarginRate: must be between 0 and 1",
+  "message": "$.baseline.grossMarginRate: must be between 0 and 1",
+  "code": "business_simulator_validation_failed",
+  "issues": [
+    {
+      "path": "$.baseline.grossMarginRate",
+      "message": "must be between 0 and 1"
+    }
+  ]
+}
+```
+
+Frontend clients should prefer `issues` for field-level UI and fall back to `message` or `error` for a page-level alert.
+
 ## Backend Integration Notes
 
 The first backend implementation can adapt the existing Reux simulation runner:
@@ -187,3 +206,4 @@ The output includes a recommended scenario, reasons, and tradeoffs so the fronte
 - `POST /api/scenarios/compare` accepts `BusinessSimulatorCompareRequest`.
 - Unknown simulation IDs return `404`.
 - Malformed run/compare requests return `400`.
+- Malformed Business Simulator requests include `code: "business_simulator_validation_failed"` and stable `issues[].path` entries for field-level display.
