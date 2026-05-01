@@ -75,6 +75,7 @@ Status: implemented for the MVP workflow.
 - Simulation examples now cover PLOS personal finance, PLOS habit consistency, business workforce, and business operations.
 - `format` and `project-format` provide conservative stdout formatting for `.dl` and `.reux` files.
 - A local VS Code language package under `editors/vscode` provides `.dl`/`.reux` file association, syntax highlighting, bracket pairing, line-aware diagnostics backed by `reux diagnose --json`, formatting backed by `reux format`, lightweight completions, query-alias field completions, insert/enqueue object-field completions, hover text, and current-file go-to-definition.
+- VS Code diagnostics now infer symbol and field ranges from compiler messages when explicit line numbers are unavailable.
 - Package distribution now has typed ESM entrypoints, runtime subpath exports, package dry-run coverage for editor assets, and tarball installation documentation.
 - Release readiness now has a preflight script that checks release docs, package entrypoints, roadmap status synchronization, and clean-tree readiness.
 - `scripts/demo-pilot-worker.mjs` provides a runnable pilot outbox worker process for hosted and local demo environments.

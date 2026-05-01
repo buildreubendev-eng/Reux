@@ -254,9 +254,12 @@ function fileDiagnostic(document, message) {
 
 function diagnosticRange(document, message) {
   const lineMatch = message.match(/\bline\s+(\d+)\b/i);
-  if (!lineMatch) return firstLineRange(document);
-  const lineNumber = Math.max(0, Math.min(document.lineCount - 1, Number.parseInt(lineMatch[1], 10) - 1));
-  return trimmedLineRange(document, lineNumber);
+  if (lineMatch) {
+    const lineNumber = Math.max(0, Math.min(document.lineCount - 1, Number.parseInt(lineMatch[1], 10) - 1));
+    return trimmedLineRange(document, lineNumber);
+  }
+  const inferredRange = inferredDiagnosticRange(document, message);
+  return inferredRange ?? firstLineRange(document);
 }
 
 function firstLineRange(document) {
@@ -269,6 +272,61 @@ function trimmedLineRange(document, lineNumber) {
   const firstNonWhitespace = line.text.search(/\S/);
   if (firstNonWhitespace < 0) return line.range;
   return new vscode.Range(new vscode.Position(lineNumber, firstNonWhitespace), line.range.end);
+}
+
+function inferredDiagnosticRange(document, message) {
+  for (const token of diagnosticTokens(message)) {
+    const range = findTokenRange(document, token);
+    if (range) return range;
+  }
+  return undefined;
+}
+
+function diagnosticTokens(message) {
+  const tokens = [];
+  for (const dotted of message.matchAll(/\b([A-Za-z_][A-Za-z0-9_]*\.[A-Za-z_][A-Za-z0-9_]*)\b/g)) {
+    tokens.push(dotted[1]);
+  }
+  for (const word of message.matchAll(/\b([A-Za-z_][A-Za-z0-9_]*)\b/g)) {
+    if (!diagnosticStopWords.has(word[1])) tokens.push(word[1]);
+  }
+  return [...new Set(tokens)];
+}
+
+function findTokenRange(document, token) {
+  const parts = token.split(".");
+  if (parts.length === 2) {
+    const fieldRange = findFieldRange(document, parts[0], parts[1]);
+    if (fieldRange) return fieldRange;
+  }
+  const pattern = new RegExp(`\\b${escapeRegExp(token)}\\b`);
+  for (let lineNumber = 0; lineNumber < document.lineCount; lineNumber += 1) {
+    const text = document.lineAt(lineNumber).text;
+    const index = text.search(pattern);
+    if (index >= 0) {
+      return new vscode.Range(new vscode.Position(lineNumber, index), new vscode.Position(lineNumber, index + token.length));
+    }
+  }
+  return undefined;
+}
+
+function findFieldRange(document, ownerName, fieldName) {
+  let inOwner = false;
+  let depth = 0;
+  const declarationPattern = new RegExp(`^\\s*(entity|event|simulate)\\s+${escapeRegExp(ownerName)}\\b`);
+  for (let lineNumber = 0; lineNumber < document.lineCount; lineNumber += 1) {
+    const text = document.lineAt(lineNumber).text;
+    if (!inOwner && declarationPattern.test(text)) inOwner = true;
+    if (!inOwner) continue;
+    depth += countChar(text, "{");
+    depth -= countChar(text, "}");
+    const index = text.search(new RegExp(`\\b${escapeRegExp(fieldName)}\\b`));
+    if (index >= 0) {
+      return new vscode.Range(new vscode.Position(lineNumber, index), new vscode.Position(lineNumber, index + fieldName.length));
+    }
+    if (lineNumber > 0 && depth <= 0) inOwner = false;
+  }
+  return undefined;
 }
 
 function fullDocumentRange(document) {
@@ -488,6 +546,72 @@ const keywordDetails = new Map([
   ["scenario", "Declares an alternate simulation path."],
   ["formula", "Declares a derived simulation metric."],
   ["objective", "Declares whether a simulation metric should be maximized or minimized."],
+]);
+
+const diagnosticStopWords = new Set([
+  "Add",
+  "Bool",
+  "CurrencyCode",
+  "Decimal",
+  "Duplicate",
+  "Id",
+  "Int",
+  "PostgreSQL",
+  "Query",
+  "Reux",
+  "String",
+  "a",
+  "abort",
+  "add",
+  "after",
+  "against",
+  "an",
+  "and",
+  "argument",
+  "at",
+  "be",
+  "before",
+  "by",
+  "change",
+  "changes",
+  "commit",
+  "condition",
+  "declaration",
+  "declares",
+  "duplicate",
+  "else",
+  "enum",
+  "entity",
+  "field",
+  "for",
+  "from",
+  "function",
+  "in",
+  "invalid",
+  "is",
+  "kind",
+  "line",
+  "missing",
+  "module",
+  "must",
+  "not",
+  "of",
+  "or",
+  "parameter",
+  "query",
+  "references",
+  "requires",
+  "scenario",
+  "simulation",
+  "source",
+  "the",
+  "to",
+  "transaction",
+  "type",
+  "unknown",
+  "uses",
+  "value",
+  "with",
 ]);
 
 module.exports = {

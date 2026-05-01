@@ -5,7 +5,7 @@ Reux is a data-native language for applications that need reliable workflows, au
 Current status:
 
 - Demo readiness: roughly 99%.
-- Full platform completion: roughly 98%.
+- Full platform completion: roughly 99%.
 - Public demo scope: commerce workflows, logistics workflows, isolated visitor sessions, transaction execution, PostgreSQL-backed state, queue/outbox processing, and health checks.
 - Core language scope: schema declarations, typed queries, transaction functions, durable events, conservative migrations, generated TypeScript integration, and early simulation declarations.
 
@@ -17,6 +17,7 @@ Current status:
 - Hosted Railway backend connected to PostgreSQL.
 - Reuben website embed/link for public testing.
 - Reux compiler checks for schema, query, transaction, migration, seed, and simulation files.
+- VS Code diagnostic targeting for declaration and field-level compiler errors.
 - Generated TypeScript client/server/worker scaffolds.
 - Release preflight checks for package entrypoints, release docs, roadmap sync, and clean-tree readiness.
 - Migration rollback SQL for safe reversible schema changes.
