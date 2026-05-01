@@ -622,6 +622,30 @@ simulate support_cost {
     expect(report.simulations[0].missingDimensions).toEqual([]);
     expect(report.simulations[0].missingSuggestedAssumptions).toEqual(["average_hourly_cost"]);
     expect(report.simulations[0].missingSuggestedMetrics).toEqual(["labor_cost_delta", "capacity_delta"]);
+    expect(report.simulations[0].missingSuggestedScenarios).toEqual([
+      { name: "automation", purpose: "Estimate whether automation reduces labor cost or increases capacity." },
+      { name: "hiring_plan", purpose: "Compare new headcount against productivity and overtime alternatives." },
+    ]);
+    expect(report.simulations[0].missingSuggestedObjectives).toEqual([
+      { metric: "labor_cost_delta", direction: "minimize" },
+      { metric: "capacity_delta", direction: "maximize" },
+    ]);
+    expect(report.simulations[0].coverage).toEqual({
+      overallPercent: 63,
+      dimensions: { present: 3, total: 3 },
+      assumptions: { present: 3, total: 4 },
+      metrics: { present: 2, total: 4 },
+      scenarios: { present: 2, total: 4 },
+      objectives: { present: 2, total: 4 },
+    });
+  });
+
+  it("formats simulation domain pack scenario and objective guidance", () => {
+    const report = emitSimulationPacks(readFileSync("examples/simulations/workforce_change.reux", "utf8"));
+
+    expect(report).toContain("coverage: 63%");
+    expect(report).toContain("suggested scenarios to add: automation (Estimate whether automation reduces labor cost or increases capacity.); hiring_plan");
+    expect(report).toContain("suggested objectives to add: minimize labor_cost_delta, maximize capacity_delta");
   });
 
   it("applies simulation assumption changes by forecast period", () => {

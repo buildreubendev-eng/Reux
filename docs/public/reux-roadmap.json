@@ -3,8 +3,8 @@
   "headline": "A data-native language for reliable backend workflows and simulation-driven applications.",
   "status": {
     "demoReadinessPercent": 98,
-    "fullCompletionPercent": 88,
-    "summary": "The public demo is live with commerce and logistics workflows, visible domain-scoped queue health, hosted smoke checks for reset, transaction, queue, and outbox behavior, and CI smoke automation against PostgreSQL. The deeper language, tooling, simulation, and production-hardening layers are still maturing."
+    "fullCompletionPercent": 89,
+    "summary": "The public demo is live with commerce and logistics workflows, visible domain-scoped queue health, hosted smoke checks for reset, transaction, queue, and outbox behavior, and CI smoke automation against PostgreSQL. Simulation domain packs now report coverage and suggested assumptions, metrics, scenarios, and objectives. The deeper language, tooling, simulation, and production-hardening layers are still maturing."
   },
   "liveNow": [
     "Public commerce workflow demo",
@@ -16,7 +16,8 @@
     "Outbox queue processing with retry, dead-letter, stale-claim recovery, domain-scoped queue health, queue stats, and worker observability counters",
     "Hosted smoke checks that validate public reset, transactions, queue health, and outbox processing for both demo domains",
     "CI smoke automation that boots the demo server against PostgreSQL and runs the same public smoke path on every push",
-    "Early simulation syntax for PLOS and business-simulation research"
+    "Early simulation syntax for PLOS and business-simulation research",
+    "Advisory simulation domain-pack coverage for PLOS and business models, including suggested assumptions, metrics, scenarios, and objectives"
   ],
   "milestones": [
     {
