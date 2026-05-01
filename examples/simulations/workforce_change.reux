@@ -1,6 +1,10 @@
 module business_ops
 
 simulate workforce_change {
+  dimension product = business_simulation
+  dimension domain = workforce
+  dimension audience = enterprise
+
   employees = 50 count
   productivity_gain = 8 percent
   overtime_reduction = 10 percent

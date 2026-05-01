@@ -93,6 +93,10 @@ The first simulation slice is intentionally small. It exists to prove the Reux e
 
 ```dl
 simulate personal_finance {
+  dimension product = PLOS
+  dimension domain = finance
+  dimension audience = personal
+
   income = 5000 USD
   rent = 1500 USD
   debt_payment = 500 USD
@@ -121,6 +125,10 @@ simulate personal_finance {
 }
 
 simulate workforce_change {
+  dimension product = business_simulation
+  dimension domain = workforce
+  dimension audience = enterprise
+
   employees = 50 count
   productivity_gain = 8 percent
   overtime_reduction = 10 percent
@@ -147,6 +155,8 @@ simulate workforce_change {
 
 Supported simulation statements:
 
+- `dimension name = identifier`
+- `dimension name = "quoted string"`
 - `name = number`
 - `name = number unit`
 - `name = true | false`
@@ -158,6 +168,8 @@ Supported simulation statements:
 - `scenario name { ... }`
 - `forecast N days|weeks|months|quarters|years`
 
+Dimensions attach lightweight domain metadata to a simulation without affecting the forecast math. They are intended to classify models across the Reuben ecosystem, such as `product = PLOS`, `domain = finance`, or `audience = enterprise`. Dimension names must be unique and cannot collide with assumption names. Dimension values may be identifiers or quoted strings.
+
 Unit quantities attach a lightweight unit label to numeric assumptions. `percent` and `%` normalize to a decimal value plus `percent` unit, so `8 percent` evaluates as `0.08`. Uppercase currency labels such as `USD` are preserved. Common count labels normalize to `count`.
 
 Formula expressions support numeric literals, assumptions, earlier formulas, parentheses, and `+`, `-`, `*`, `/`. The compiler validates that referenced values exist, that formulas only use numeric assumptions or earlier formulas, and that unit math is compatible. Adding or subtracting requires matching non-percent units, scalar multiplication preserves the unit value, same-unit division produces a unitless ratio, and percent values can participate in scalar/rate calculations. Unsupported compound-unit math, such as `USD * count` or `USD + percent`, is rejected instead of silently producing a misleading metric. Formula results carry a unit when the expression is unit-compatible, such as adding/subtracting `USD` values or multiplying one unit value by a scalar.
@@ -168,7 +180,7 @@ Scenarios declare alternate assumption values against the same formulas and fore
 
 Changes declare time-varying assumption values that take effect at a forecast period and continue for later periods. Change blocks must use the same forecast unit, must occur inside the forecast window, and must keep the same primitive type and unit as the baseline assumption.
 
-The compiler emits Simulation IR and can run a prototype formula forecast. The runner repeats the declared assumptions for each period, applies any scheduled changes, emits formula results as metrics with `metricUnits` when known, and compares scenarios against the baseline.
+The compiler emits Simulation IR and can run a prototype formula forecast. The runner repeats the declared assumptions for each period, applies any scheduled changes, carries simulation dimensions into the run output, emits formula results as metrics with `metricUnits` when known, and compares scenarios against the baseline.
 
 Scenario comparison reports include:
 
@@ -191,7 +203,7 @@ node dist/cli.js simulation-run examples/simulations/workforce_change.reux
 node dist/cli.js simulation-types-ts examples/simulations/workforce_change.reux
 ```
 
-Generated simulation TypeScript contracts include typed assumption maps, metric maps, scenario names, run/result shapes, explanation summaries, summary helper types, runtime helper functions, and a small metadata constant for each simulation. This lets a frontend or product backend consume simulation output without treating it as unstructured JSON.
+Generated simulation TypeScript contracts include typed dimension names, typed assumption maps, metric maps, scenario names, run/result shapes, explanation summaries, summary helper types, runtime helper functions, and a small metadata constant for each simulation. This lets a frontend or product backend consume simulation output without treating it as unstructured JSON.
 
 This is not yet the full simulation language. The next layers are named domain dimensions, domain packs for PLOS/business use cases, deeper generated TypeScript clients, and eventually integration with Reux data modules.
 

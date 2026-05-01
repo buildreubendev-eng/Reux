@@ -419,6 +419,8 @@ entity User {
     const source = `module personal_life
 
 simulate personal_finance {
+  dimension product = PLOS
+  dimension domain = finance
   income = 5000 USD
   rent = 1500 USD
   debt_payment = 500 USD
@@ -439,6 +441,10 @@ simulate personal_finance {
 
     expect(ir).toEqual({
       name: "personal_finance",
+      dimensions: [
+        { name: "product", value: "PLOS" },
+        { name: "domain", value: "finance" },
+      ],
       assumptions: [
         { name: "income", type: "number", value: 5000, unit: "USD" },
         { name: "rent", type: "number", value: 1500, unit: "USD" },
@@ -457,6 +463,7 @@ simulate personal_finance {
       forecast: { periods: 12, unit: "month" },
     });
     expect(run.model).toBe("prototype-formula-forecast");
+    expect(run.dimensions).toEqual({ product: "PLOS", domain: "finance" });
     expect(run.objectives).toEqual([
       { metric: "cash_flow", direction: "maximize" },
       { metric: "annual_surplus", direction: "maximize" },
@@ -510,6 +517,7 @@ simulate personal_finance {
     const run = JSON.parse(emitSimulationRun(readFileSync("examples/simulations/workforce_change.reux", "utf8")));
 
     expect(run.name).toBe("workforce_change");
+    expect(run.dimensions).toEqual({ product: "business_simulation", domain: "workforce", audience: "enterprise" });
     expect(run.forecast).toEqual({ periods: 6, unit: "month" });
     expect(run.periods[0].metrics.productivity_index).toBe(108);
     expect(run.periods[0].metrics.operating_relief).toBe(0.18);
@@ -581,6 +589,7 @@ simulate support_cost {
     const types = emitSimulationTypes(readFileSync("examples/simulations/workforce_change.reux", "utf8"));
 
     expect(types).toContain("export type WorkforceChangeAssumptionName = \"employees\" | \"productivity_gain\" | \"overtime_reduction\";");
+    expect(types).toContain("export type WorkforceChangeDimensionName = \"product\" | \"domain\" | \"audience\";");
     expect(types).toContain("export type WorkforceChangeMetricName = \"operating_relief\" | \"productivity_index\";");
     expect(types).toContain("export type WorkforceChangeScenarioName = \"baseline\" | \"stronger_training\" | \"no_overtime_change\";");
     expect(types).toContain("export interface WorkforceChangeAssumptions");
@@ -592,6 +601,7 @@ simulate support_cost {
     expect(types).toContain("productivity_gain: number;");
     expect(types).toContain("export type WorkforceChangeRun = ReuxSimulationRun<WorkforceChangeSimulationName, WorkforceChangeScenarioName, WorkforceChangeAssumptions, WorkforceChangeMetrics, WorkforceChangeMetricName>;");
     expect(types).toContain("export const workforceChangeSimulation = {");
+    expect(types).toContain("\"dimensions\": [");
     expect(types).toContain("\"direction\": \"maximize\"");
   });
 
@@ -628,6 +638,30 @@ simulate bad {
 }
 `),
     ).toThrow(DlAggregateError);
+  });
+
+  it("validates simulation dimensions", () => {
+    expect(() =>
+      compileSource(`module broken
+
+simulate bad {
+  dimension domain = finance
+  dimension domain = personal
+  domain = "conflict"
+  forecast 1 month
+}
+`),
+    ).toThrow(DlAggregateError);
+
+    expect(() =>
+      compileSource(`module broken
+
+simulate bad {
+  dimension domain = personal finance
+  forecast 1 month
+}
+`),
+    ).toThrow();
   });
 
   it("validates simulation formula references", () => {

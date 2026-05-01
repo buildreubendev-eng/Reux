@@ -18,6 +18,11 @@ export function emitTypeScriptSimulationContracts(source: string): string {
     "  unit: \"day\" | \"week\" | \"month\" | \"quarter\" | \"year\";",
     "}",
     "",
+    "export interface ReuxSimulationDimension {",
+    "  name: string;",
+    "  value: string;",
+    "}",
+    "",
     "export interface ReuxSimulationPeriod<Assumptions extends object, Metrics extends object> {",
     "  period: number;",
     "  label: string;",
@@ -93,6 +98,7 @@ export function emitTypeScriptSimulationContracts(source: string): string {
     "export interface ReuxSimulationRun<SimulationName extends string, ScenarioName extends string, Assumptions extends object, Metrics extends object, MetricName extends string> {",
     "  name: SimulationName;",
     "  model: \"prototype-formula-forecast\";",
+    "  dimensions: Record<string, string>;",
     "  forecast: ReuxSimulationForecast;",
     "  objectives: Array<ReuxSimulationObjective<MetricName>>;",
     "  periods: Array<ReuxSimulationPeriod<Assumptions, Metrics>>;",
@@ -172,6 +178,7 @@ function simulationContractLines(simulation: SimulationIr): string[] {
 
   return [
     `export type ${typeName}SimulationName = ${quoteString(simulation.name)};`,
+    `export type ${typeName}DimensionName = ${stringUnion(simulation.dimensions.map((dimension) => dimension.name))};`,
     `export type ${typeName}AssumptionName = ${stringUnion(assumptions)};`,
     `export type ${typeName}MetricName = ${stringUnion(metrics)};`,
     `export type ${typeName}ScenarioName = ${stringUnion(scenarios)};`,
@@ -194,6 +201,7 @@ function simulationContractLines(simulation: SimulationIr): string[] {
 function simulationMetadata(simulation: SimulationIr, run: SimulationRunResult): unknown {
   return {
     name: simulation.name,
+    dimensions: simulation.dimensions,
     forecast: simulation.forecast,
     assumptions: simulation.assumptions.map((assumption) => ({
       name: assumption.name,

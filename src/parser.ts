@@ -431,6 +431,7 @@ function parseSimulation(lines: SourceLine[], start: number): { declaration: Sim
   }
 
   const assumptions: SimulationDeclaration["assumptions"] = [];
+  const dimensions: SimulationDeclaration["dimensions"] = [];
   const formulas: SimulationDeclaration["formulas"] = [];
   const objectives: SimulationDeclaration["objectives"] = [];
   const scenarios: SimulationDeclaration["scenarios"] = [];
@@ -452,6 +453,7 @@ function parseSimulation(lines: SourceLine[], start: number): { declaration: Sim
         declaration: {
           kind: "simulation",
           name: match[1],
+          dimensions,
           assumptions,
           formulas,
           objectives,
@@ -508,6 +510,13 @@ function parseSimulation(lines: SourceLine[], start: number): { declaration: Sim
       continue;
     }
 
+    const dimension = text.match(/^dimension\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+)$/);
+    if (dimension) {
+      dimensions.push({ name: dimension[1], value: parseSimulationDimensionValue(dimension[2].trim(), line.number) });
+      index += 1;
+      continue;
+    }
+
     const assignment = text.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+)$/);
     if (!assignment) {
       throw new DlError(`line ${line.number}: expected simulation assignment, formula, objective, scenario, change, or forecast`);
@@ -517,6 +526,14 @@ function parseSimulation(lines: SourceLine[], start: number): { declaration: Sim
   }
 
   throw new DlError(`line ${lines[start].number}: simulation '${match[1]}' is missing a closing brace`);
+}
+
+function parseSimulationDimensionValue(value: string, lineNumber: number): string {
+  if ((value.startsWith("\"") && value.endsWith("\"")) || (value.startsWith("'") && value.endsWith("'"))) {
+    return value.slice(1, -1);
+  }
+  if (/^[A-Za-z_][A-Za-z0-9_-]*$/.test(value)) return value;
+  throw new DlError(`line ${lineNumber}: simulation dimension value must be an identifier or quoted string`);
 }
 
 function parseSimulationChange(

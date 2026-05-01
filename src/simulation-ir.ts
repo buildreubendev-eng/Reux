@@ -3,6 +3,7 @@ import { DlAggregateError } from "./errors.js";
 
 export interface SimulationIr {
   name: string;
+  dimensions: SimulationDimensionIr[];
   assumptions: SimulationAssumptionIr[];
   formulas: SimulationFormulaIr[];
   objectives: SimulationObjectiveIr[];
@@ -12,6 +13,11 @@ export interface SimulationIr {
     periods: number;
     unit: SimulationDeclaration["forecast"]["unit"];
   };
+}
+
+export interface SimulationDimensionIr {
+  name: string;
+  value: string;
 }
 
 export interface SimulationAssumptionIr {
@@ -48,6 +54,7 @@ export interface SimulationChangeIr {
 export interface SimulationRunResult {
   name: string;
   model: "prototype-formula-forecast";
+  dimensions: Record<string, string>;
   forecast: SimulationIr["forecast"];
   objectives: SimulationObjectiveIr[];
   periods: SimulationPeriodResult[];
@@ -154,6 +161,7 @@ export function runSimulationIr(simulation: SimulationIr): SimulationRunResult {
   return {
     name: simulation.name,
     model: "prototype-formula-forecast",
+    dimensions: Object.fromEntries(simulation.dimensions.map((dimension) => [dimension.name, dimension.value])),
     forecast: simulation.forecast,
     objectives: simulation.objectives,
     periods,
@@ -164,6 +172,15 @@ export function runSimulationIr(simulation: SimulationIr): SimulationRunResult {
 function buildSimulationIr(simulation: SimulationDeclaration, diagnostics: string[]): SimulationIr {
   for (const duplicate of duplicates(simulation.assumptions.map((assumption) => assumption.name))) {
     diagnostics.push(`simulation ${simulation.name} declares duplicate assumption ${duplicate}`);
+  }
+  for (const duplicate of duplicates(simulation.dimensions.map((dimension) => dimension.name))) {
+    diagnostics.push(`simulation ${simulation.name} declares duplicate dimension ${duplicate}`);
+  }
+  const dimensionNames = new Set(simulation.dimensions.map((dimension) => dimension.name));
+  for (const assumption of simulation.assumptions) {
+    if (dimensionNames.has(assumption.name)) {
+      diagnostics.push(`simulation ${simulation.name} assumption ${assumption.name} conflicts with a dimension`);
+    }
   }
   for (const duplicate of duplicates(simulation.formulas.map((formula) => formula.name))) {
     diagnostics.push(`simulation ${simulation.name} declares duplicate formula ${duplicate}`);
@@ -193,6 +210,7 @@ function buildSimulationIr(simulation: SimulationDeclaration, diagnostics: strin
 
   return {
     name: simulation.name,
+    dimensions: simulation.dimensions.map((dimension) => ({ name: dimension.name, value: dimension.value })),
     assumptions,
     formulas,
     objectives,

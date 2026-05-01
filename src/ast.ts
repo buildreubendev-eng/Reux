@@ -77,12 +77,18 @@ export interface QueryFragmentDeclaration {
 export interface SimulationDeclaration {
   kind: "simulation";
   name: string;
+  dimensions: SimulationDimension[];
   assumptions: SimulationAssumption[];
   formulas: SimulationFormula[];
   objectives: SimulationObjective[];
   scenarios: SimulationScenario[];
   changes: SimulationChange[];
   forecast: SimulationForecast;
+}
+
+export interface SimulationDimension {
+  name: string;
+  value: string;
 }
 
 export interface SimulationAssumption {

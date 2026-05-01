@@ -1,6 +1,10 @@
 module personal_life
 
 simulate personal_finance {
+  dimension product = PLOS
+  dimension domain = finance
+  dimension audience = personal
+
   income = 5000 USD
   rent = 1500 USD
   debt_payment = 500 USD
