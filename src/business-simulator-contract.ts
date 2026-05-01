@@ -7,6 +7,8 @@ export const businessSimulatorEndpoints = {
 
 export type BusinessSimulatorEndpointName = keyof typeof businessSimulatorEndpoints;
 export type BusinessSimulatorForecastUnit = "week" | "month" | "quarter";
+export const businessSimulatorForecastUnits = ["week", "month", "quarter"] as const satisfies readonly BusinessSimulatorForecastUnit[];
+
 export type BusinessSimulatorMetricName =
   | "revenue"
   | "operatingCost"
@@ -17,6 +19,17 @@ export type BusinessSimulatorMetricName =
   | "marginDelta"
   | "riskScore"
   | "defectCost";
+export const businessSimulatorMetricNames = [
+  "revenue",
+  "operatingCost",
+  "laborCost",
+  "productivity",
+  "workforceLoad",
+  "margin",
+  "marginDelta",
+  "riskScore",
+  "defectCost",
+] as const satisfies readonly BusinessSimulatorMetricName[];
 
 export interface BusinessSimulatorAssumptions {
   employees: number;

@@ -32,7 +32,14 @@ export {
   businessSimulatorContractVersion,
   businessSimulatorDefaultAssumptions,
   businessSimulatorEndpoints,
+  businessSimulatorForecastUnits,
+  businessSimulatorMetricNames,
 } from "./business-simulator-contract.js";
+export {
+  assertBusinessSimulatorCompareRequest,
+  assertBusinessSimulatorRunRequest,
+  BusinessSimulatorValidationError,
+} from "./business-simulator-validation.js";
 export {
   buildBusinessSimulatorSource,
   compareBusinessSimulatorScenarioResults,
@@ -66,6 +73,7 @@ export type {
   GetBusinessSimulationResponse,
   ListBusinessSimulationsResponse,
 } from "./business-simulator-contract.js";
+export type { BusinessSimulatorValidationIssue } from "./business-simulator-validation.js";
 
 export interface CompileResult {
   program: Program;

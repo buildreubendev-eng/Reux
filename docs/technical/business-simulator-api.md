@@ -4,6 +4,7 @@ This contract is the handoff point between the Business Simulator frontend and t
 
 The TypeScript source of truth lives in `src/business-simulator-contract.ts`.
 The first Reux model that matches this contract lives in `examples/simulations/business_simulator.reux`.
+Runtime request validators live in `src/business-simulator-validation.ts`.
 
 ## Endpoints
 
@@ -93,6 +94,8 @@ Metric snapshots include:
 - `riskScore`
 - `defectCost`
 
+The source of truth also exports `businessSimulatorForecastUnits` and `businessSimulatorMetricNames` so product apps can build controls and charts without hand-copying enum values.
+
 ## Frontend Integration Notes
 
 - The frontend should keep using a mock service until the backend endpoint exists.
@@ -108,6 +111,8 @@ node dist/cli.js business-simulator-contract
 ```
 
 That command emits the endpoint map, template response, sample run request, sample run response, sample compare request, sample compare response, and frontend mapping notes. It is useful when checking that a website mock, API client, or demo fixture still matches the Reux backend contract.
+
+For public API handlers, call `assertBusinessSimulatorRunRequest(body)` before running a simulation and `assertBusinessSimulatorCompareRequest(body)` before comparing existing results. Validation failures throw `BusinessSimulatorValidationError` with stable `issues[].path` values such as `$.baseline.grossMarginRate`, which lets frontends display field-level errors instead of a generic failed request.
 
 ## Backend Integration Notes
 
@@ -160,6 +165,8 @@ It provides:
 - `buildBusinessSimulatorSource(request)`
 - `createBusinessSimulatorContractFixture()`
 - `emitBusinessSimulatorContractFixture()`
+- `assertBusinessSimulatorRunRequest(body)`
+- `assertBusinessSimulatorCompareRequest(body)`
 
 The adapter turns frontend contract requests into a temporary Reux simulation source, runs it through the Reux simulation runtime, and normalizes the result back into `BusinessSimulatorRunResponse`.
 

@@ -4,9 +4,13 @@ import {
   businessSimulatorContractVersion,
   businessSimulatorDefaultAssumptions,
   businessSimulatorEndpoints,
+  businessSimulatorForecastUnits,
+  businessSimulatorMetricNames,
   type BusinessSimulatorRunRequest,
 } from "../src/business-simulator-contract.js";
 import {
+  assertBusinessSimulatorRunRequest,
+  BusinessSimulatorValidationError,
   compareBusinessSimulatorScenarios,
   createBusinessSimulatorContractFixture,
   emitBusinessSimulatorContractFixture,
@@ -25,6 +29,8 @@ describe("business simulator API contract", () => {
       runSimulation: "POST /api/simulations/run",
       compareScenarios: "POST /api/scenarios/compare",
     });
+    expect(businessSimulatorForecastUnits).toEqual(["week", "month", "quarter"]);
+    expect(businessSimulatorMetricNames).toContain("marginDelta");
   });
 
   it("keeps frontend assumption defaults in the public contract", () => {
@@ -184,5 +190,63 @@ describe("business simulator API contract", () => {
     const emitted = JSON.parse(emitBusinessSimulatorContractFixture(new Date("2026-05-01T00:00:00.000Z")));
     expect(emitted.generatedAt).toBe("2026-05-01T00:00:00.000Z");
     expect(emitted.runResponse.generatedAt).toBe("2026-05-01T00:00:00.000Z");
+  });
+
+  it("rejects malformed run requests with stable validation paths", () => {
+    expect(() =>
+      assertBusinessSimulatorRunRequest({
+        baseline: {
+          ...businessSimulatorDefaultAssumptions,
+          grossMarginRate: 1.5,
+          forecastUnit: "year",
+        },
+        scenarios: [
+          {
+            id: "",
+            name: "Bad Scenario",
+            assumptions: {
+              forecastPeriods: 6,
+              unknownField: 1,
+            },
+          },
+        ],
+        options: {
+          includeTimeline: "yes",
+        },
+      }),
+    ).toThrow(BusinessSimulatorValidationError);
+
+    try {
+      assertBusinessSimulatorRunRequest({
+        baseline: {
+          ...businessSimulatorDefaultAssumptions,
+          grossMarginRate: 1.5,
+          forecastUnit: "year",
+        },
+        scenarios: [
+          {
+            id: "",
+            name: "Bad Scenario",
+            assumptions: {
+              forecastPeriods: 6,
+              unknownField: 1,
+            },
+          },
+        ],
+        options: {
+          includeTimeline: "yes",
+        },
+      });
+      throw new Error("expected validation to fail");
+    } catch (error) {
+      expect(error).toBeInstanceOf(BusinessSimulatorValidationError);
+      const issues = (error as BusinessSimulatorValidationError).issues.map((issue) => issue.path);
+      expect(issues).toContain("$.baseline.grossMarginRate");
+      expect(issues).toContain("$.baseline.forecastUnit");
+      expect(issues).toContain("$.scenarios[0].id");
+      expect(issues).toContain("$.scenarios[0].assumptions.forecastPeriods");
+      expect(issues).toContain("$.scenarios[0].assumptions.unknownField");
+      expect(issues).toContain("$.options.includeTimeline");
+    }
   });
 });

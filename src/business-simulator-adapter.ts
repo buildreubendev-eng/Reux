@@ -2,6 +2,7 @@ import { parseProgram } from "./parser.js";
 import { buildSimulationCatalog, runSimulationIr, SimulationRunResult, SimulationScenarioRunResult } from "./simulation-ir.js";
 import {
   businessSimulatorDefaultAssumptions,
+  businessSimulatorMetricNames,
   BusinessSimulatorAssumptions,
   BusinessSimulatorCompareRequest,
   BusinessSimulatorCompareResponse,
@@ -18,6 +19,7 @@ import {
   GetBusinessSimulationResponse,
   ListBusinessSimulationsResponse,
 } from "./business-simulator-contract.js";
+import { assertBusinessSimulatorCompareRequest, assertBusinessSimulatorRunRequest } from "./business-simulator-validation.js";
 
 const businessSimulatorSummary: BusinessSimulatorSummary = {
   id: "operations-decision",
@@ -67,18 +69,6 @@ const exampleScenarios: BusinessSimulatorScenarioInput[] = [
   },
 ];
 
-const businessMetricNames: BusinessSimulatorMetricName[] = [
-  "revenue",
-  "operatingCost",
-  "laborCost",
-  "productivity",
-  "workforceLoad",
-  "margin",
-  "marginDelta",
-  "riskScore",
-  "defectCost",
-];
-
 const metricUnits: Partial<Record<BusinessSimulatorMetricName, BusinessSimulatorMetricDelta["unit"]>> = {
   revenue: "USD",
   operatingCost: "USD",
@@ -107,6 +97,7 @@ export function getBusinessSimulation(id = businessSimulatorSummary.id): GetBusi
 }
 
 export function runBusinessSimulator(request: BusinessSimulatorRunRequest, now: Date = new Date()): BusinessSimulatorRunResponse {
+  assertBusinessSimulatorRunRequest(request);
   const normalized = normalizeRunRequest(request);
   const reuxScenarioNames = scenarioNamesFor(normalized.scenarios);
   const scenarioNames = new Map(normalized.scenarios.map((scenario, index) => [reuxScenarioNames[index], scenario]));
@@ -134,6 +125,7 @@ export function runBusinessSimulator(request: BusinessSimulatorRunRequest, now: 
 }
 
 export function compareBusinessSimulatorScenarios(request: BusinessSimulatorCompareRequest, now: Date = new Date()): BusinessSimulatorCompareResponse {
+  assertBusinessSimulatorCompareRequest(request);
   return {
     comparison: compareBusinessSimulatorScenarioResults(request.baseline, request.scenarios),
     generatedAt: now.toISOString(),
@@ -145,7 +137,7 @@ export function compareBusinessSimulatorScenarioResults(
   scenarios: BusinessSimulatorScenarioResult[],
 ): BusinessSimulatorComparison {
   const metricDeltasByScenario = Object.fromEntries(
-    scenarios.map((scenario) => [scenario.id, businessMetricNames.map((metric) => metricDelta(metric, baseline.finalMetrics, scenario.finalMetrics))]),
+    scenarios.map((scenario) => [scenario.id, businessSimulatorMetricNames.map((metric) => metricDelta(metric, baseline.finalMetrics, scenario.finalMetrics))]),
   );
   const recommendation = recommendScenario(scenarios, metricDeltasByScenario);
 
@@ -289,7 +281,7 @@ function toScenarioResult(
 }
 
 function toMetricSnapshot(metrics: Record<string, number>): BusinessSimulatorMetricSnapshot {
-  return Object.fromEntries(businessMetricNames.map((metric) => [metric, metrics[metric] ?? 0])) as unknown as BusinessSimulatorMetricSnapshot;
+  return Object.fromEntries(businessSimulatorMetricNames.map((metric) => [metric, metrics[metric] ?? 0])) as unknown as BusinessSimulatorMetricSnapshot;
 }
 
 function metricDelta(
