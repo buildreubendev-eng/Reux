@@ -6,7 +6,7 @@ import {
   businessSimulatorEndpoints,
   type BusinessSimulatorRunRequest,
 } from "../src/business-simulator-contract.js";
-import { compileSource, emitSimulationRun } from "../src/compiler.js";
+import { compileSource, emitSimulationRun, runBusinessSimulator } from "../src/compiler.js";
 
 describe("business simulator API contract", () => {
   it("defines the first public endpoint set", () => {
@@ -94,5 +94,43 @@ describe("business simulator API contract", () => {
       "qualityIssue",
       "staffingIncrease",
     ]);
+  });
+
+  it("adapts Reux simulation output into the business simulator response contract", () => {
+    const response = runBusinessSimulator(
+      {
+        baseline: businessSimulatorDefaultAssumptions,
+        scenarios: [
+          {
+            id: "process-improvement",
+            name: "Process Improvement",
+            assumptions: {
+              productivityGainRate: 0.12,
+              overtimeReductionRate: 0.18,
+            },
+          },
+          {
+            id: "quality-issue",
+            name: "Quality Issue",
+            assumptions: {
+              defectRate: 0.06,
+              supplierDelayRiskRate: 0.18,
+            },
+          },
+        ],
+        options: {
+          includeReuxSource: true,
+        },
+      },
+      new Date("2026-05-01T00:00:00.000Z"),
+    );
+
+    expect(response.simulation.id).toBe("operations-decision");
+    expect(response.baseline.timeline).toHaveLength(12);
+    expect(response.scenarios.map((scenario) => scenario.id)).toEqual(["process-improvement", "quality-issue"]);
+    expect(response.comparison.metricDeltasByScenario["process-improvement"].some((delta) => delta.metric === "marginDelta")).toBe(true);
+    expect(response.comparison.recommendation?.scenarioId).toBe("process-improvement");
+    expect(response.reuxSource).toContain("simulate operations_decision");
+    expect(response.generatedAt).toBe("2026-05-01T00:00:00.000Z");
   });
 });

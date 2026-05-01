@@ -136,3 +136,26 @@ The model emits these frontend-facing metric names:
 - `defectCost`
 
 The endpoint should not require admin tokens. Public demos can rate-limit and session-isolate requests separately from this contract.
+
+## Adapter
+
+The backend adapter lives in `src/business-simulator-adapter.ts`.
+
+It provides:
+
+- `listBusinessSimulations()`
+- `getBusinessSimulation(id)`
+- `runBusinessSimulator(request)`
+- `compareBusinessSimulatorScenarios(request)`
+- `buildBusinessSimulatorSource(request)`
+
+The adapter turns frontend contract requests into a temporary Reux simulation source, runs it through the Reux simulation runtime, and normalizes the result back into `BusinessSimulatorRunResponse`.
+
+Recommendation scoring is deterministic. It rewards:
+
+- Higher `marginDelta`.
+- Higher `productivity`.
+- Lower `operatingCost`.
+- Lower `riskScore`.
+
+The output includes a recommended scenario, reasons, and tradeoffs so the frontend can show a clear decision summary without inventing its own scoring logic.

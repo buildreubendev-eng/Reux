@@ -33,6 +33,14 @@ export {
   businessSimulatorDefaultAssumptions,
   businessSimulatorEndpoints,
 } from "./business-simulator-contract.js";
+export {
+  buildBusinessSimulatorSource,
+  compareBusinessSimulatorScenarioResults,
+  compareBusinessSimulatorScenarios,
+  getBusinessSimulation,
+  listBusinessSimulations,
+  runBusinessSimulator,
+} from "./business-simulator-adapter.js";
 export type {
   BusinessSimulatorAssumptions,
   BusinessSimulatorCompareRequest,

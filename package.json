@@ -15,8 +15,8 @@
       "import": "./dist/runtime.js"
     },
     "./business-simulator": {
-      "types": "./dist/business-simulator-contract.d.ts",
-      "import": "./dist/business-simulator-contract.js"
+      "types": "./dist/business-simulator.d.ts",
+      "import": "./dist/business-simulator.js"
     },
     "./package.json": "./package.json"
   },
