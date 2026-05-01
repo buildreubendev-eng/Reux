@@ -15,6 +15,7 @@ Implemented today:
 - PostgreSQL runtime helpers for migrations, compiled queries, transaction execution, seed resets, and outbox processing with delayed retries, dead-lettering, stale-claim recovery, status summaries, and worker observability counters.
 - CLI workflows for checking, diagnosis, migration planning, migration safety checks, migration review/rollback guidance, SQL inspection, API generation, worker generation, and seed validation.
 - Public capability/status data shared through committed JSON, Markdown, and `reux capabilities` CLI output.
+- Website-consumable public snapshot and next-backlog assets generated from roadmap/capability data and guarded by `npm run check:public`.
 - A hosted commerce and logistics pilot demo with isolated public sessions and public reset flow.
 - Logistics and clinic pilot sources showing the same language subset applied outside commerce.
 - An executable example catalog check that keeps workflow pilots, seed fixtures, docs, generated scaffolds, and simulation examples aligned.

@@ -16,7 +16,11 @@ const requiredDocs = [
   "docs/public/reux-roadmap.json",
   "docs/public/reux-capabilities.md",
   "docs/public/reux-capabilities.json",
+  "docs/public/reux-public-snapshot.md",
+  "docs/public/reux-public-snapshot.json",
   "docs/public/reux-demo-testing-guide.md",
+  "docs/technical/next-backlog.md",
+  "docs/technical/next-backlog.json",
 ];
 
 const requiredScripts = [
@@ -26,6 +30,8 @@ const requiredScripts = [
   "verify:demo:smoke",
   "demo:healthcheck",
   "demo:monitor",
+  "check:public",
+  "public:write",
   "release:preflight",
   "release:pack-dry-run",
 ];
@@ -34,6 +40,8 @@ const failures = [];
 const pkg = readJson("package.json");
 const roadmap = readJson("docs/public/reux-roadmap.json");
 const capabilities = readJson("docs/public/reux-capabilities.json");
+const publicSnapshot = readJson("docs/public/reux-public-snapshot.json");
+const nextBacklog = readJson("docs/technical/next-backlog.json");
 
 for (const path of requiredDocs) {
   if (!existsSync(path)) failures.push(`missing release doc: ${path}`);
@@ -96,6 +104,16 @@ if (!capabilities.capabilityGroups?.some((group) => group.name === "Public Demo"
 if (!capabilitiesMarkdown.includes("## Capability Groups") || !capabilitiesMarkdown.includes("### Public Demo")) {
   failures.push("public capabilities markdown must include capability groups and the public demo section");
 }
+if (publicSnapshot.status?.demoReadinessPercent !== status.demoReadinessPercent) {
+  failures.push("public snapshot demo readiness must match roadmap JSON");
+}
+if (!publicSnapshot.links?.capabilitiesJson?.endsWith("reux-capabilities.json")) {
+  failures.push("public snapshot must link to the public capabilities JSON");
+}
+if (!nextBacklog.items?.some((item) => item.priority === "P1" && item.ownerTrack === "Language Core")) {
+  failures.push("next backlog must include a P1 Language Core item");
+}
+execFileSync(process.execPath, ["scripts/check-public-assets.mjs"], { stdio: "pipe" });
 
 if (!allowDirty) {
   const statusOutput = execFileSync("git", ["status", "--short"], { encoding: "utf8" }).trim();

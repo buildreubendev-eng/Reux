@@ -79,6 +79,7 @@ Status: implemented for the MVP workflow.
 - Package distribution now has typed ESM entrypoints, runtime subpath exports, package dry-run coverage for editor assets, and tarball installation documentation.
 - Release readiness now has a preflight script that checks release docs, package entrypoints, roadmap status synchronization, and clean-tree readiness.
 - Public capability/status data now lives in `docs/public/reux-capabilities.json`, with Markdown and CLI output for website reuse.
+- Public snapshot and next-backlog assets are generated from roadmap/capability data through `npm run public:write` and guarded by `npm run check:public`.
 - Public release readiness now has a package-name plan, package dry-run command, and cross-repo upgrade guidance.
 - `scripts/demo-pilot-worker.mjs` provides a runnable pilot outbox worker process for hosted and local demo environments.
 - Seed tooling supports schema-only checks with enum validation, PostgreSQL dry runs, rerunnable upserts, deletes, and transactional resets.

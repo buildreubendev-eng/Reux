@@ -1,0 +1,203 @@
+{
+  "project": "Reux",
+  "updatedAt": "2026-05-01",
+  "summary": "The prototype bar is complete. This backlog tracks the next work that should make Reux more useful, marketable, and product-backed.",
+  "items": [
+    {
+      "priority": "P1",
+      "ownerTrack": "Language Core",
+      "title": "Richer transaction control flow",
+      "why": "Move beyond prototype completion into deeper product and language capability.",
+      "source": "capability-research-track"
+    },
+    {
+      "priority": "P1",
+      "ownerTrack": "Language Core",
+      "title": "Deeper expression typing",
+      "why": "Move beyond prototype completion into deeper product and language capability.",
+      "source": "capability-research-track"
+    },
+    {
+      "priority": "P2",
+      "ownerTrack": "Language Core",
+      "title": "Reusable query and join patterns",
+      "why": "Move beyond prototype completion into deeper product and language capability.",
+      "source": "capability-research-track"
+    },
+    {
+      "priority": "P2",
+      "ownerTrack": "Simulation Foundation",
+      "title": "Richer simulation time-series and assumptions",
+      "why": "Move beyond prototype completion into deeper product and language capability.",
+      "source": "capability-research-track"
+    },
+    {
+      "priority": "P3",
+      "ownerTrack": "Simulation Foundation",
+      "title": "Product-facing simulation execution APIs",
+      "why": "Move beyond prototype completion into deeper product and language capability.",
+      "source": "capability-research-track"
+    },
+    {
+      "priority": "P3",
+      "ownerTrack": "Developer Experience",
+      "title": "Compiler-backed language-server features",
+      "why": "Move beyond prototype completion into deeper product and language capability.",
+      "source": "capability-research-track"
+    },
+    {
+      "priority": "P1",
+      "ownerTrack": "Demo Hardening",
+      "title": "Keep improving public demo copy as new domains are added",
+      "why": "Make the public demo feel stable, explainable, and safe for repeat visitors.",
+      "source": "public-roadmap"
+    },
+    {
+      "priority": "P1",
+      "ownerTrack": "Demo Hardening",
+      "title": "Keep monitor alert routing aligned with the final hosting and notification setup",
+      "why": "Make the public demo feel stable, explainable, and safe for repeat visitors.",
+      "source": "public-roadmap"
+    },
+    {
+      "priority": "P2",
+      "ownerTrack": "Demo Hardening",
+      "title": "Document public reset/session behavior for testers",
+      "why": "Make the public demo feel stable, explainable, and safe for repeat visitors.",
+      "source": "public-roadmap"
+    },
+    {
+      "priority": "P1",
+      "ownerTrack": "Reux Language Depth",
+      "title": "Broaden transaction control flow",
+      "why": "Turn the current useful subset into a stronger application language foundation.",
+      "source": "public-roadmap"
+    },
+    {
+      "priority": "P1",
+      "ownerTrack": "Reux Language Depth",
+      "title": "Deepen expression typing",
+      "why": "Turn the current useful subset into a stronger application language foundation.",
+      "source": "public-roadmap"
+    },
+    {
+      "priority": "P2",
+      "ownerTrack": "Reux Language Depth",
+      "title": "Improve generated worker contracts",
+      "why": "Turn the current useful subset into a stronger application language foundation.",
+      "source": "public-roadmap"
+    },
+    {
+      "priority": "P2",
+      "ownerTrack": "Reux Language Depth",
+      "title": "Expand reusable query patterns",
+      "why": "Turn the current useful subset into a stronger application language foundation.",
+      "source": "public-roadmap"
+    },
+    {
+      "priority": "P2",
+      "ownerTrack": "Reux Language Depth",
+      "title": "Continue tightening compiler diagnostics and safety checks",
+      "why": "Turn the current useful subset into a stronger application language foundation.",
+      "source": "public-roadmap"
+    },
+    {
+      "priority": "P2",
+      "ownerTrack": "Simulation Foundation",
+      "title": "Expand simulation domain packs for PLOS and business operations",
+      "why": "Make Reux useful for structured forecasting and scenario comparison.",
+      "source": "public-roadmap"
+    },
+    {
+      "priority": "P2",
+      "ownerTrack": "Simulation Foundation",
+      "title": "Add richer time-series and assumption modeling",
+      "why": "Make Reux useful for structured forecasting and scenario comparison.",
+      "source": "public-roadmap"
+    },
+    {
+      "priority": "P2",
+      "ownerTrack": "Simulation Foundation",
+      "title": "Add stronger unit and formula validation",
+      "why": "Make Reux useful for structured forecasting and scenario comparison.",
+      "source": "public-roadmap"
+    },
+    {
+      "priority": "P2",
+      "ownerTrack": "Simulation Foundation",
+      "title": "Improve comparison reports and explanation output",
+      "why": "Make Reux useful for structured forecasting and scenario comparison.",
+      "source": "public-roadmap"
+    },
+    {
+      "priority": "P2",
+      "ownerTrack": "Simulation Foundation",
+      "title": "Expand simulation APIs from generated catalog discovery into full product-facing execution services",
+      "why": "Make Reux useful for structured forecasting and scenario comparison.",
+      "source": "public-roadmap"
+    },
+    {
+      "priority": "P2",
+      "ownerTrack": "Product Ecosystem",
+      "title": "Build PLOS as a personal simulation product using normal web technology first",
+      "why": "Keep Reux grounded in real products instead of building language features in isolation.",
+      "source": "public-roadmap"
+    },
+    {
+      "priority": "P2",
+      "ownerTrack": "Product Ecosystem",
+      "title": "Build the real-time business simulation engine as an enterprise product prototype",
+      "why": "Keep Reux grounded in real products instead of building language features in isolation.",
+      "source": "public-roadmap"
+    },
+    {
+      "priority": "P2",
+      "ownerTrack": "Product Ecosystem",
+      "title": "Use Reux underneath both products as the rule, workflow, and simulation layer as it matures",
+      "why": "Keep Reux grounded in real products instead of building language features in isolation.",
+      "source": "public-roadmap"
+    },
+    {
+      "priority": "P2",
+      "ownerTrack": "Product Ecosystem",
+      "title": "Use clinic, logistics, and future product pilots to keep language features grounded in real workflows",
+      "why": "Keep Reux grounded in real products instead of building language features in isolation.",
+      "source": "public-roadmap"
+    },
+    {
+      "priority": "P2",
+      "ownerTrack": "Product Ecosystem",
+      "title": "Add deeper product pilots for PLOS and enterprise operations once the core language/runtime path is stable",
+      "why": "Keep Reux grounded in real products instead of building language features in isolation.",
+      "source": "public-roadmap"
+    },
+    {
+      "priority": "P3",
+      "ownerTrack": "Developer Experience",
+      "title": "Improve editor completions, definitions, and diagnostics",
+      "why": "Make Reux approachable for technical reviewers and early users.",
+      "source": "public-roadmap"
+    },
+    {
+      "priority": "P3",
+      "ownerTrack": "Developer Experience",
+      "title": "Publish clearer examples and tutorials",
+      "why": "Make Reux approachable for technical reviewers and early users.",
+      "source": "public-roadmap"
+    },
+    {
+      "priority": "P3",
+      "ownerTrack": "Developer Experience",
+      "title": "Execute the public package-name decision and publish when the owning account is ready",
+      "why": "Make Reux approachable for technical reviewers and early users.",
+      "source": "public-roadmap"
+    },
+    {
+      "priority": "P3",
+      "ownerTrack": "Developer Experience",
+      "title": "Add concise getting-started flows for local development and hosted demos",
+      "why": "Make Reux approachable for technical reviewers and early users.",
+      "source": "public-roadmap"
+    }
+  ]
+}
