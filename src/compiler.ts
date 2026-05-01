@@ -28,6 +28,8 @@ import {
 } from "./api-generator.js";
 import { emitTypeScriptSimulationContracts } from "./simulation-generator.js";
 
+export { emitReuxCapabilitiesJson, formatReuxCapabilitiesMarkdown, getReuxCapabilities } from "./capabilities.js";
+export type { ReuxCapabilities, ReuxCapabilityGroup } from "./capabilities.js";
 export {
   businessSimulatorContractVersion,
   businessSimulatorDefaultAssumptions,

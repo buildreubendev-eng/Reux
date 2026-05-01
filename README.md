@@ -170,6 +170,8 @@ Technical documentation:
 - [Public demo testing guide](docs/public/reux-demo-testing-guide.md)
 - [Public Reux roadmap](docs/public/reux-roadmap.md)
 - [Public Reux roadmap data](docs/public/reux-roadmap.json)
+- [Public Reux capabilities](docs/public/reux-capabilities.md)
+- [Public Reux capabilities data](docs/public/reux-capabilities.json)
 - [Public Reux positioning guide](docs/public/reux-positioning.md)
 
 GitHub Actions runs `npm run verify` and PostgreSQL-backed `npm run verify:postgres` on pushes and pull requests to `main`.

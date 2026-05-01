@@ -36,9 +36,12 @@ Show the command catalog or focused help for one command:
 node dist/cli.js help
 node dist/cli.js help project-query-sql
 node dist/cli.js project-query-sql --help
+node dist/cli.js capabilities
+node dist/cli.js capabilities --markdown
 ```
 
 The CLI suggests close command names when a command is mistyped, and failed commands include the relevant usage line when Reux knows the command.
+`capabilities` emits the same status and capability manifest stored at `docs/public/reux-capabilities.json` so the website, docs, and CLI can share the public Reux story.
 
 Check a Reux source file:
 

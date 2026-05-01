@@ -20,6 +20,7 @@ Current status:
 - Reux compiler checks for schema, query, transaction, migration, seed, and simulation files.
 - VS Code diagnostic targeting for declaration and field-level compiler errors.
 - Generated TypeScript client/server/worker scaffolds.
+- Public capabilities manifest for website, CLI, and release-check alignment.
 - Release preflight checks for package entrypoints, release docs, roadmap sync, and clean-tree readiness.
 - Public release plan and package dry-run command.
 - Migration rollback SQL for safe reversible schema changes.

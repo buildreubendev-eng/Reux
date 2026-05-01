@@ -1,5 +1,7 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
+  cliCommands,
   commandUsage,
   formatCommandHelp,
   formatMainHelp,
@@ -49,5 +51,21 @@ describe("cli help", () => {
   it("returns usage for known commands", () => {
     expect(commandUsage("query-sql")).toBe("reux query-sql <source.dl|source.reux> <query-name>");
     expect(commandUsage("not-real")).toBeUndefined();
+  });
+
+  it("keeps help metadata aligned with CLI command dispatch", () => {
+    const source = readFileSync("src/cli.ts", "utf8");
+    const implemented = new Set([...source.matchAll(/command === "([^"]+)"/g)].map((match) => match[1]));
+    const aliases = new Set(["--help", "-h", "--version", "-v"]);
+
+    for (const command of cliCommands) {
+      expect(implemented.has(command.name), `${command.name} should be implemented by src/cli.ts`).toBe(true);
+    }
+
+    for (const command of implemented) {
+      if (!aliases.has(command)) {
+        expect(isKnownCommand(command), `${command} should be documented in cliCommands`).toBe(true);
+      }
+    }
   });
 });

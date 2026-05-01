@@ -1,0 +1,98 @@
+# Reux Capabilities
+
+Reux is a data-native language prototype for reliable backend workflows and simulation-driven applications.
+
+Updated: 2026-05-01
+
+## Status
+
+- Demo readiness: roughly 99%.
+- Full platform completion: roughly 100%.
+- Release track: prototype-complete.
+- Reux is demo-ready for public commerce and logistics testing, and prototype-complete for the current language/runtime foundation. The remaining work is product expansion and deeper language research rather than closing the original MVP bar.
+
+## Positioning
+
+- Use normal web frameworks for the product shell.
+- Use Reux for data models, typed queries, transactions, events, migrations, and simulation declarations.
+- Use real product pilots to validate language features instead of building abstract syntax in isolation.
+
+## Capability Groups
+
+### Language Core
+
+Status: prototype-complete.
+
+The MVP language subset can model schemas, enums, queries, transaction functions, durable events, migrations, and simulations.
+
+- Module, entity, enum, query, transaction, event, and simulate declarations.
+- Validated scalar, decimal, currency, enum, reference, generated ID, unique, index, check, and transition-rule metadata.
+- Explicit joins, left joins, reusable filters, cursor pagination, ordering, limits, record projections, and narrow aggregation support.
+- Transaction guards, row locking, inserts, mutations, retry metadata, idempotency keys, typed outbox events, and after-commit hooks.
+- Formula-based simulation forecasts with dimensions, units, scheduled changes, scenarios, objectives, rankings, and explanations.
+
+### Runtime And Database
+
+Status: prototype-complete.
+
+The runtime path uses PostgreSQL today and supports compiled query execution, transaction execution, migrations, seeds, and outbox processing.
+
+- PostgreSQL schema emission and runtime query execution.
+- Managed transaction execution with retryable conflict handling.
+- Migration manifests, diff planning, safety checks, rollback notes, rollback SQL, and environment gates.
+- Seed checks, dry runs, upserts, deletes, and transactional resets.
+- Outbox list, claim, process, fail, requeue, stale-claim recovery, dead-letter handling, and queue statistics.
+
+### Developer Experience
+
+Status: prototype-complete.
+
+The CLI, docs, package smoke checks, and editor tooling are ready for technical review and local experimentation.
+
+- CLI command catalog, command-specific help, typo suggestions, and actionable usage on failures.
+- Generated TypeScript API clients, HTTP server scaffolds, worker scaffolds, and simulation contracts.
+- Local VS Code syntax highlighting, diagnostics, formatting, completions, hover text, and current-file definitions.
+- Onboarding smoke path, example catalog checks, release preflight, package dry-run, and package install smoke checks.
+- Technical docs for architecture, CLI, examples, runtime, migrations, package distribution, editor tooling, and deployment.
+
+### Public Demo
+
+Status: live.
+
+The hosted demo lets public users test commerce and logistics workflows with isolated visitor sessions.
+
+- Commerce workflow demo with reset, transaction, queue, and outbox behavior.
+- Logistics workflow demo validating non-commerce dispatch workflows.
+- Railway-hosted backend connected to PostgreSQL.
+- Reuben website embed/link for public testing.
+- Health checks, deep smoke checks, CI smoke automation, monitor wrapper, webhook alerts, and operations dashboard.
+
+### Pilots And Validation
+
+Status: active.
+
+Commerce, logistics, clinic, PLOS, and business operations examples keep Reux grounded in real product needs.
+
+- Commerce pilot for accounts, orders, payments, transitions, and durable events.
+- Logistics pilot for drivers, vehicles, shipments, dispatch transitions, payouts, and events.
+- Clinic pilot for appointments, patients, clinicians, care tasks, lifecycle transitions, and events.
+- PLOS finance and habit-consistency simulations.
+- Business workforce and operations simulations with domain-pack coverage reports.
+
+## Not Yet
+
+- A custom database engine.
+- A distributed runtime.
+- A full standard library.
+- A package ecosystem.
+- General-purpose UI syntax.
+- A graphical modeling tool.
+
+## Next Research Tracks
+
+- Richer transaction control flow.
+- Deeper expression typing.
+- Reusable query and join patterns.
+- Richer simulation time-series and assumptions.
+- Product-facing simulation execution APIs.
+- Compiler-backed language-server features.

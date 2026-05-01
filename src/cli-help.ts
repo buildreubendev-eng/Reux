@@ -21,6 +21,7 @@ export interface CliCommandInfo {
 const commandNames = [
   "help",
   "version",
+  "capabilities",
   "business-simulator-contract",
   "format",
   "diagnose",
@@ -110,6 +111,12 @@ const commandDetails: Record<string, Partial<CliCommandInfo>> = {
     summary: "Print the installed Reux package version.",
     usage: "reux version",
     examples: ["reux version"],
+  },
+  capabilities: {
+    category: "Getting started",
+    summary: "Print the current Reux capability and status manifest.",
+    usage: "reux capabilities [--markdown]",
+    examples: ["reux capabilities", "reux capabilities --markdown"],
   },
   "business-simulator-contract": {
     category: "Demo support",

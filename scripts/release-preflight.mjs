@@ -14,6 +14,8 @@ const requiredDocs = [
   "docs/technical/roadmap.md",
   "docs/public/reux-roadmap.md",
   "docs/public/reux-roadmap.json",
+  "docs/public/reux-capabilities.md",
+  "docs/public/reux-capabilities.json",
   "docs/public/reux-demo-testing-guide.md",
 ];
 
@@ -31,6 +33,7 @@ const requiredScripts = [
 const failures = [];
 const pkg = readJson("package.json");
 const roadmap = readJson("docs/public/reux-roadmap.json");
+const capabilities = readJson("docs/public/reux-capabilities.json");
 
 for (const path of requiredDocs) {
   if (!existsSync(path)) failures.push(`missing release doc: ${path}`);
@@ -57,6 +60,7 @@ if (Number(status.fullCompletionPercent) < 100) {
 }
 
 const roadmapMarkdown = readFileSync("docs/public/reux-roadmap.md", "utf8");
+const capabilitiesMarkdown = readFileSync("docs/public/reux-capabilities.md", "utf8");
 const demoDeploymentMarkdown = readFileSync("docs/technical/demo-deployment.md", "utf8");
 const demoTestingMarkdown = readFileSync("docs/public/reux-demo-testing-guide.md", "utf8");
 if (!roadmapMarkdown.includes(`Demo readiness: roughly ${status.demoReadinessPercent}%`)) {
@@ -76,6 +80,21 @@ if (!roadmap.liveNow?.some((item) => String(item).includes("webhook alerts"))) {
 }
 if (JSON.stringify(roadmap.milestones ?? []).includes("Add external alert delivery")) {
   failures.push("public roadmap JSON still lists monitor alert delivery as future work");
+}
+if (capabilities.project !== "Reux" || !Array.isArray(capabilities.capabilityGroups)) {
+  failures.push("public capabilities JSON must identify Reux and include capability groups");
+}
+if (Number(capabilities.status?.demoReadinessPercent) !== Number(status.demoReadinessPercent)) {
+  failures.push("public capabilities JSON demo readiness must match roadmap JSON");
+}
+if (Number(capabilities.status?.fullCompletionPercent) !== Number(status.fullCompletionPercent)) {
+  failures.push("public capabilities JSON full completion must match roadmap JSON");
+}
+if (!capabilities.capabilityGroups?.some((group) => group.name === "Public Demo" && group.status === "live")) {
+  failures.push("public capabilities JSON must include a live Public Demo capability group");
+}
+if (!capabilitiesMarkdown.includes("## Capability Groups") || !capabilitiesMarkdown.includes("### Public Demo")) {
+  failures.push("public capabilities markdown must include capability groups and the public demo section");
 }
 
 if (!allowDirty) {

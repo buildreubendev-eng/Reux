@@ -21,6 +21,8 @@ const expectedPaths = [
   "docs/technical/public-release-plan.md",
   "docs/technical/developer-onboarding.md",
   "docs/technical/clinic-pilot.md",
+  "docs/public/reux-capabilities.md",
+  "docs/public/reux-capabilities.json",
   "examples/clinic_reux.dl",
   "examples/seeds/clinic_smoke.json",
   "docs/technical/editor-tooling.md",
@@ -76,9 +78,20 @@ try {
     process.exit(1);
   }
 
+  const capabilitiesOutput = execFileSync(binPath, ["capabilities"], {
+    cwd: tempRoot,
+    encoding: "utf8",
+    shell: process.platform === "win32",
+  });
+  const capabilities = JSON.parse(capabilitiesOutput);
+  if (capabilities.project !== "Reux" || !Array.isArray(capabilities.capabilityGroups)) {
+    console.error("Package smoke check failed. Installed CLI did not emit the public Reux capabilities manifest.");
+    process.exit(1);
+  }
+
   writeFileSync(
     join(tempRoot, "consumer-smoke.mjs"),
-    `import { compileSource, emitPostgresSchema } from "${pkg.name}";
+    `import { compileSource, emitPostgresSchema, getReuxCapabilities } from "${pkg.name}";
 import { businessSimulatorContractVersion } from "${pkg.name}/business-simulator";
 import { createPostgresDatabase } from "${pkg.name}/runtime";
 
@@ -93,6 +106,7 @@ const compiled = compileSource(source);
 const sql = emitPostgresSchema(source);
 if (compiled.schema.entities.length !== 1) throw new Error("compiler import failed");
 if (!sql.includes("CREATE TABLE accounts")) throw new Error("schema emitter import failed");
+if (getReuxCapabilities().project !== "Reux") throw new Error("capabilities export failed");
 if (typeof businessSimulatorContractVersion !== "string") throw new Error("business simulator export failed");
 if (typeof createPostgresDatabase !== "function") throw new Error("runtime export failed");
 console.log("consumer import smoke ok");

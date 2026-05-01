@@ -28,6 +28,7 @@ import {
   explainQuery,
   transactionRetryAttempts,
 } from "./compiler.js";
+import { emitReuxCapabilitiesJson, formatReuxCapabilitiesMarkdown } from "./capabilities.js";
 import { loadConfig } from "./config.js";
 import { commandUsage, formatCommandHelp, formatMainHelp, formatUnknownCommand, isKnownCommand } from "./cli-help.js";
 import { mapDatabaseError } from "./db-errors.js";
@@ -68,6 +69,8 @@ try {
   } else if (!isKnownCommand(command)) {
     console.error(formatUnknownCommand(command));
     process.exitCode = 1;
+  } else if (command === "capabilities") {
+    process.stdout.write(file === "--markdown" ? formatReuxCapabilitiesMarkdown() : emitReuxCapabilitiesJson());
   } else if (command === "business-simulator-contract") {
     process.stdout.write(emitBusinessSimulatorContractFixture());
   } else if (command === "project-diagnose") {

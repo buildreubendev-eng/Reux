@@ -14,6 +14,7 @@ Implemented today:
 - Simulation declarations with domain dimensions, advisory PLOS/business domain pack reports with coverage scoring, static assumptions, lightweight unit-compatibility checks, formulas, maximize/minimize objectives, shared and scenario-specific time-varying changes, scenarios, forecast windows, Simulation IR, period-level comparison reports, objective-aware metric rankings, explanation summaries, generated TypeScript contracts, typed comparison helpers, and prototype formula forecast runners for finance, habits, and workforce examples.
 - PostgreSQL runtime helpers for migrations, compiled queries, transaction execution, seed resets, and outbox processing with delayed retries, dead-lettering, stale-claim recovery, status summaries, and worker observability counters.
 - CLI workflows for checking, diagnosis, migration planning, migration safety checks, migration review/rollback guidance, SQL inspection, API generation, worker generation, and seed validation.
+- Public capability/status data shared through committed JSON, Markdown, and `reux capabilities` CLI output.
 - A hosted commerce and logistics pilot demo with isolated public sessions and public reset flow.
 - Logistics and clinic pilot sources showing the same language subset applied outside commerce.
 - An executable example catalog check that keeps workflow pilots, seed fixtures, docs, generated scaffolds, and simulation examples aligned.
