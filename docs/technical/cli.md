@@ -30,6 +30,16 @@ This verifies example source files, docs, seeds, query SQL emission, transaction
 
 ## Commands
 
+Show the command catalog or focused help for one command:
+
+```bash
+node dist/cli.js help
+node dist/cli.js help project-query-sql
+node dist/cli.js project-query-sql --help
+```
+
+The CLI suggests close command names when a command is mistyped, and failed commands include the relevant usage line when Reux knows the command.
+
 Check a Reux source file:
 
 ```bash

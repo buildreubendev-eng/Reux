@@ -29,6 +29,7 @@ import {
   transactionRetryAttempts,
 } from "./compiler.js";
 import { loadConfig } from "./config.js";
+import { commandUsage, formatCommandHelp, formatMainHelp, formatUnknownCommand, isKnownCommand } from "./cli-help.js";
 import { mapDatabaseError } from "./db-errors.js";
 import { parseJsonObject } from "./data.js";
 import { DlAggregateError } from "./errors.js";
@@ -56,10 +57,17 @@ const [command, file, extra, extra2] = args;
 
 try {
   if (!command) {
-    usage();
+    console.error(formatMainHelp());
     process.exitCode = 1;
+  } else if (command === "help" || command === "--help" || command === "-h") {
+    console.log(file ? formatCommandHelp(file) : formatMainHelp());
   } else if (command === "version" || command === "--version" || command === "-v") {
     console.log(packageVersion());
+  } else if (args.includes("--help") || args.includes("-h")) {
+    console.log(formatCommandHelp(command));
+  } else if (!isKnownCommand(command)) {
+    console.error(formatUnknownCommand(command));
+    process.exitCode = 1;
   } else if (command === "business-simulator-contract") {
     process.stdout.write(emitBusinessSimulatorContractFixture());
   } else if (command === "project-diagnose") {
@@ -404,9 +412,7 @@ try {
     }
   } else {
     if (!file) {
-      usage();
-      process.exitCode = 1;
-      throw new Error("missing file argument");
+      throw new Error(`${command} requires a source file`);
     }
     const source = readFileSync(file, "utf8");
     if (command === "diagnose") {
@@ -569,6 +575,13 @@ try {
     }
   } else if (error instanceof Error) {
     console.error(`error: ${error.message}`);
+    const usage = command ? commandUsage(command) : undefined;
+    if (usage) {
+      console.error(`Usage: ${usage}`);
+      console.error(`Run \`reux help ${command}\` for examples.`);
+    } else {
+      console.error("Run `reux help` to list available commands.");
+    }
   } else {
     console.error(String(error));
   }
@@ -576,7 +589,7 @@ try {
 }
 
 function usage(): void {
-  console.error("usage: dl <version|business-simulator-contract|format|diagnose|check|project-format|project-diagnose|project-check|project-summary|project-doctor|project-sql|project-manifest|project-manifest-write|project-transition-rules|project-api-ts|project-api-server-ts|project-worker-ts|project-simulation-types-ts|project-simulation-packs|project-migrate-plan|project-migrate-check|project-migrate-diff-create|project-query-ir|project-query-sql|project-query-run|project-explain|project-tx-ir|project-tx-sql|project-tx-run|project-simulation-ir|project-simulation-run|project-data-insert|project-data-insert-sql|project-seed-run|project-seed-dry-run|project-seed-check|project-seed-delete|project-seed-reset|sql|manifest|transition-rules|api-ts|api-server-ts|worker-ts|simulation-types-ts|simulation-packs|manifest-write|query-ir|query-sql|query-run|data-insert|data-insert-sql|seed-run|seed-dry-run|seed-check|seed-delete|seed-reset|tx-ir|tx-sql|tx-run|simulation-ir|simulation-run|explain|migrate-create|migrate-plan|migrate-check|migrate-diff-create|migrate-status|migrate-apply|outbox-list|outbox-stats|outbox-claim|outbox-mark-processed|outbox-mark-failed|outbox-requeue|outbox-requeue-stale> [args]");
+  console.error(formatMainHelp());
 }
 
 function packageVersion(): string {
