@@ -135,6 +135,7 @@ Technical documentation:
 - [Pilot demo deployment](docs/technical/demo-deployment.md)
 - [Logistics pilot](docs/technical/logistics-pilot.md)
 - [Pilot demo walkthrough](docs/tutorial/demo-walkthrough.md)
+- [Public demo testing guide](docs/public/reux-demo-testing-guide.md)
 - [Public Reux roadmap](docs/public/reux-roadmap.md)
 - [Public Reux roadmap data](docs/public/reux-roadmap.json)
 - [Public Reux positioning guide](docs/public/reux-positioning.md)
