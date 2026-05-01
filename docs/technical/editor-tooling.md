@@ -37,6 +37,8 @@ editors/vscode
 
 It provides `.reux` and `.dl` file association, syntax highlighting, bracket/quote pairing, compiler diagnostics, document formatting, lightweight completions, hover text, and current-file go-to-definition. Diagnostics run:
 
+For first-time setup, see [Developer onboarding](developer-onboarding.md). The extension can point at this repo's built CLI through the `reux.cliPath` setting.
+
 ```bash
 reux diagnose <file> --json
 ```

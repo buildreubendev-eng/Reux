@@ -25,10 +25,30 @@ Ecosystem direction:
 
 The product apps should be built with normal web technology first. Reux should become the shared rule and simulation layer underneath them as the language matures.
 
-Run:
+## Quick Start
+
+Use this path on a fresh clone when you want to prove the local toolchain works without setting up a database:
 
 ```bash
 npm install
+npm run onboarding:smoke
+```
+
+That command builds the CLI, checks real Reux source, emits query and transaction SQL, validates a clinic seed fixture, and runs a simulation forecast. Read [Developer onboarding](docs/technical/developer-onboarding.md) for the guided walkthrough and what each step proves.
+
+For the full local verification suite:
+
+```bash
+npm run verify
+```
+
+PostgreSQL is only required for runtime/database checks such as `npm run verify:postgres` and the local hosted demo app.
+
+## Command Reference
+
+```bash
+npm install
+npm run onboarding:smoke
 npm run verify
 npm run verify:cli
 npm run verify:package
@@ -128,6 +148,7 @@ This is intentionally a scoped MVP slice, not the complete language.
 
 Technical documentation:
 
+- [Developer onboarding](docs/technical/developer-onboarding.md)
 - [Language subset](docs/technical/language-subset.md)
 - [Ecosystem architecture](docs/technical/ecosystem-architecture.md)
 - [Compiler artifacts](docs/technical/compiler-artifacts.md)

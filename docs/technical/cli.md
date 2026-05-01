@@ -6,6 +6,14 @@ Build before running the CLI:
 npm run build
 ```
 
+For a guided no-database first run, use:
+
+```bash
+npm run onboarding:smoke
+```
+
+That script builds the CLI, validates example source, emits SQL, checks a seed fixture, and runs a simulation. See [Developer onboarding](developer-onboarding.md) for the step-by-step path.
+
 Run the no-database pilot demo:
 
 ```bash
