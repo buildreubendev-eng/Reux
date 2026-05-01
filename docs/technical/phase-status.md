@@ -40,7 +40,7 @@ Status: implemented for the supported SQL subset.
 - Supports `load ... for update`, simple loaded-entity mutations, `idempotency key`, `require ... else abort ...` guards, transition-guarded literal and parameterized enum assignments, `insert Entity { ... }`, bound insert results and later bound-field references, typed event payload validation, enum-valued transaction writes with enum-parameter compatibility checks, and durable `enqueue Event { ... }`.
 - Validates `after commit` hook argument references before runtime dispatch.
 - Records outbox events in `_dl_outbox` and exposes list, claim, mark processed, mark failed, requeue, and stale-claim recovery commands.
-- Provides embeddable `processOutboxEvents` and `runOutboxWorker` helpers for dispatching claimed events to application handlers, with delayed retry scheduling, max-attempt dead-lettering, stale claim recovery, per-iteration worker observability, stale-requeue totals, and separate retry/dead-letter result reporting.
+- Provides embeddable `processOutboxEvents` and `runOutboxWorker` helpers for dispatching claimed events to application handlers, with delayed retry scheduling, max-attempt dead-lettering, stale claim recovery, `outbox-stats` summaries, per-iteration worker observability, stale-requeue totals, and separate retry/dead-letter result reporting.
 - Provides an embeddable `processAfterCommitHooks` helper for dispatching returned after-commit hooks to application handlers, with optional parameter and binding resolution for hook arguments.
 
 ## Phase 4: Migrations

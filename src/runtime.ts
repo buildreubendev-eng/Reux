@@ -46,6 +46,19 @@ export interface OutboxEvent {
   processedAt: string | null;
 }
 
+export interface OutboxStatusStats {
+  status: string;
+  count: number;
+  attempts: number;
+  oldestCreatedAt: string | null;
+  newestCreatedAt: string | null;
+}
+
+export interface OutboxStats {
+  total: number;
+  byStatus: OutboxStatusStats[];
+}
+
 export type OutboxListStatus = "pending" | "processing" | "processed" | "failed" | "dead" | "all";
 
 export type OutboxHandler = (event: OutboxEvent) => Promise<void> | void;
@@ -344,6 +357,37 @@ RETURNING o.id, o.event_type, o.payload, o.status, o.attempts, o.last_error, o.c
   return result.rows.map(outboxRow);
 }
 
+export async function outboxStats(db: Database): Promise<OutboxStats> {
+  await ensureOutboxTable(db);
+  const result = await db.query<{
+    status: string;
+    count: string | number;
+    attempts: string | number | null;
+    oldest_created_at: string | Date | null;
+    newest_created_at: string | Date | null;
+  }>(`
+SELECT status,
+       count(*) AS count,
+       COALESCE(sum(attempts), 0) AS attempts,
+       min(created_at) AS oldest_created_at,
+       max(created_at) AS newest_created_at
+FROM _dl_outbox
+GROUP BY status
+ORDER BY status ASC;
+`);
+  const byStatus = result.rows.map((row) => ({
+    status: row.status,
+    count: Number(row.count),
+    attempts: Number(row.attempts ?? 0),
+    oldestCreatedAt: timestampValue(row.oldest_created_at),
+    newestCreatedAt: timestampValue(row.newest_created_at),
+  }));
+  return {
+    total: byStatus.reduce((sum, status) => sum + status.count, 0),
+    byStatus,
+  };
+}
+
 export async function processOutboxEvents(
   db: Database,
   handlers: Record<string, OutboxHandler>,
@@ -432,6 +476,11 @@ function trackOutboxFailure(
   failed.push(failure);
   if (event.status === "pending") retried.push(failure);
   if (event.status === "dead") deadLettered.push(failure);
+}
+
+function timestampValue(value: string | Date | null): string | null {
+  if (value === null) return null;
+  return value instanceof Date ? value.toISOString() : String(value);
 }
 
 export function parseAfterCommitHook(call: string): AfterCommitHook {

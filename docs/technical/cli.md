@@ -331,6 +331,12 @@ node dist/cli.js outbox-list dead 10
 node dist/cli.js outbox-list all 50
 ```
 
+Summarize outbox counts by status:
+
+```bash
+node dist/cli.js outbox-stats
+```
+
 Claim pending outbox events for a worker:
 
 ```bash

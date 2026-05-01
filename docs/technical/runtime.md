@@ -368,6 +368,14 @@ node dist/cli.js outbox-list dead 10
 node dist/cli.js outbox-list all 50
 ```
 
+Summarize outbox counts by status:
+
+```bash
+node dist/cli.js outbox-stats
+```
+
+`outbox-stats` returns `total` plus `byStatus` rows with count, accumulated attempts, oldest event time, and newest event time. This gives dashboards and hosted operators a cheap health snapshot without listing every event.
+
 Mark an event processed after an external worker has handled it:
 
 ```bash

@@ -15,6 +15,7 @@ import {
   markOutboxFailed,
   markOutboxProcessed,
   migrationStatus,
+  outboxStats,
   parseAfterCommitHook,
   parseJsonParams,
   parseTransactionSql,
@@ -1043,6 +1044,62 @@ COMMIT;`,
     expect(await listOutboxEvents(db, 10, "all")).toHaveLength(2);
   });
 
+  it("reports outbox status stats", async () => {
+    const db = new FakeDb();
+    db.outbox.push(
+      {
+        id: "outbox-1",
+        event_type: "RewardGranted",
+        payload: { user: "user-id" },
+        status: "pending",
+        attempts: 0,
+        last_error: null,
+        created_at: "2026-04-25T00:00:00.000Z",
+        processed_at: null,
+      },
+      {
+        id: "outbox-2",
+        event_type: "RewardGranted",
+        payload: { user: "other-user-id" },
+        status: "failed",
+        attempts: 2,
+        last_error: "smtp unavailable",
+        created_at: "2026-04-25T00:02:00.000Z",
+        processed_at: null,
+      },
+      {
+        id: "outbox-3",
+        event_type: "RewardGranted",
+        payload: { user: "third-user-id" },
+        status: "failed",
+        attempts: 3,
+        last_error: "smtp unavailable",
+        created_at: "2026-04-25T00:03:00.000Z",
+        processed_at: null,
+      },
+    );
+
+    await expect(outboxStats(db)).resolves.toEqual({
+      total: 3,
+      byStatus: [
+        {
+          status: "failed",
+          count: 2,
+          attempts: 5,
+          oldestCreatedAt: "2026-04-25T00:02:00.000Z",
+          newestCreatedAt: "2026-04-25T00:03:00.000Z",
+        },
+        {
+          status: "pending",
+          count: 1,
+          attempts: 0,
+          oldestCreatedAt: "2026-04-25T00:00:00.000Z",
+          newestCreatedAt: "2026-04-25T00:00:00.000Z",
+        },
+      ],
+    });
+  });
+
   it("marks outbox events processed", async () => {
     const db = new FakeDb();
     db.outbox.push({
@@ -1598,6 +1655,25 @@ class FakeDb implements Database {
       return { rows: [row] as T[], rowCount: 1 };
     }
     if (sql.includes("FROM _dl_outbox")) {
+      if (sql.includes("GROUP BY status")) {
+        const grouped = new Map<string, FakeOutboxRow[]>();
+        for (const row of this.outbox) {
+          grouped.set(row.status, [...(grouped.get(row.status) ?? []), row]);
+        }
+        const rows = [...grouped.entries()]
+          .sort(([left], [right]) => left.localeCompare(right))
+          .map(([status, statusRows]) => ({
+            status,
+            count: statusRows.length,
+            attempts: statusRows.reduce((sum, row) => sum + row.attempts, 0),
+            oldest_created_at: statusRows.map((row) => row.created_at).sort()[0] ?? null,
+            newest_created_at: statusRows.map((row) => row.created_at).sort().at(-1) ?? null,
+          }));
+        return {
+          rows: rows as T[],
+          rowCount: rows.length,
+        };
+      }
       const status = params?.[1] as string | undefined;
       const rows = status ? this.outbox.filter((row) => row.status === status) : this.outbox;
       return {
