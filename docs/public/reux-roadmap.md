@@ -24,7 +24,7 @@ Current status:
 - Migration rollback SQL for safe reversible schema changes.
 - Outbox queue processing with retry, dead-letter, stale-claim recovery, domain-scoped queue health, queue stats, and worker observability counters.
 - Hosted smoke checks that validate public reset, transactions, queue health, and outbox processing for both demo domains.
-- Hosted demo monitor for continuous or cron-style health checks.
+- Hosted demo monitor for continuous or cron-style health checks with optional webhook alerts.
 - Hosted operations dashboard for cross-domain queue and worker health.
 - CI smoke automation that boots the demo server against PostgreSQL and runs the same public smoke path on every push.
 - Early simulation syntax for PLOS and business-simulation research.
@@ -43,7 +43,7 @@ Goal: make the public demo feel stable, explainable, and safe for repeat visitor
 Planned work:
 
 - Keep improving public demo copy as new domains are added.
-- Add external alert delivery for uptime failures.
+- Keep monitor alert routing aligned with the final hosting and notification setup.
 - Document the public reset/session behavior for testers.
 
 ### 2. Reux Language Depth

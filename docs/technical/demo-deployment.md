@@ -57,6 +57,14 @@ npm run demo:monitor -- https://your-demo-host.example.com --deep --interval-sec
 
 The monitor wraps `demo:healthcheck`, records timestamped pass/fail output, and exits nonzero after the configured number of consecutive failures. Use `--once` for cron-style checks, or set `REUX_DEMO_MONITOR_URL`, `REUX_DEMO_MONITOR_INTERVAL_SECONDS`, and `REUX_DEMO_MONITOR_MAX_FAILURES` in the environment.
 
+For external alerting, pass a webhook URL:
+
+```bash
+npm run demo:monitor -- https://your-demo-host.example.com --deep --max-failures 3 --alert-webhook-url https://alerts.example.com/reux
+```
+
+You can also set `REUX_DEMO_MONITOR_ALERT_WEBHOOK_URL` and optional `REUX_DEMO_MONITOR_ALERT_TIMEOUT_MS`. The monitor sends a JSON `POST` when a one-shot check fails, when a continuous check reaches the configured failure threshold, and when a continuous check recovers after transient failures. The payload includes the target URL, check mode, timestamp, failure counts, elapsed time, and truncated healthcheck stdout/stderr for debugging.
+
 For release validation after a production redeploy, run the full public smoke path:
 
 ```bash
