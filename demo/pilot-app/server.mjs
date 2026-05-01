@@ -8,6 +8,7 @@ import {
   applyMigrations,
   createPostgresDatabase,
   migrationStatus,
+  outboxStats,
   processOutboxEvents,
   runSqlQuery,
   runTransactionSql,
@@ -150,6 +151,11 @@ async function route(request, response) {
     return;
   }
 
+  if (url.pathname === "/api/outbox/stats" && method === "GET") {
+    sendJson(response, 200, await demoOutboxStats(request, domains.commerce));
+    return;
+  }
+
   if (url.pathname === "/api/logistics/setup" && method === "POST") {
     const body = await readJson(request);
     assertSetupAllowed(request, body);
@@ -187,6 +193,11 @@ async function route(request, response) {
 
   if (url.pathname === "/api/logistics/actions/process-outbox" && method === "POST") {
     sendJson(response, 200, await processDemoOutbox(request, domains.logistics));
+    return;
+  }
+
+  if (url.pathname === "/api/logistics/outbox/stats" && method === "GET") {
+    sendJson(response, 200, await demoOutboxStats(request, domains.logistics));
     return;
   }
 
@@ -369,6 +380,18 @@ async function processDemoOutbox(request, domain) {
       failed: result.failed,
     },
     session: sessionInfo(context),
+  };
+}
+
+async function demoOutboxStats(request, domain) {
+  const context = requestContext(request);
+  await ensureDemoSchema(context);
+  await ensureDemoOutboxTable(context);
+  return {
+    ok: true,
+    domain: domain.key,
+    session: sessionInfo(context),
+    outbox: await outboxStats(context.db),
   };
 }
 

@@ -76,6 +76,15 @@ Regular visitors can reset only their own session and use the dashboard and tran
 
 The public UI keeps admin setup inside a collapsed `Admin` menu and exposes `Reset My Session` for each tab. The dashboard can still load before setup and will show a setup-required state instead of failing with a database error. Public visitors do not need the token after the seeded data has been initialized. The `Process Outbox` button runs demo event handlers over pending outbox rows so visitors can see transaction events move from `pending` to `processed`. The app creates and queries `_dl_outbox` inside `REUX_DEMO_SCHEMA`, avoiding accidental reads from another schema in a shared database.
 
+The hosted service also exposes session-scoped queue health endpoints for lightweight operations checks:
+
+```text
+GET /api/outbox/stats
+GET /api/logistics/outbox/stats
+```
+
+They return the current visitor session plus outbox totals grouped by status.
+
 For a separate worker process, deploy the same repo with:
 
 ```text
