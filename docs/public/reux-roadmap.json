@@ -4,7 +4,7 @@
   "status": {
     "demoReadinessPercent": 99,
     "fullCompletionPercent": 100,
-    "summary": "The prototype completion bar is closed. The public demo is live with commerce and logistics workflows, in-page tester guidance, clearer empty states, visible domain-scoped queue health, hosted smoke checks for reset, transaction, queue, and outbox behavior, CI smoke automation against PostgreSQL, a reusable monitor for uptime checks, and an operations dashboard for queue and worker health. Simulation domain packs report coverage and suggested assumptions, metrics, scenarios, and objectives, with executable PLOS finance/habit and business workforce/operations examples, deterministic scheduled-change reporting, non-finite formula rejection, and generated catalog helpers for product apps. Release preflight checks package entrypoints, release docs, roadmap sync, and clean-tree readiness; migrations synthesize rollback SQL for safe reversible schema changes; VS Code diagnostics infer useful symbol and field ranges; and public release planning is documented."
+    "summary": "The prototype completion bar is closed. The public demo is live with commerce and logistics workflows, in-page tester guidance, clearer empty states, visible domain-scoped queue health, hosted smoke checks for reset, transaction, queue, and outbox behavior, CI smoke automation against PostgreSQL, a reusable monitor for uptime checks with optional webhook alerts, and an operations dashboard for queue and worker health. Simulation domain packs report coverage and suggested assumptions, metrics, scenarios, and objectives, with executable PLOS finance/habit and business workforce/operations examples, deterministic scheduled-change reporting, non-finite formula rejection, and generated catalog helpers for product apps. Release preflight checks package entrypoints, release docs, roadmap sync, and clean-tree readiness; migrations synthesize rollback SQL for safe reversible schema changes; VS Code diagnostics infer useful symbol and field ranges; and public release planning is documented."
   },
   "liveNow": [
     "Public commerce workflow demo",
@@ -20,7 +20,7 @@
     "Migration rollback SQL for safe reversible schema changes",
     "Outbox queue processing with retry, dead-letter, stale-claim recovery, domain-scoped queue health, queue stats, and worker observability counters",
     "Hosted smoke checks that validate public reset, transactions, queue health, and outbox processing for both demo domains",
-    "Hosted demo monitor for continuous or cron-style health checks",
+    "Hosted demo monitor for continuous or cron-style health checks with optional webhook alerts",
     "Hosted operations dashboard for cross-domain queue and worker health",
     "CI smoke automation that boots the demo server against PostgreSQL and runs the same public smoke path on every push",
     "Early simulation syntax for PLOS and business-simulation research",
@@ -36,7 +36,7 @@
       "goal": "Make the public demo feel stable, explainable, and safe for repeat visitors.",
       "items": [
         "Keep improving public demo copy as new domains are added",
-        "Add external alert delivery for uptime failures",
+        "Keep monitor alert routing aligned with the final hosting and notification setup",
         "Document public reset/session behavior for testers"
       ]
     },

@@ -69,6 +69,12 @@ if (!demoDeploymentMarkdown.includes("REUX_DEMO_MONITOR_ALERT_WEBHOOK_URL")) {
 if (!demoTestingMarkdown.includes("--alert-webhook-url")) {
   failures.push("public demo testing guide must document monitor alert webhook usage");
 }
+if (!roadmap.liveNow?.some((item) => String(item).includes("webhook alerts"))) {
+  failures.push("public roadmap JSON must list monitor webhook alerts as live");
+}
+if (JSON.stringify(roadmap.milestones ?? []).includes("Add external alert delivery")) {
+  failures.push("public roadmap JSON still lists monitor alert delivery as future work");
+}
 
 if (!allowDirty) {
   const statusOutput = execFileSync("git", ["status", "--short"], { encoding: "utf8" }).trim();

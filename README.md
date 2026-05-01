@@ -41,6 +41,8 @@ node dist/cli.js simulation-run examples/simulations/operations_throughput.reux
 $env:DATABASE_URL='postgres://datalang:datalang@127.0.0.1:5432/datalang_dev'
 npm run demo:pilot-app
 npm run demo:pilot-worker
+npm run demo:healthcheck -- http://127.0.0.1:4173 --deep
+npm run demo:monitor -- http://127.0.0.1:4173 --deep
 node dist/cli.js version
 npm run verify:postgres
 npm run build
@@ -115,6 +117,8 @@ node dist/cli.js manifest examples/commerce.dl > old-manifest.json
 node dist/cli.js migrate-plan old-manifest.json examples/commerce_v2.dl
 node dist/cli.js migrate-check old-manifest.json examples/commerce_v2.dl
 node dist/cli.js migrate-diff-create old-manifest.json examples/commerce_v2.dl commerce_v2
+npm run release:preflight
+npm run release:pack-dry-run
 ```
 
 This is intentionally a scoped MVP slice, not the complete language.
