@@ -6,6 +6,7 @@ const allowDirty = process.argv.includes("--allow-dirty");
 const requiredDocs = [
   "README.md",
   "docs/technical/business-simulator-api.md",
+  "docs/technical/demo-deployment.md",
   "docs/technical/release.md",
   "docs/technical/package-distribution.md",
   "docs/technical/public-release-plan.md",
@@ -54,11 +55,19 @@ if (Number(status.fullCompletionPercent) < 100) {
 }
 
 const roadmapMarkdown = readFileSync("docs/public/reux-roadmap.md", "utf8");
+const demoDeploymentMarkdown = readFileSync("docs/technical/demo-deployment.md", "utf8");
+const demoTestingMarkdown = readFileSync("docs/public/reux-demo-testing-guide.md", "utf8");
 if (!roadmapMarkdown.includes(`Demo readiness: roughly ${status.demoReadinessPercent}%`)) {
   failures.push("public roadmap markdown demo percentage does not match roadmap JSON");
 }
 if (!roadmapMarkdown.includes(`Full platform completion: roughly ${status.fullCompletionPercent}%`)) {
   failures.push("public roadmap markdown full-completion percentage does not match roadmap JSON");
+}
+if (!demoDeploymentMarkdown.includes("REUX_DEMO_MONITOR_ALERT_WEBHOOK_URL")) {
+  failures.push("demo deployment docs must document monitor alert webhook configuration");
+}
+if (!demoTestingMarkdown.includes("--alert-webhook-url")) {
+  failures.push("public demo testing guide must document monitor alert webhook usage");
 }
 
 if (!allowDirty) {
