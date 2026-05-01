@@ -97,6 +97,8 @@ Metric snapshots include:
 The source of truth also exports `businessSimulatorForecastUnits` and `businessSimulatorMetricNames` so product apps can build controls and charts without hand-copying enum values.
 It also exports `businessSimulatorErrorCodes`, `BusinessSimulatorErrorResponse`, and `BusinessSimulatorValidationErrorResponse` so clients can handle backend failures without inventing their own error envelopes.
 
+`options.includeTimeline` defaults to `true`. Set it to `false` for lighter responses that keep `finalMetrics` and comparison/recommendation output while returning empty `timeline` arrays. `options.includeReuxSource` defaults to `false`; set it to `true` only when a UI needs the Reux transparency panel.
+
 ## Frontend Integration Notes
 
 - The frontend should keep using a mock service until the backend endpoint exists.
@@ -115,6 +117,8 @@ That command emits the endpoint map, template response, sample run request, samp
 The same fixture includes `invalidRunResponse`, a deterministic example of the validation error envelope the hosted API returns for malformed simulator inputs.
 
 For public API handlers, call `assertBusinessSimulatorRunRequest(body)` before running a simulation and `assertBusinessSimulatorCompareRequest(body)` before comparing existing results. Validation failures throw `BusinessSimulatorValidationError` with stable `issues[].path` values such as `$.baseline.grossMarginRate`, which lets frontends display field-level errors instead of a generic failed request.
+
+Run requests also reject unsupported `simulationId` values and duplicate scenario IDs. Compare requests reject duplicate scenario result IDs and metric snapshots with unknown or non-numeric metrics. Scenario IDs should be unique because comparison results are keyed by scenario ID.
 
 The hosted demo server serializes those failures as `400` responses:
 

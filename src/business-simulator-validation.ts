@@ -41,6 +41,7 @@ const rateFields = new Set<keyof BusinessSimulatorAssumptions>([
   "supplierDelayRiskRate",
   "defectRate",
 ]);
+const supportedSimulationIds = new Set(["operations-decision"]);
 
 export function assertBusinessSimulatorRunRequest(value: unknown): asserts value is BusinessSimulatorRunRequest {
   const issues: BusinessSimulatorValidationIssue[] = [];
@@ -51,8 +52,12 @@ export function assertBusinessSimulatorRunRequest(value: unknown): asserts value
   validateAssumptions(value.baseline, "$.baseline", issues);
   validateScenarioInputs(value.scenarios, "$.scenarios", issues);
 
-  if (value.simulationId !== undefined && !isNonEmptyString(value.simulationId)) {
-    issues.push({ path: "$.simulationId", message: "must be a non-empty string when provided" });
+  if (value.simulationId !== undefined) {
+    if (!isNonEmptyString(value.simulationId)) {
+      issues.push({ path: "$.simulationId", message: "must be a non-empty string when provided" });
+    } else if (!supportedSimulationIds.has(value.simulationId)) {
+      issues.push({ path: "$.simulationId", message: `must be one of ${[...supportedSimulationIds].join(", ")}` });
+    }
   }
   if (value.options !== undefined) {
     validateOptions(value.options, "$.options", issues);
@@ -71,7 +76,16 @@ export function assertBusinessSimulatorCompareRequest(value: unknown): asserts v
   if (!Array.isArray(value.scenarios) || value.scenarios.length === 0) {
     issues.push({ path: "$.scenarios", message: "must contain at least one scenario result" });
   } else {
-    value.scenarios.forEach((scenario, index) => validateScenarioResult(scenario, `$.scenarios[${index}]`, issues));
+    const seenScenarioIds = new Set<string>();
+    value.scenarios.forEach((scenario, index) => {
+      validateScenarioResult(scenario, `$.scenarios[${index}]`, issues);
+      if (isRecord(scenario) && isNonEmptyString(scenario.id)) {
+        if (seenScenarioIds.has(scenario.id)) {
+          issues.push({ path: `$.scenarios[${index}].id`, message: "must be unique" });
+        }
+        seenScenarioIds.add(scenario.id);
+      }
+    });
   }
 
   throwIfIssues(issues);
@@ -104,6 +118,7 @@ function validateScenarioInputs(value: unknown, path: string, issues: BusinessSi
     return;
   }
 
+  const seenScenarioIds = new Set<string>();
   value.forEach((scenario, index) => {
     const scenarioPath = `${path}[${index}]`;
     if (!isRecord(scenario)) {
@@ -112,6 +127,10 @@ function validateScenarioInputs(value: unknown, path: string, issues: BusinessSi
     }
     if (!isNonEmptyString(scenario.id)) {
       issues.push({ path: `${scenarioPath}.id`, message: "must be a non-empty string" });
+    } else if (seenScenarioIds.has(scenario.id)) {
+      issues.push({ path: `${scenarioPath}.id`, message: "must be unique" });
+    } else {
+      seenScenarioIds.add(scenario.id);
     }
     if (!isNonEmptyString(scenario.name)) {
       issues.push({ path: `${scenarioPath}.name`, message: "must be a non-empty string" });

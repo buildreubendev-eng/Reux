@@ -10,6 +10,7 @@ import {
   type BusinessSimulatorRunRequest,
 } from "../src/business-simulator-contract.js";
 import {
+  assertBusinessSimulatorCompareRequest,
   assertBusinessSimulatorRunRequest,
   BusinessSimulatorValidationError,
   compareBusinessSimulatorScenarios,
@@ -151,6 +152,41 @@ describe("business simulator API contract", () => {
     expect(response.generatedAt).toBe("2026-05-01T00:00:00.000Z");
   });
 
+  it("honors lightweight run options without changing final metrics or comparison output", () => {
+    const response = runBusinessSimulator(
+      {
+        baseline: businessSimulatorDefaultAssumptions,
+        scenarios: [
+          {
+            id: "process-improvement",
+            name: "Process Improvement",
+            assumptions: {
+              productivityGainRate: 0.12,
+              overtimeReductionRate: 0.18,
+            },
+          },
+        ],
+        options: {
+          includeTimeline: false,
+          includeReuxSource: false,
+        },
+      },
+      new Date("2026-05-01T00:00:00.000Z"),
+    );
+
+    expect(response.baseline.timeline).toEqual([]);
+    expect(response.scenarios[0].timeline).toEqual([]);
+    expect(response.scenarios[0].finalMetrics.marginDelta).toBeGreaterThan(response.baseline.finalMetrics.marginDelta);
+    expect(response.comparison.metricDeltasByScenario["process-improvement"].map((delta) => delta.metric)).toEqual(businessSimulatorMetricNames);
+    expect(response.comparison.recommendation).toMatchObject({
+      scenarioId: "process-improvement",
+      scenarioName: "Process Improvement",
+    });
+    expect(response.comparison.recommendation?.reasons.length).toBeGreaterThan(0);
+    expect(response.comparison.recommendation?.tradeoffs.length).toBeGreaterThan(0);
+    expect(response).not.toHaveProperty("reuxSource");
+  });
+
   it("lists templates, loads a template, and compares already-run scenarios", () => {
     expect(listBusinessSimulations().simulations.map((simulation) => simulation.id)).toEqual(["operations-decision"]);
     const template = getBusinessSimulation("operations-decision");
@@ -174,6 +210,8 @@ describe("business simulator API contract", () => {
 
     expect(comparison.comparison.baselineScenarioId).toBe("baseline");
     expect(comparison.comparison.recommendedScenarioId).toBeTruthy();
+    expect(comparison.comparison.recommendation?.summary).toContain("strongest blended score");
+    expect(comparison.comparison.metricDeltasByScenario["process-improvement"]).toHaveLength(businessSimulatorMetricNames.length);
     expect(comparison.generatedAt).toBe("2026-05-01T00:00:00.000Z");
   });
 
@@ -252,6 +290,88 @@ describe("business simulator API contract", () => {
       expect(issues).toContain("$.scenarios[0].assumptions.forecastPeriods");
       expect(issues).toContain("$.scenarios[0].assumptions.unknownField");
       expect(issues).toContain("$.options.includeTimeline");
+    }
+  });
+
+  it("rejects unsupported simulations and duplicate scenario IDs with stable validation paths", () => {
+    try {
+      assertBusinessSimulatorRunRequest({
+        simulationId: "unknown-simulation",
+        baseline: businessSimulatorDefaultAssumptions,
+        scenarios: [
+          {
+            id: "duplicate",
+            name: "First",
+            assumptions: {
+              productivityGainRate: 0.12,
+            },
+          },
+          {
+            id: "duplicate",
+            name: "Second",
+            assumptions: {
+              overtimeReductionRate: 0.2,
+            },
+          },
+        ],
+      });
+      throw new Error("expected validation to fail");
+    } catch (error) {
+      expect(error).toBeInstanceOf(BusinessSimulatorValidationError);
+      const issueMap = new Map((error as BusinessSimulatorValidationError).issues.map((issue) => [issue.path, issue.message]));
+      expect(issueMap.get("$.simulationId")).toBe("must be one of operations-decision");
+      expect(issueMap.get("$.scenarios[1].id")).toBe("must be unique");
+    }
+  });
+
+  it("rejects malformed compare requests with stable validation paths", () => {
+    const run = runBusinessSimulator(
+      {
+        baseline: businessSimulatorDefaultAssumptions,
+        scenarios: [
+          {
+            id: "process-improvement",
+            name: "Process Improvement",
+            assumptions: {
+              productivityGainRate: 0.12,
+            },
+          },
+        ],
+      },
+      new Date("2026-05-01T00:00:00.000Z"),
+    );
+
+    try {
+      assertBusinessSimulatorCompareRequest({
+        baseline: {
+          ...run.baseline,
+          finalMetrics: {
+            ...run.baseline.finalMetrics,
+            riskScore: Number.NaN,
+            unknownMetric: 10,
+          },
+        },
+        scenarios: [
+          run.scenarios[0],
+          {
+            ...run.scenarios[0],
+            name: "",
+            finalMetrics: {
+              ...run.scenarios[0].finalMetrics,
+              marginDelta: "bad",
+            },
+          },
+        ],
+      });
+      throw new Error("expected validation to fail");
+    } catch (error) {
+      expect(error).toBeInstanceOf(BusinessSimulatorValidationError);
+      const issues = (error as BusinessSimulatorValidationError).issues.map((issue) => issue.path);
+      expect(issues).toContain("$.baseline.finalMetrics.riskScore");
+      expect(issues).toContain("$.baseline.finalMetrics.unknownMetric");
+      expect(issues).toContain("$.scenarios[1].id");
+      expect(issues).toContain("$.scenarios[1].name");
+      expect(issues).toContain("$.scenarios[1].finalMetrics.marginDelta");
     }
   });
 });

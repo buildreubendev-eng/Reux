@@ -106,9 +106,10 @@ export function runBusinessSimulator(request: BusinessSimulatorRunRequest, now: 
   const run = runSimulationIr(simulation);
   const baselineRun = findScenarioRun(run, "baseline");
   const scenarioRuns = [...scenarioNames.entries()].map(([reuxName, input]) => ({ input, run: findScenarioRun(run, reuxName) }));
-  const baseline = toScenarioResult("baseline", "Baseline", undefined, normalized.baseline, baselineRun);
+  const includeTimeline = request.options?.includeTimeline !== false;
+  const baseline = toScenarioResult("baseline", "Baseline", undefined, normalized.baseline, baselineRun, includeTimeline);
   const scenarios = scenarioRuns.map(({ input, run: scenarioRun }) =>
-    toScenarioResult(input.id, input.name, input.description, mergeAssumptions(normalized.baseline, input.assumptions), scenarioRun),
+    toScenarioResult(input.id, input.name, input.description, mergeAssumptions(normalized.baseline, input.assumptions), scenarioRun, includeTimeline),
   );
 
   return {
@@ -263,6 +264,7 @@ function toScenarioResult(
   description: string | undefined,
   assumptions: BusinessSimulatorAssumptions,
   scenario: SimulationScenarioRunResult,
+  includeTimeline = true,
 ): BusinessSimulatorScenarioResult {
   const finalPeriod = scenario.periods.at(-1);
   if (!finalPeriod) throw new Error(`scenario '${scenario.name}' did not produce any periods`);
@@ -272,11 +274,13 @@ function toScenarioResult(
     ...(description ? { description } : {}),
     assumptions,
     finalMetrics: toMetricSnapshot(finalPeriod.metrics),
-    timeline: scenario.periods.map((period) => ({
-      period: period.period,
-      label: period.label,
-      metrics: toMetricSnapshot(period.metrics),
-    })),
+    timeline: includeTimeline
+      ? scenario.periods.map((period) => ({
+          period: period.period,
+          label: period.label,
+          metrics: toMetricSnapshot(period.metrics),
+        }))
+      : [],
   };
 }
 
