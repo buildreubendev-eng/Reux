@@ -75,6 +75,7 @@ Status: implemented for the MVP workflow.
 - `format` and `project-format` provide conservative stdout formatting for `.dl` and `.reux` files.
 - A local VS Code language package under `editors/vscode` provides `.dl`/`.reux` file association, syntax highlighting, bracket pairing, line-aware diagnostics backed by `reux diagnose --json`, formatting backed by `reux format`, lightweight completions, query-alias field completions, insert/enqueue object-field completions, hover text, and current-file go-to-definition.
 - Package distribution now has typed ESM entrypoints, runtime subpath exports, package dry-run coverage for editor assets, and tarball installation documentation.
+- Release readiness now has a preflight script that checks release docs, package entrypoints, roadmap status synchronization, and clean-tree readiness.
 - `scripts/demo-pilot-worker.mjs` provides a runnable pilot outbox worker process for hosted and local demo environments.
 - Seed tooling supports schema-only checks with enum validation, PostgreSQL dry runs, rerunnable upserts, deletes, and transactional resets.
 - Seed reset supports delete-and-rerun and truncate-and-rerun modes for local fixture refreshes.

@@ -51,6 +51,7 @@
     "verify:postgres": "npm run postgres:preflight && npm run test:postgres && npm run test:pilot:postgres",
     "verify:postgres:full": "npm run verify:postgres && npm run build && node ./dist/cli.js project-doctor --db --json",
     "verify:demo:smoke": "npm run build && node ./scripts/demo-smoke-local.mjs",
+    "release:preflight": "npm run verify && npm run verify:package && node ./scripts/release-preflight.mjs",
     "demo:pilot": "node ./scripts/demo-pilot.mjs",
     "demo:healthcheck": "node ./scripts/demo-healthcheck.mjs",
     "demo:logistics": "node ./scripts/demo-logistics.mjs",

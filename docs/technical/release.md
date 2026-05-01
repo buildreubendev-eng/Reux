@@ -26,9 +26,16 @@ Build and inspect the package contents before sharing a tarball or publishing:
 npm run build
 npm run verify
 npm run verify:package
+npm run release:preflight
 ```
 
 `npm run build` first clears `dist/` so stale compiled files cannot leak into the package. `verify:package` runs a package smoke check around `npm pack --dry-run --json`; it fails if exported JavaScript files, generated declaration files, docs, or editor assets are missing from disk or missing from the dry-run tarball.
+
+`npm run release:preflight` is the final local release gate. It runs the normal verification and package smoke check, then confirms that release docs exist, package entrypoints are present, public roadmap percentages are synchronized between Markdown and JSON, and the working tree is clean. During development, the script itself can be tested without the clean-tree gate:
+
+```bash
+node scripts/release-preflight.mjs --allow-dirty
+```
 
 ## Versioning
 
@@ -60,10 +67,11 @@ Before tagging a prototype release:
 1. Run `npm run verify`, including CLI smoke checks for the root commerce seed and pilot seed fixture.
 2. Run `npm run verify:postgres:full` against a live PostgreSQL database.
 3. Run `npm run verify:package`.
-4. Check `docs/technical/package-distribution.md`.
-5. Check `docs/technical/phase-status.md`.
-6. Check `docs/technical/cli.md` for new or changed commands.
-7. Update `README.md` if setup or demo commands changed.
-8. Tag the commit after the repository is pushed.
+4. Run `npm run release:preflight`.
+5. Check `docs/technical/package-distribution.md`.
+6. Check `docs/technical/phase-status.md`.
+7. Check `docs/technical/cli.md` for new or changed commands.
+8. Update `README.md` if setup or demo commands changed.
+9. Tag the commit after the repository is pushed.
 
 The package remains marked `private` until the public package name and distribution policy are final.
