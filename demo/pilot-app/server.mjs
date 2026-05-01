@@ -2,7 +2,16 @@ import { createReadStream, existsSync, readFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { extname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { emitPostgresSchema, emitQuerySql, emitTransactionSql, transactionRetryAttempts } from "../../dist/compiler.js";
+import {
+  compareBusinessSimulatorScenarios,
+  emitPostgresSchema,
+  emitQuerySql,
+  emitTransactionSql,
+  getBusinessSimulation,
+  listBusinessSimulations,
+  runBusinessSimulator,
+  transactionRetryAttempts,
+} from "../../dist/compiler.js";
 import { loadConfig } from "../../dist/config.js";
 import {
   applyMigrations,
@@ -113,6 +122,27 @@ async function route(request, response) {
 
   if (url.pathname === "/api/ops" && method === "GET") {
     sendJson(response, 200, await operationsDashboard(request));
+    return;
+  }
+
+  if (url.pathname === "/api/simulations" && method === "GET") {
+    sendJson(response, 200, listBusinessSimulations());
+    return;
+  }
+
+  if (url.pathname.startsWith("/api/simulations/") && method === "GET") {
+    const id = decodeURIComponent(url.pathname.slice("/api/simulations/".length));
+    sendJson(response, 200, businessSimulationTemplate(id));
+    return;
+  }
+
+  if (url.pathname === "/api/simulations/run" && method === "POST") {
+    sendJson(response, 200, businessSimulationRun(await readJson(request)));
+    return;
+  }
+
+  if (url.pathname === "/api/scenarios/compare" && method === "POST") {
+    sendJson(response, 200, businessScenarioCompare(await readJson(request)));
     return;
   }
 
@@ -425,6 +455,30 @@ async function operationsDashboard(request) {
   };
 }
 
+function businessSimulationTemplate(id) {
+  try {
+    return getBusinessSimulation(id);
+  } catch (error) {
+    throw withStatus(error, 404);
+  }
+}
+
+function businessSimulationRun(body) {
+  try {
+    return runBusinessSimulator(body);
+  } catch (error) {
+    throw withStatus(error, 400);
+  }
+}
+
+function businessScenarioCompare(body) {
+  try {
+    return compareBusinessSimulatorScenarios(body);
+  } catch (error) {
+    throw withStatus(error, 400);
+  }
+}
+
 async function domainOutboxStats(context, domain) {
   const eventTypes = Object.keys(domain.outboxHandlers);
   const placeholders = eventTypes.map((_, index) => `$${index + 1}`).join(", ");
@@ -516,6 +570,16 @@ function assertSetupAllowed(request, body) {
     error.statusCode = 403;
     throw error;
   }
+}
+
+function withStatus(error, statusCode) {
+  if (error && typeof error === "object") {
+    error.statusCode = statusCode;
+    return error;
+  }
+  const wrapped = new Error(String(error));
+  wrapped.statusCode = statusCode;
+  return wrapped;
 }
 
 function isMissingRelation(error) {

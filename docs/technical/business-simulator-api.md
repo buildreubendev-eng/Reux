@@ -14,6 +14,8 @@ The first Reux model that matches this contract lives in `examples/simulations/b
 | `POST /api/simulations/run` | Run a baseline plus one or more scenarios and return metrics, timeline, and recommendation output. |
 | `POST /api/scenarios/compare` | Compare already-run scenario results without rerunning the simulation model. |
 
+The hosted demo server exposes these routes from `demo/pilot-app/server.mjs`. The first implementation is intentionally a thin HTTP wrapper around the adapter functions so the frontend can switch from mock data to live backend calls without changing its data model.
+
 ## Core Assumptions
 
 The first Business Simulator model should cover the controls the frontend is building:
@@ -159,3 +161,12 @@ Recommendation scoring is deterministic. It rewards:
 - Lower `riskScore`.
 
 The output includes a recommended scenario, reasons, and tradeoffs so the frontend can show a clear decision summary without inventing its own scoring logic.
+
+## Demo Server Behavior
+
+- `GET /api/simulations` returns `ListBusinessSimulationsResponse`.
+- `GET /api/simulations/operations-decision` returns the default assumptions and starter scenarios.
+- `POST /api/simulations/run` accepts `BusinessSimulatorRunRequest`.
+- `POST /api/scenarios/compare` accepts `BusinessSimulatorCompareRequest`.
+- Unknown simulation IDs return `404`.
+- Malformed run/compare requests return `400`.

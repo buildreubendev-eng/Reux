@@ -6,7 +6,14 @@ import {
   businessSimulatorEndpoints,
   type BusinessSimulatorRunRequest,
 } from "../src/business-simulator-contract.js";
-import { compileSource, emitSimulationRun, runBusinessSimulator } from "../src/compiler.js";
+import {
+  compareBusinessSimulatorScenarios,
+  compileSource,
+  emitSimulationRun,
+  getBusinessSimulation,
+  listBusinessSimulations,
+  runBusinessSimulator,
+} from "../src/compiler.js";
 
 describe("business simulator API contract", () => {
   it("defines the first public endpoint set", () => {
@@ -132,5 +139,31 @@ describe("business simulator API contract", () => {
     expect(response.comparison.recommendation?.scenarioId).toBe("process-improvement");
     expect(response.reuxSource).toContain("simulate operations_decision");
     expect(response.generatedAt).toBe("2026-05-01T00:00:00.000Z");
+  });
+
+  it("lists templates, loads a template, and compares already-run scenarios", () => {
+    expect(listBusinessSimulations().simulations.map((simulation) => simulation.id)).toEqual(["operations-decision"]);
+    const template = getBusinessSimulation("operations-decision");
+    expect(template.defaultAssumptions).toEqual(businessSimulatorDefaultAssumptions);
+    expect(template.exampleScenarios.length).toBeGreaterThan(0);
+
+    const run = runBusinessSimulator(
+      {
+        baseline: businessSimulatorDefaultAssumptions,
+        scenarios: template.exampleScenarios.slice(0, 2),
+      },
+      new Date("2026-05-01T00:00:00.000Z"),
+    );
+    const comparison = compareBusinessSimulatorScenarios(
+      {
+        baseline: run.baseline,
+        scenarios: run.scenarios,
+      },
+      new Date("2026-05-01T00:00:00.000Z"),
+    );
+
+    expect(comparison.comparison.baselineScenarioId).toBe("baseline");
+    expect(comparison.comparison.recommendedScenarioId).toBeTruthy();
+    expect(comparison.generatedAt).toBe("2026-05-01T00:00:00.000Z");
   });
 });
