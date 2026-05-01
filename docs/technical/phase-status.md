@@ -78,6 +78,7 @@ Status: implemented for the MVP workflow.
 - VS Code diagnostics now infer symbol and field ranges from compiler messages when explicit line numbers are unavailable.
 - Package distribution now has typed ESM entrypoints, runtime subpath exports, package dry-run coverage for editor assets, and tarball installation documentation.
 - Release readiness now has a preflight script that checks release docs, package entrypoints, roadmap status synchronization, and clean-tree readiness.
+- Public release readiness now has a package-name plan, package dry-run command, and cross-repo upgrade guidance.
 - `scripts/demo-pilot-worker.mjs` provides a runnable pilot outbox worker process for hosted and local demo environments.
 - Seed tooling supports schema-only checks with enum validation, PostgreSQL dry runs, rerunnable upserts, deletes, and transactional resets.
 - Seed reset supports delete-and-rerun and truncate-and-rerun modes for local fixture refreshes.

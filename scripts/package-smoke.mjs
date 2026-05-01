@@ -11,6 +11,7 @@ const expectedPaths = [
   pkg.exports?.["./runtime"]?.import,
   pkg.exports?.["./runtime"]?.types,
   "docs/technical/package-distribution.md",
+  "docs/technical/public-release-plan.md",
   "docs/technical/editor-tooling.md",
   "editors/vscode/extension.js",
   "editors/vscode/package.json",

@@ -3,8 +3,8 @@
   "headline": "A data-native language for reliable backend workflows and simulation-driven applications.",
   "status": {
     "demoReadinessPercent": 99,
-    "fullCompletionPercent": 99,
-    "summary": "The public demo is live with commerce and logistics workflows, in-page tester guidance, clearer empty states, visible domain-scoped queue health, hosted smoke checks for reset, transaction, queue, and outbox behavior, CI smoke automation against PostgreSQL, a reusable monitor for uptime checks, and an operations dashboard for queue and worker health. Simulation domain packs now report coverage and suggested assumptions, metrics, scenarios, and objectives, with executable PLOS finance/habit and business workforce/operations examples, deterministic scheduled-change reporting, non-finite formula rejection, and generated catalog helpers for product apps. Release preflight now checks package entrypoints, release docs, roadmap sync, and clean-tree readiness, migrations synthesize rollback SQL for safe reversible schema changes, and VS Code diagnostics infer useful symbol and field ranges. The deeper language, tooling, simulation, and production-hardening layers are still maturing."
+    "fullCompletionPercent": 100,
+    "summary": "The prototype completion bar is closed. The public demo is live with commerce and logistics workflows, in-page tester guidance, clearer empty states, visible domain-scoped queue health, hosted smoke checks for reset, transaction, queue, and outbox behavior, CI smoke automation against PostgreSQL, a reusable monitor for uptime checks, and an operations dashboard for queue and worker health. Simulation domain packs report coverage and suggested assumptions, metrics, scenarios, and objectives, with executable PLOS finance/habit and business workforce/operations examples, deterministic scheduled-change reporting, non-finite formula rejection, and generated catalog helpers for product apps. Release preflight checks package entrypoints, release docs, roadmap sync, and clean-tree readiness; migrations synthesize rollback SQL for safe reversible schema changes; VS Code diagnostics infer useful symbol and field ranges; and public release planning is documented."
   },
   "liveNow": [
     "Public commerce workflow demo",
@@ -16,6 +16,7 @@
     "VS Code diagnostic targeting for declaration and field-level compiler errors",
     "Generated TypeScript client, server, and worker scaffolds",
     "Release preflight checks for package entrypoints, release docs, roadmap sync, and clean-tree readiness",
+    "Public release plan and package dry-run command",
     "Migration rollback SQL for safe reversible schema changes",
     "Outbox queue processing with retry, dead-letter, stale-claim recovery, domain-scoped queue health, queue stats, and worker observability counters",
     "Hosted smoke checks that validate public reset, transactions, queue health, and outbox processing for both demo domains",
@@ -77,7 +78,7 @@
       "items": [
         "Improve editor completions, definitions, and diagnostics",
         "Publish clearer examples and tutorials",
-        "Prepare public package naming, publishing, and upgrade automation",
+        "Execute the public package-name decision and publish when the owning account is ready",
         "Add concise getting-started flows for local development and hosted demos"
       ]
     }

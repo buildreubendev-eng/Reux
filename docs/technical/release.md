@@ -27,6 +27,7 @@ npm run build
 npm run verify
 npm run verify:package
 npm run release:preflight
+npm run release:pack-dry-run
 ```
 
 `npm run build` first clears `dist/` so stale compiled files cannot leak into the package. `verify:package` runs a package smoke check around `npm pack --dry-run --json`; it fails if exported JavaScript files, generated declaration files, docs, or editor assets are missing from disk or missing from the dry-run tarball.
@@ -36,6 +37,8 @@ npm run release:preflight
 ```bash
 node scripts/release-preflight.mjs --allow-dirty
 ```
+
+`npm run release:pack-dry-run` rebuilds the project and asks npm to show the tarball contents without publishing.
 
 ## Versioning
 
@@ -68,10 +71,12 @@ Before tagging a prototype release:
 2. Run `npm run verify:postgres:full` against a live PostgreSQL database.
 3. Run `npm run verify:package`.
 4. Run `npm run release:preflight`.
-5. Check `docs/technical/package-distribution.md`.
-6. Check `docs/technical/phase-status.md`.
-7. Check `docs/technical/cli.md` for new or changed commands.
-8. Update `README.md` if setup or demo commands changed.
-9. Tag the commit after the repository is pushed.
+5. Run `npm run release:pack-dry-run`.
+6. Check `docs/technical/package-distribution.md`.
+7. Check `docs/technical/public-release-plan.md`.
+8. Check `docs/technical/phase-status.md`.
+9. Check `docs/technical/cli.md` for new or changed commands.
+10. Update `README.md` if setup or demo commands changed.
+11. Tag the commit after the repository is pushed.
 
 The package remains marked `private` until the public package name and distribution policy are final.

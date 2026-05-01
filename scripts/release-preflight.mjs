@@ -7,6 +7,7 @@ const requiredDocs = [
   "README.md",
   "docs/technical/release.md",
   "docs/technical/package-distribution.md",
+  "docs/technical/public-release-plan.md",
   "docs/technical/phase-status.md",
   "docs/technical/roadmap.md",
   "docs/public/reux-roadmap.md",
@@ -47,8 +48,8 @@ const status = roadmap.status ?? {};
 if (Number(status.demoReadinessPercent) < 99) {
   failures.push("public roadmap demo readiness must be at least 99 before this release track");
 }
-if (Number(status.fullCompletionPercent) < 95) {
-  failures.push("public roadmap full completion must be at least 95 before this release track");
+if (Number(status.fullCompletionPercent) < 100) {
+  failures.push("public roadmap full completion must be at least 100 before this release track");
 }
 
 const roadmapMarkdown = readFileSync("docs/public/reux-roadmap.md", "utf8");
