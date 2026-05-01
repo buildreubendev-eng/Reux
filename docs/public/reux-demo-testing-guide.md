@@ -67,13 +67,21 @@ npm run demo:monitor -- https://your-demo-host.example.com --deep
 
 The monitor repeats the hosted health/deep check and exits nonzero after repeated failures.
 
+For external alerts, maintainers can pass a webhook URL:
+
+```bash
+npm run demo:monitor -- https://your-demo-host.example.com --deep --alert-webhook-url https://alerts.example.com/reux
+```
+
+The monitor posts JSON failure and recovery events to that URL. The same value can be configured with `REUX_DEMO_MONITOR_ALERT_WEBHOOK_URL` in hosted or scheduled environments.
+
 ## What Is Not Final Yet
 
 The demo is not the finished Reux product experience. It is intentionally closer to a working technical preview than a polished customer app.
 
 Known remaining polish areas:
 
-- Hosted uptime monitoring.
+- Final hosted alert routing and database maintenance routines.
 - Richer public examples for simulations.
 - More product-focused flows for PLOS and business simulation use cases.
 
