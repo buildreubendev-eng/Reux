@@ -1,5 +1,6 @@
 import {
   businessSimulatorForecastUnits,
+  businessSimulatorLimits,
   businessSimulatorMetricNames,
   BusinessSimulatorAssumptions,
   BusinessSimulatorCompareRequest,
@@ -42,6 +43,7 @@ const rateFields = new Set<keyof BusinessSimulatorAssumptions>([
   "defectRate",
 ]);
 const supportedSimulationIds = new Set(["operations-decision"]);
+const scenarioIdPattern = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
 
 export function assertBusinessSimulatorRunRequest(value: unknown): asserts value is BusinessSimulatorRunRequest {
   const issues: BusinessSimulatorValidationIssue[] = [];
@@ -76,6 +78,9 @@ export function assertBusinessSimulatorCompareRequest(value: unknown): asserts v
   if (!Array.isArray(value.scenarios) || value.scenarios.length === 0) {
     issues.push({ path: "$.scenarios", message: "must contain at least one scenario result" });
   } else {
+    if (value.scenarios.length > businessSimulatorLimits.maxCompareScenarios) {
+      issues.push({ path: "$.scenarios", message: `must contain ${businessSimulatorLimits.maxCompareScenarios} or fewer scenario results` });
+    }
     const seenScenarioIds = new Set<string>();
     value.scenarios.forEach((scenario, index) => {
       validateScenarioResult(scenario, `$.scenarios[${index}]`, issues);
@@ -116,6 +121,8 @@ function validateScenarioInputs(value: unknown, path: string, issues: BusinessSi
   if (!Array.isArray(value) || value.length === 0) {
     issues.push({ path, message: "must contain at least one scenario" });
     return;
+  } else if (value.length > businessSimulatorLimits.maxRunScenarios) {
+    issues.push({ path, message: `must contain ${businessSimulatorLimits.maxRunScenarios} or fewer scenarios` });
   }
 
   const seenScenarioIds = new Set<string>();
@@ -125,19 +132,15 @@ function validateScenarioInputs(value: unknown, path: string, issues: BusinessSi
       issues.push({ path: scenarioPath, message: "must be an object" });
       return;
     }
-    if (!isNonEmptyString(scenario.id)) {
-      issues.push({ path: `${scenarioPath}.id`, message: "must be a non-empty string" });
-    } else if (seenScenarioIds.has(scenario.id)) {
-      issues.push({ path: `${scenarioPath}.id`, message: "must be unique" });
-    } else {
+    validateScenarioId(scenario.id, `${scenarioPath}.id`, issues);
+    if (isNonEmptyString(scenario.id) && scenarioIdPattern.test(scenario.id) && scenario.id.length <= businessSimulatorLimits.maxScenarioIdLength) {
+      if (seenScenarioIds.has(scenario.id)) {
+        issues.push({ path: `${scenarioPath}.id`, message: "must be unique" });
+      }
       seenScenarioIds.add(scenario.id);
     }
-    if (!isNonEmptyString(scenario.name)) {
-      issues.push({ path: `${scenarioPath}.name`, message: "must be a non-empty string" });
-    }
-    if (scenario.description !== undefined && typeof scenario.description !== "string") {
-      issues.push({ path: `${scenarioPath}.description`, message: "must be a string when provided" });
-    }
+    validateBoundedString(scenario.name, `${scenarioPath}.name`, "name", businessSimulatorLimits.maxScenarioNameLength, issues);
+    validateOptionalBoundedString(scenario.description, `${scenarioPath}.description`, "description", businessSimulatorLimits.maxScenarioDescriptionLength, issues);
     validateScenarioAssumptions(scenario.assumptions, `${scenarioPath}.assumptions`, issues);
   });
 }
@@ -177,8 +180,12 @@ function validateAssumptionValue(
     issues.push({ path, message: "must be a finite number" });
     return;
   }
-  if (field === "forecastPeriods" && (!Number.isInteger(value) || value < 1)) {
-    issues.push({ path, message: "must be a positive integer" });
+  if (field === "forecastPeriods") {
+    if (!Number.isInteger(value) || value < 1) {
+      issues.push({ path, message: "must be a positive integer" });
+    } else if (value > businessSimulatorLimits.maxForecastPeriods) {
+      issues.push({ path, message: `must be ${businessSimulatorLimits.maxForecastPeriods} or less` });
+    }
     return;
   }
   if (rateFields.has(field) && (value < 0 || value > 1)) {
@@ -207,11 +214,9 @@ function validateScenarioResult(value: unknown, path: string, issues: BusinessSi
     issues.push({ path, message: "must be an object" });
     return;
   }
-  if (!isNonEmptyString(value.id)) issues.push({ path: `${path}.id`, message: "must be a non-empty string" });
-  if (!isNonEmptyString(value.name)) issues.push({ path: `${path}.name`, message: "must be a non-empty string" });
-  if (value.description !== undefined && typeof value.description !== "string") {
-    issues.push({ path: `${path}.description`, message: "must be a string when provided" });
-  }
+  validateScenarioId(value.id, `${path}.id`, issues);
+  validateBoundedString(value.name, `${path}.name`, "name", businessSimulatorLimits.maxScenarioNameLength, issues);
+  validateOptionalBoundedString(value.description, `${path}.description`, "description", businessSimulatorLimits.maxScenarioDescriptionLength, issues);
   validateAssumptions(value.assumptions, `${path}.assumptions`, issues);
   validateMetricSnapshot(value.finalMetrics, `${path}.finalMetrics`, issues);
   validateTimeline(value.timeline, `${path}.timeline`, issues);
@@ -221,6 +226,9 @@ function validateTimeline(value: unknown, path: string, issues: BusinessSimulato
   if (!Array.isArray(value)) {
     issues.push({ path, message: "must be an array" });
     return;
+  }
+  if (value.length > businessSimulatorLimits.maxTimelinePoints) {
+    issues.push({ path, message: `must contain ${businessSimulatorLimits.maxTimelinePoints} or fewer points` });
   }
   value.forEach((point, index) => {
     const pointPath = `${path}[${index}]`;
@@ -236,6 +244,52 @@ function validateTimeline(value: unknown, path: string, issues: BusinessSimulato
     }
     validateMetricSnapshot(point.metrics, `${pointPath}.metrics`, issues);
   });
+}
+
+function validateScenarioId(value: unknown, path: string, issues: BusinessSimulatorValidationIssue[]): void {
+  if (!isNonEmptyString(value)) {
+    issues.push({ path, message: "must be a non-empty string" });
+    return;
+  }
+  if (value.length > businessSimulatorLimits.maxScenarioIdLength) {
+    issues.push({ path, message: `must be ${businessSimulatorLimits.maxScenarioIdLength} characters or fewer` });
+  }
+  if (!scenarioIdPattern.test(value)) {
+    issues.push({ path, message: "must use letters, numbers, underscores, or hyphens and start with a letter or number" });
+  }
+}
+
+function validateBoundedString(
+  value: unknown,
+  path: string,
+  label: string,
+  maxLength: number,
+  issues: BusinessSimulatorValidationIssue[],
+): void {
+  if (!isNonEmptyString(value)) {
+    issues.push({ path, message: `must be a non-empty ${label}` });
+    return;
+  }
+  if (value.length > maxLength) {
+    issues.push({ path, message: `must be ${maxLength} characters or fewer` });
+  }
+}
+
+function validateOptionalBoundedString(
+  value: unknown,
+  path: string,
+  label: string,
+  maxLength: number,
+  issues: BusinessSimulatorValidationIssue[],
+): void {
+  if (value === undefined) return;
+  if (typeof value !== "string") {
+    issues.push({ path, message: `must be a string when provided` });
+    return;
+  }
+  if (value.length > maxLength) {
+    issues.push({ path, message: `${label} must be ${maxLength} characters or fewer` });
+  }
 }
 
 function validateMetricSnapshot(value: unknown, path: string, issues: BusinessSimulatorValidationIssue[]): void {

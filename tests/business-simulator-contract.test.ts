@@ -6,6 +6,7 @@ import {
   businessSimulatorEndpoints,
   businessSimulatorErrorCodes,
   businessSimulatorForecastUnits,
+  businessSimulatorLimits,
   businessSimulatorMetricNames,
   type BusinessSimulatorRunRequest,
 } from "../src/business-simulator-contract.js";
@@ -34,6 +35,8 @@ describe("business simulator API contract", () => {
     expect(businessSimulatorForecastUnits).toEqual(["week", "month", "quarter"]);
     expect(businessSimulatorMetricNames).toContain("marginDelta");
     expect(businessSimulatorErrorCodes).toContain("business_simulator_validation_failed");
+    expect(businessSimulatorLimits.maxRunScenarios).toBe(8);
+    expect(businessSimulatorLimits.maxForecastPeriods).toBe(52);
   });
 
   it("keeps frontend assumption defaults in the public contract", () => {
@@ -220,6 +223,7 @@ describe("business simulator API contract", () => {
 
     expect(fixture.contractVersion).toBe("2026-05-01");
     expect(fixture.endpoints.runSimulation).toBe("POST /api/simulations/run");
+    expect(fixture.limits.maxRunScenarios).toBe(8);
     expect(fixture.templateResponse.simulation.id).toBe("operations-decision");
     expect(fixture.runRequest.options?.includeReuxSource).toBe(true);
     expect(fixture.runResponse.reuxSource).toContain("simulate operations_decision");
@@ -324,6 +328,34 @@ describe("business simulator API contract", () => {
     }
   });
 
+  it("rejects oversized or unstable run request inputs with stable validation paths", () => {
+    try {
+      assertBusinessSimulatorRunRequest({
+        baseline: {
+          ...businessSimulatorDefaultAssumptions,
+          forecastPeriods: businessSimulatorLimits.maxForecastPeriods + 1,
+        },
+        scenarios: Array.from({ length: businessSimulatorLimits.maxRunScenarios + 1 }, (_, index) => ({
+          id: index === 0 ? "bad id with spaces" : `scenario-${index}`,
+          name: index === 1 ? "" : `Scenario ${index}`,
+          description: index === 2 ? "x".repeat(businessSimulatorLimits.maxScenarioDescriptionLength + 1) : undefined,
+          assumptions: {
+            productivityGainRate: 0.1,
+          },
+        })),
+      });
+      throw new Error("expected validation to fail");
+    } catch (error) {
+      expect(error).toBeInstanceOf(BusinessSimulatorValidationError);
+      const issueMap = new Map((error as BusinessSimulatorValidationError).issues.map((issue) => [issue.path, issue.message]));
+      expect(issueMap.get("$.baseline.forecastPeriods")).toBe("must be 52 or less");
+      expect(issueMap.get("$.scenarios")).toBe("must contain 8 or fewer scenarios");
+      expect(issueMap.get("$.scenarios[0].id")).toContain("must use letters");
+      expect(issueMap.get("$.scenarios[1].name")).toBe("must be a non-empty name");
+      expect(issueMap.get("$.scenarios[2].description")).toBe("description must be 500 characters or fewer");
+    }
+  });
+
   it("rejects malformed compare requests with stable validation paths", () => {
     const run = runBusinessSimulator(
       {
@@ -372,6 +404,49 @@ describe("business simulator API contract", () => {
       expect(issues).toContain("$.scenarios[1].id");
       expect(issues).toContain("$.scenarios[1].name");
       expect(issues).toContain("$.scenarios[1].finalMetrics.marginDelta");
+    }
+  });
+
+  it("rejects oversized compare payloads before they stress public demo clients", () => {
+    const run = runBusinessSimulator(
+      {
+        baseline: businessSimulatorDefaultAssumptions,
+        scenarios: [
+          {
+            id: "process-improvement",
+            name: "Process Improvement",
+            assumptions: {
+              productivityGainRate: 0.12,
+            },
+          },
+        ],
+      },
+      new Date("2026-05-01T00:00:00.000Z"),
+    );
+    const oversizedTimeline = Array.from({ length: businessSimulatorLimits.maxTimelinePoints + 1 }, (_, index) => ({
+      period: index + 1,
+      label: `${index + 1} weeks`,
+      metrics: run.baseline.finalMetrics,
+    }));
+
+    try {
+      assertBusinessSimulatorCompareRequest({
+        baseline: {
+          ...run.baseline,
+          timeline: oversizedTimeline,
+        },
+        scenarios: Array.from({ length: businessSimulatorLimits.maxCompareScenarios + 1 }, (_, index) => ({
+          ...run.scenarios[0],
+          id: `scenario-${index}`,
+          name: `Scenario ${index}`,
+        })),
+      });
+      throw new Error("expected validation to fail");
+    } catch (error) {
+      expect(error).toBeInstanceOf(BusinessSimulatorValidationError);
+      const issueMap = new Map((error as BusinessSimulatorValidationError).issues.map((issue) => [issue.path, issue.message]));
+      expect(issueMap.get("$.baseline.timeline")).toBe("must contain 52 or fewer points");
+      expect(issueMap.get("$.scenarios")).toBe("must contain 12 or fewer scenario results");
     }
   });
 });

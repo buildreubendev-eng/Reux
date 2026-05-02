@@ -95,7 +95,7 @@ Metric snapshots include:
 - `defectCost`
 
 The source of truth also exports `businessSimulatorForecastUnits` and `businessSimulatorMetricNames` so product apps can build controls and charts without hand-copying enum values.
-It also exports `businessSimulatorErrorCodes`, `BusinessSimulatorErrorResponse`, and `BusinessSimulatorValidationErrorResponse` so clients can handle backend failures without inventing their own error envelopes.
+It also exports `businessSimulatorErrorCodes`, `BusinessSimulatorErrorResponse`, `BusinessSimulatorValidationErrorResponse`, and `businessSimulatorLimits` so clients can handle backend failures and mirror public-demo limits without inventing their own envelope or constraints.
 
 `options.includeTimeline` defaults to `true`. Set it to `false` for lighter responses that keep `finalMetrics` and comparison/recommendation output while returning empty `timeline` arrays. `options.includeReuxSource` defaults to `false`; set it to `true` only when a UI needs the Reux transparency panel.
 
@@ -119,6 +119,20 @@ The same fixture includes `invalidRunResponse`, a deterministic example of the v
 For public API handlers, call `assertBusinessSimulatorRunRequest(body)` before running a simulation and `assertBusinessSimulatorCompareRequest(body)` before comparing existing results. Validation failures throw `BusinessSimulatorValidationError` with stable `issues[].path` values such as `$.baseline.grossMarginRate`, which lets frontends display field-level errors instead of a generic failed request.
 
 Run requests also reject unsupported `simulationId` values and duplicate scenario IDs. Compare requests reject duplicate scenario result IDs and metric snapshots with unknown or non-numeric metrics. Scenario IDs should be unique because comparison results are keyed by scenario ID.
+
+Public-demo limits are intentionally conservative:
+
+| Limit | Value |
+| --- | ---: |
+| Run request scenarios | 8 |
+| Compare request scenario results | 12 |
+| Forecast periods | 52 |
+| Timeline points per scenario result | 52 |
+| Scenario ID length | 64 |
+| Scenario name length | 120 |
+| Scenario description length | 500 |
+
+Scenario IDs must use letters, numbers, underscores, or hyphens and must start with a letter or number. These limits keep the public demo responsive and make validation errors predictable for frontend field-level UI.
 
 The hosted demo server serializes those failures as `400` responses:
 

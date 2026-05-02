@@ -36,6 +36,7 @@ export {
   businessSimulatorEndpoints,
   businessSimulatorErrorCodes,
   businessSimulatorForecastUnits,
+  businessSimulatorLimits,
   businessSimulatorMetricNames,
 } from "./business-simulator-contract.js";
 export {

@@ -1,6 +1,7 @@
 import {
   businessSimulatorContractVersion,
   businessSimulatorEndpoints,
+  businessSimulatorLimits,
   BusinessSimulatorValidationErrorResponse,
   BusinessSimulatorCompareRequest,
   BusinessSimulatorCompareResponse,
@@ -20,6 +21,7 @@ export interface BusinessSimulatorContractFixture {
   contractVersion: string;
   generatedAt: string;
   endpoints: typeof businessSimulatorEndpoints;
+  limits: typeof businessSimulatorLimits;
   listResponse: ListBusinessSimulationsResponse;
   templateResponse: GetBusinessSimulationResponse;
   runRequest: BusinessSimulatorRunRequest;
@@ -60,6 +62,7 @@ export function createBusinessSimulatorContractFixture(now: Date = new Date(busi
     contractVersion: businessSimulatorContractVersion,
     generatedAt: now.toISOString(),
     endpoints: businessSimulatorEndpoints,
+    limits: businessSimulatorLimits,
     listResponse,
     templateResponse,
     runRequest,

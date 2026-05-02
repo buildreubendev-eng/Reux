@@ -43,6 +43,16 @@ export const businessSimulatorMetricNames = [
   "defectCost",
 ] as const satisfies readonly BusinessSimulatorMetricName[];
 
+export const businessSimulatorLimits = {
+  maxRunScenarios: 8,
+  maxCompareScenarios: 12,
+  maxForecastPeriods: 52,
+  maxTimelinePoints: 52,
+  maxScenarioIdLength: 64,
+  maxScenarioNameLength: 120,
+  maxScenarioDescriptionLength: 500,
+} as const;
+
 export interface BusinessSimulatorAssumptions {
   employees: number;
   averageHourlyCost: number;
