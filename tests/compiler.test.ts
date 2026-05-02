@@ -1562,6 +1562,153 @@ transaction function debitAccount(accountRef: Account, amount: Decimal<12,2>, re
     expect(worker).toContain("AccountDebited: TypedOutboxHandler<AccountDebitedPayload>");
   });
 
+  it("lowers conditional transaction aborts", () => {
+    const source = `module commerce
+
+entity Account {
+  id: Id<Account> primary generated
+  balance: Decimal<12,2>
+}
+
+transaction function debitAccount(accountRef: Account, amount: Decimal<12,2>) writes Account retry 3 {
+  let account = load accountRef for update
+  if account.balance < amount then abort InsufficientFunds
+  account.balance -= amount
+  save account
+}
+`;
+    const txIr = JSON.parse(emitTransactionIr(source, "debitAccount"));
+    const sql = emitTransactionSql(source, "debitAccount");
+
+    expect(txIr.steps[1]).toEqual({ kind: "ConditionalAbort", condition: "account.balance < amount", error: "InsufficientFunds" });
+    expect(sql).toContain("-- conditional abort: InsufficientFunds");
+    expect(sql).toContain("SELECT CASE WHEN :account.balance < $2 THEN 1 / 0 ELSE 1 END;");
+  });
+
+  it("types and lowers arithmetic transaction expressions", () => {
+    const source = `module commerce
+
+entity Account {
+  id: Id<Account> primary generated
+  balance: Decimal<12,2>
+}
+
+event AccountAdjusted {
+  account: Account
+  amount: Decimal<12,2>
+}
+
+transaction function adjustAccount(accountRef: Account, amount: Decimal<12,2>, fee: Decimal<12,2>, requestId: String) writes Account retry 3 {
+  idempotency key requestId
+  let account = load accountRef for update
+  account.balance += amount - fee
+  enqueue AccountAdjusted { account: accountRef, amount: amount - fee }
+  save account
+}
+`;
+    const sql = emitTransactionSql(source, "adjustAccount");
+
+    expect(sql).toContain("UPDATE accounts SET balance = balance + $2 - $3 WHERE id = $1;");
+    expect(sql).toContain("jsonb_build_object('account', $1::uuid, 'amount', $2 - $3)");
+  });
+
+  it("lowers conditional transaction mutations and enqueues", () => {
+    const source = `module commerce
+
+entity Account {
+  id: Id<Account> primary generated
+  balance: Decimal<12,2>
+}
+
+event AccountAdjusted {
+  account: Account
+  amount: Decimal<12,2>
+}
+
+transaction function adjustAccount(accountRef: Account, amount: Decimal<12,2>, fee: Decimal<12,2>, ceiling: Decimal<12,2>) writes Account retry 3 {
+  let account = load accountRef for update
+  if account.balance < ceiling then account.balance += amount - fee
+  if amount > fee then enqueue AccountAdjusted { account: accountRef, amount: amount - fee }
+  save account
+}
+`;
+    const txIr = JSON.parse(emitTransactionIr(source, "adjustAccount"));
+    const sql = emitTransactionSql(source, "adjustAccount");
+
+    expect(txIr.steps[1]).toEqual({
+      kind: "ConditionalMutation",
+      condition: "account.balance < ceiling",
+      target: "account.balance",
+      operator: "+=",
+      expression: "amount - fee",
+    });
+    expect(txIr.steps[2]).toEqual({
+      kind: "ConditionalEnqueue",
+      condition: "amount > fee",
+      event: "AccountAdjusted",
+      source: "{ account: accountRef, amount: amount - fee }",
+    });
+    expect(sql).toContain("UPDATE accounts SET balance = balance + $2 - $3 WHERE id = $1 AND :account.balance < $4;");
+    expect(sql).toContain(
+      "INSERT INTO _dl_outbox (event_type, payload) SELECT 'AccountAdjusted', jsonb_build_object('account', $1::uuid, 'amount', $2 - $3) WHERE $2 > $3 RETURNING id, event_type, payload;",
+    );
+  });
+
+  it("lowers block conditionals and conditional after-commit hooks", () => {
+    const source = `module commerce
+
+entity Account {
+  id: Id<Account> primary generated
+  balance: Decimal<12,2>
+  active: Bool
+}
+
+event AccountAdjusted {
+  account: Account
+  amount: Decimal<12,2>
+}
+
+transaction function adjustAccount(accountRef: Account, amount: Decimal<12,2>, fee: Decimal<12,2>) writes Account retry 3 {
+  let account = load accountRef for update
+  if account.active {
+    account.balance += amount - fee
+    enqueue AccountAdjusted { account: accountRef, amount: amount - fee }
+    after commit notifyAccount(accountRef)
+  }
+  save account
+}
+`;
+    const txIr = JSON.parse(emitTransactionIr(source, "adjustAccount"));
+    const sql = emitTransactionSql(source, "adjustAccount");
+    const worker = emitWorker(source);
+
+    expect(txIr.steps[1]).toEqual({
+      kind: "ConditionalMutation",
+      condition: "account.active",
+      target: "account.balance",
+      operator: "+=",
+      expression: "amount - fee",
+    });
+    expect(txIr.steps[2]).toEqual({
+      kind: "ConditionalEnqueue",
+      condition: "account.active",
+      event: "AccountAdjusted",
+      source: "{ account: accountRef, amount: amount - fee }",
+    });
+    expect(txIr.steps[3]).toEqual({
+      kind: "ConditionalAfterCommit",
+      condition: "account.active",
+      call: "notifyAccount(accountRef)",
+    });
+    expect(sql).toContain("UPDATE accounts SET balance = balance + $2 - $3 WHERE id = $1 AND :account.active;");
+    expect(sql).toContain(
+      "INSERT INTO _dl_outbox (event_type, payload) SELECT 'AccountAdjusted', jsonb_build_object('account', $1::uuid, 'amount', $2 - $3) WHERE :account.active RETURNING id, event_type, payload;",
+    );
+    expect(sql).toContain("-- conditional after commit: notifyAccount(accountRef)");
+    expect(sql).toContain("SELECT CASE WHEN :account.active THEN 'notifyAccount(accountRef)' ELSE NULL END AS _dl_after_commit;");
+    expect(worker).toContain("notifyAccount: AfterCommitHandlerFornotifyAccount");
+  });
+
   it("rejects unknown and unsupported transaction guard expressions", () => {
     const brokenGuardSource = (condition: string) => `module broken
 
@@ -1581,6 +1728,92 @@ transaction function debitAccount(accountRef: Account, amount: Decimal) writes A
     expect(() => compileSource(brokenGuardSource("account.balance >= amunt"))).toThrow(DlAggregateError);
     expect(() => compileSource(brokenGuardSource("account.missing >= amount"))).toThrow(DlAggregateError);
     expect(() => compileSource(brokenGuardSource("canDebit(accountRef)"))).toThrow(DlAggregateError);
+  });
+
+  it("rejects incompatible transaction guard operand types", () => {
+    const source = (condition: string) => `module broken
+
+entity Account {
+  id: Id<Account> primary generated
+  balance: Decimal
+  active: Bool
+}
+
+transaction function debitAccount(accountRef: Account, amount: Decimal, label: String) writes Account retry 3 {
+  let account = load accountRef for update
+  require ${condition} else abort InvalidGuard
+  account.balance -= amount
+  save account
+}
+`;
+
+    expect(diagnoseSource(source('account.balance == "paid"')).diagnostics.map((diagnostic) => diagnostic.message)).toContain(
+      'transaction debitAccount guard compares incompatible operands in \'account.balance == "paid"\' (Decimal == String)',
+    );
+    expect(diagnoseSource(source('account.balance > "10"')).diagnostics.map((diagnostic) => diagnostic.message)).toContain(
+      'transaction debitAccount guard compares non-numeric operands in \'account.balance > "10"\' (Decimal > String)',
+    );
+    expect(diagnoseSource(source("amount")).diagnostics.map((diagnostic) => diagnostic.message)).toContain(
+      "transaction debitAccount guard clause 'amount' must be Bool, got Decimal",
+    );
+    expect(compileSource(source("account.active"))).toBeTruthy();
+    expect(compileSource(source("not account.active"))).toBeTruthy();
+    expect(compileSource(source("(account.balance > amount) and account.active"))).toBeTruthy();
+  });
+
+  it("accepts compatible enum transaction guard comparisons", () => {
+    const source = `module commerce
+
+entity Order {
+  id: Id<Order> primary generated
+  status: OrderStatus
+}
+
+enum OrderStatus {
+  Pending
+  Paid
+}
+
+transaction function markPaid(orderRef: Order, nextStatus: OrderStatus) writes Order {
+  let order = load orderRef for update
+  require order.status != Paid else abort AlreadyPaid
+  if order.status == nextStatus then abort NoChange
+  order.status = Paid
+}
+`;
+
+    expect(compileSource(source)).toBeTruthy();
+  });
+
+  it("rejects unsupported arithmetic transaction expressions", () => {
+    expect(() =>
+      compileSource(`module broken
+
+entity Account {
+  id: Id<Account> primary generated
+  balance: Decimal
+}
+
+transaction function bad(accountRef: Account, amount: Decimal) writes Account {
+  let account = load accountRef for update
+  account.balance = amount + missing
+}
+`),
+    ).toThrow(DlAggregateError);
+    expect(() =>
+      compileSource(`module broken
+
+entity Account {
+  id: Id<Account> primary generated
+  balance: Decimal
+}
+
+transaction function bad(accountRef: Account, amount: Decimal) writes Account {
+  let account = load accountRef for update
+  account.balance = amount +
+}
+`),
+    ).toThrow(DlAggregateError);
   });
 
   it("lowers explicit transaction abort steps", () => {

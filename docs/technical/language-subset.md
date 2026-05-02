@@ -352,6 +352,11 @@ Supported Transaction IR step recognition:
 - `let name = load expr for update`
 - `idempotency key expr`
 - `require condition else abort ErrorName`
+- `if condition then abort ErrorName`
+- `if condition then target.field += expr`
+- `if condition then enqueue Event { ... }`
+- `if condition then after commit callName(args)`
+- `if condition { ... }` blocks containing `abort`, mutation, `enqueue`, or `after commit` statements
 - `target.field += expr`
 - `target.field -= expr`
 - `target.field = expr`
@@ -371,10 +376,14 @@ The compiler also validates the first effect boundary:
 - mutation or `save` of an entity loaded from an entity-typed parameter requires `writes Entity`.
 - enum-valued inserts and assignments accept bare enum literals and reject values that are not declared by the enum.
 - enum-valued inserts and assignments from transaction parameters require the parameter enum type to match the target field enum type.
-- mutation and insert expressions are checked against target field types for simple parameters, literals, loaded rows, and bound insert references.
+- mutation and insert expressions are checked against target field types for simple parameters, literals, loaded rows, bound insert references, and numeric arithmetic over those values.
 - `idempotency key expr` lowers to an insert into `_dl_idempotency_keys`, giving retryable callers a first-class durable key.
 - `require condition else abort ErrorName` lowers to a SQL guard that rolls back the transaction when the condition is false.
-- `require` guard expressions validate transaction parameters, loaded row fields, bound insert references, and enum literals. Unknown bare references, unknown loaded fields, and function-call-shaped guard expressions are rejected before SQL lowering.
+- `if condition then abort ErrorName` lowers to a SQL guard that rolls back the transaction when the condition is true.
+- `if condition then target.field += expr` and `if condition then enqueue Event { ... }` lower to conditional SQL side effects.
+- `if condition then after commit callName(args)` lowers to a runtime-collected after-commit hook that is returned only when the condition is true.
+- `if condition { ... }` block syntax is accepted as a compact form for multiple conditional `abort`, mutation, `enqueue`, or `after commit` statements.
+- `require` and `if` guard expressions validate transaction parameters, loaded row fields, bound insert references, enum literals, parenthesized clauses, `not` boolean clauses, and comparison operand types. Unknown bare references, unknown loaded fields, function-call-shaped guard expressions, non-boolean bare clauses, non-numeric ordering comparisons, and incompatible equality comparisons are rejected before SQL lowering.
 - `abort ErrorName` lowers to an explicit failing SQL statement so supported transaction runners roll back immediately.
 - declared event payloads validate `enqueue Event { ... }` and generate typed worker payload contracts.
 - retryable transactions use `retry N`;

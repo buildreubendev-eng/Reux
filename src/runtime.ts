@@ -611,6 +611,7 @@ export async function runTransactionSql(
       const returnedRows: unknown[] = [];
       const outboxEvents: unknown[] = [];
       const bindings: Record<string, unknown> = {};
+      const afterCommit = [...plan.afterCommit];
       for (const statement of plan.statements) {
         const prepared = prepareTransactionStatement(statement.sql, params.slice(0, statement.paramCount), bindings);
         const result = await db.query(prepared.sql, prepared.params);
@@ -625,6 +626,9 @@ export async function runTransactionSql(
         if (statement.outbox) {
           outboxEvents.push(...result.rows);
         }
+        if (statement.conditionalAfterCommit) {
+          afterCommit.push(...result.rows.map((row) => (row as Record<string, unknown>)._dl_after_commit).filter(isString));
+        }
       }
       const bound = Object.keys(bindings).length > 0 ? { bindings } : {};
       await db.query("COMMIT;");
@@ -634,7 +638,7 @@ export async function runTransactionSql(
         rowCounts,
         returnedRows,
         outboxEvents,
-        afterCommit: plan.afterCommit,
+        afterCommit,
         ...bound,
       };
     } catch (error) {
@@ -687,6 +691,7 @@ export function parseTransactionSql(sql: string): {
   let usesIdempotency = false;
   let transitionGuard: string | undefined;
   let resultBinding: string | undefined;
+  let conditionalAfterCommit: string | undefined;
 
   for (const rawLine of sql.split("\n")) {
     const line = rawLine.trim();
@@ -703,6 +708,10 @@ export function parseTransactionSql(sql: string): {
       afterCommit.push(line.replace("-- after commit:", "").trim());
       continue;
     }
+    if (line.startsWith("-- conditional after commit:")) {
+      conditionalAfterCommit = line.replace("-- conditional after commit:", "").trim();
+      continue;
+    }
     if (line.startsWith("--")) continue;
     if (line === "BEGIN;" || line === "COMMIT;") continue;
     const outbox = line.includes("INSERT INTO _dl_outbox");
@@ -716,9 +725,11 @@ export function parseTransactionSql(sql: string): {
     };
     if (transitionGuard) statement.transitionGuard = transitionGuard;
     if (resultBinding) statement.resultBinding = resultBinding;
+    if (conditionalAfterCommit) statement.conditionalAfterCommit = conditionalAfterCommit;
     statements.push(statement);
     transitionGuard = undefined;
     resultBinding = undefined;
+    conditionalAfterCommit = undefined;
   }
 
   return usesIdempotency ? { statements, afterCommit, usesOutbox, usesIdempotency } : { statements, afterCommit, usesOutbox };
@@ -762,6 +773,10 @@ function prepareTransactionStatement(
     return `$${preparedParams.length}`;
   });
   return { sql: preparedSql, params: preparedParams };
+}
+
+function isString(value: unknown): value is string {
+  return typeof value === "string";
 }
 
 function boundFieldValue(bindings: Record<string, unknown>, binding: string, field: string): unknown {
@@ -867,6 +882,7 @@ interface TransactionStatement {
   outbox: boolean;
   transitionGuard?: string;
   resultBinding?: string;
+  conditionalAfterCommit?: string;
 }
 
 interface OutboxEventRow {

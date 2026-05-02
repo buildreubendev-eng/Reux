@@ -386,23 +386,48 @@ function httpParamKind(schema: SchemaIr, type: TypeRef): "boolean" | "integer" |
 }
 
 function enqueueEvents(body: string): string[] {
-  return body
-    .split("\n")
-    .map((line) => line.trim())
-    .flatMap((line) => {
-      const match = line.match(/^enqueue\s+([A-Za-z_][A-Za-z0-9_]*)\s+/);
-      return match ? [match[1]] : [];
-    });
+  return transactionBodyLines(body).flatMap((line) => {
+    const match = line.match(/^(?:if\s+.+\s+then\s+)?enqueue\s+([A-Za-z_][A-Za-z0-9_]*)\s+/);
+    return match ? [match[1]] : [];
+  });
 }
 
 function afterCommitHooks(body: string): string[] {
-  return body
+  return transactionBodyLines(body).flatMap((line) => {
+    const match = line.match(/^(?:if\s+.+\s+then\s+)?after\s+commit\s+([A-Za-z_][A-Za-z0-9_]*)\(/);
+    return match ? [match[1]] : [];
+  });
+}
+
+function transactionBodyLines(body: string): string[] {
+  const lines = body
     .split("\n")
     .map((line) => line.trim())
-    .flatMap((line) => {
-      const match = line.match(/^after\s+commit\s+([A-Za-z_][A-Za-z0-9_]*)\(/);
-      return match ? [match[1]] : [];
-    });
+    .filter(Boolean);
+  const expanded: string[] = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const block = lines[index].match(/^if\s+(.+?)\s*\{$/);
+    if (!block) {
+      expanded.push(lines[index]);
+      continue;
+    }
+
+    const condition = block[1];
+    let closed = false;
+    for (index += 1; index < lines.length; index += 1) {
+      if (lines[index] === "}") {
+        closed = true;
+        break;
+      }
+      expanded.push(`if ${condition} then ${lines[index]}`);
+    }
+    if (!closed) {
+      expanded.push(lines[index - 1] ?? `if ${condition} {`);
+    }
+  }
+
+  return expanded;
 }
 
 function unique(values: string[]): string[] {

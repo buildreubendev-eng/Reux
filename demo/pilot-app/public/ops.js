@@ -29,7 +29,7 @@ function renderDomain(domain) {
     <div class="panel">
       <div class="panel-heading">
         <h2>${escapeHtml(domain.title)}</h2>
-        <span class="queue-status" data-health="${domain.queue.health}">Queue: ${escapeHtml(titleCase(domain.queue.health))}</span>
+        <span class="queue-status" data-health="${escapeHtml(domain.queue.health)}">Queue: ${escapeHtml(titleCase(domain.queue.health))}</span>
       </div>
       <div class="table">
         <table>

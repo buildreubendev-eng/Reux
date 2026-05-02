@@ -308,16 +308,24 @@ class TransactionLowering {
         lines.push(this.lowerLoadForUpdate(step.target, step.source));
       } else if (step.kind === "Mutation") {
         lines.push(this.lowerMutation(step.target, step.operator, step.expression));
+      } else if (step.kind === "ConditionalMutation") {
+        lines.push(this.lowerMutation(step.target, step.operator, step.expression, step.condition));
       } else if (step.kind === "Save") {
         lines.push(`-- save ${step.target}: staged by explicit mutation statements`);
       } else if (step.kind === "Insert") {
         lines.push(this.lowerInsert(step.entity, step.source, step.target));
       } else if (step.kind === "Enqueue") {
         lines.push(this.lowerEnqueue(step.event, step.source));
+      } else if (step.kind === "ConditionalEnqueue") {
+        lines.push(this.lowerEnqueue(step.event, step.source, step.condition));
+      } else if (step.kind === "ConditionalAfterCommit") {
+        lines.push(this.lowerConditionalAfterCommit(step.condition, step.call));
       } else if (step.kind === "IdempotencyKey") {
         lines.push(this.lowerIdempotencyKey(step.expression));
       } else if (step.kind === "Require") {
         lines.push(this.lowerRequire(step.condition, step.error));
+      } else if (step.kind === "ConditionalAbort") {
+        lines.push(this.lowerConditionalAbort(step.condition, step.error));
       } else if (step.kind === "AfterCommit") {
         lines.push(`-- after commit: ${step.call}`);
       } else if (step.kind === "ExternalCall") {
@@ -350,7 +358,7 @@ class TransactionLowering {
     return `-- abort: ${error}\nSELECT 1 / 0;`;
   }
 
-  private lowerMutation(target: string, operator: "+=" | "-=" | "=", expression: string): string {
+  private lowerMutation(target: string, operator: "+=" | "-=" | "=", expression: string, condition?: string): string {
     const [localName, fieldName] = target.split(".");
     const loaded = this.loaded.get(localName);
     if (!loaded) {
@@ -365,19 +373,21 @@ class TransactionLowering {
       operator === "="
         ? `${field.columnName} = ${valueSql}`
         : `${field.columnName} = ${field.columnName} ${operator[0]} ${valueSql}`;
+    const whereConditions = [`id = $${loaded.sourceParameter}`];
+    if (condition) whereConditions.push(this.conditionSql(condition));
     const transitionGuard = this.transitionGuard(loaded.entity, field, operator, expression);
     if (!transitionGuard) {
-      return `UPDATE ${loaded.entity.tableName} SET ${assignment} WHERE id = $${loaded.sourceParameter};`;
+      return `UPDATE ${loaded.entity.tableName} SET ${assignment} WHERE ${whereConditions.join(" AND ")};`;
     }
     if (transitionGuard.kind === "parameter") {
       return [
         `-- transition guard: ${loaded.entity.name}.${field.name} -> ${transitionGuard.to}`,
-        `UPDATE ${loaded.entity.tableName} SET ${assignment} WHERE id = $${loaded.sourceParameter} AND EXISTS (SELECT 1 FROM (VALUES ${transitionGuard.values}) AS _dl_transition(from_value, to_value) WHERE _dl_transition.from_value = ${loaded.entity.tableName}.${field.columnName} AND _dl_transition.to_value = ${valueSql});`,
+        `UPDATE ${loaded.entity.tableName} SET ${assignment} WHERE ${whereConditions.join(" AND ")} AND EXISTS (SELECT 1 FROM (VALUES ${transitionGuard.values}) AS _dl_transition(from_value, to_value) WHERE _dl_transition.from_value = ${loaded.entity.tableName}.${field.columnName} AND _dl_transition.to_value = ${valueSql});`,
       ].join("\n");
     }
     return [
       `-- transition guard: ${loaded.entity.name}.${field.name} -> ${transitionGuard.to}`,
-      `UPDATE ${loaded.entity.tableName} SET ${assignment} WHERE id = $${loaded.sourceParameter} AND ${field.columnName} IN (${transitionGuard.from.map(quoteLiteral).join(", ")});`,
+      `UPDATE ${loaded.entity.tableName} SET ${assignment} WHERE ${whereConditions.join(" AND ")} AND ${field.columnName} IN (${transitionGuard.from.map(quoteLiteral).join(", ")});`,
     ].join("\n");
   }
 
@@ -423,6 +433,7 @@ class TransactionLowering {
       return quoteLiteral(expression.slice(1, -1));
     }
     if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(expression)) return quoteLiteral(expression);
+    if (isArithmeticExpressionSource(expression)) return this.replaceExpressionReferences(expression);
     return expression;
   }
 
@@ -452,10 +463,13 @@ class TransactionLowering {
     return target ? `-- bind result: ${target}\n${sql}` : sql;
   }
 
-  private lowerEnqueue(event: string, source: string): string {
+  private lowerEnqueue(event: string, source: string, condition?: string): string {
     const fields = parseObjectLiteral(source);
     const payloadParts = fields.flatMap((field) => [quoteLiteral(field.name), this.jsonExpressionSql(field.value)]);
     const payload = payloadParts.length > 0 ? `jsonb_build_object(${payloadParts.join(", ")})` : "'{}'::jsonb";
+    if (condition) {
+      return `INSERT INTO _dl_outbox (event_type, payload) SELECT ${quoteLiteral(event)}, ${payload} WHERE ${this.conditionSql(condition)} RETURNING id, event_type, payload;`;
+    }
     return `INSERT INTO _dl_outbox (event_type, payload) VALUES (${quoteLiteral(event)}, ${payload}) RETURNING id, event_type, payload;`;
   }
 
@@ -467,6 +481,20 @@ class TransactionLowering {
     return [
       `-- guard: ${error}`,
       `SELECT CASE WHEN ${this.conditionSql(condition)} THEN 1 ELSE 1 / 0 END;`,
+    ].join("\n");
+  }
+
+  private lowerConditionalAbort(condition: string, error: string): string {
+    return [
+      `-- conditional abort: ${error}`,
+      `SELECT CASE WHEN ${this.conditionSql(condition)} THEN 1 / 0 ELSE 1 END;`,
+    ].join("\n");
+  }
+
+  private lowerConditionalAfterCommit(condition: string, call: string): string {
+    return [
+      `-- conditional after commit: ${call}`,
+      `SELECT CASE WHEN ${this.conditionSql(condition)} THEN ${quoteLiteral(call)} ELSE NULL END AS _dl_after_commit;`,
     ].join("\n");
   }
 
@@ -483,11 +511,20 @@ class TransactionLowering {
   }
 
   private conditionSql(expression: string): string {
-    let sql = expression;
-    for (const parameter of this.transaction.parameters) {
-      const position = this.transaction.parameters.indexOf(parameter) + 1;
-      sql = sql.replace(new RegExp(`\\b${parameter.name}\\b`, "g"), `$${position}`);
-    }
+    let sql = this.replaceExpressionReferences(expression);
+    sql = sql.replace(/\band\b/g, "AND").replace(/\bor\b/g, "OR");
+    sql = sql.replaceAll("!=", "<>");
+    return sql.replaceAll("==", "=");
+  }
+
+  private replaceExpressionReferences(expression: string): string {
+    return expressionSegments(expression)
+      .map((segment) => (segment.kind === "string" ? quoteLiteral(segment.value) : this.replaceSourceReferences(segment.source)))
+      .join("");
+  }
+
+  private replaceSourceReferences(source: string): string {
+    let sql = source;
     for (const [name, loaded] of this.loaded) {
       for (const field of loaded.entity.fields) {
         sql = sql.replace(new RegExp(`\\b${name}\\.${field.name}\\b`, "g"), `:${name}.${field.columnName}`);
@@ -499,9 +536,11 @@ class TransactionLowering {
         sql = sql.replace(new RegExp(`\\b${name}\\.${field.name}\\b`, "g"), `:${name}.${field.columnName}`);
       }
     }
-    sql = sql.replace(/\band\b/g, "AND").replace(/\bor\b/g, "OR");
-    sql = sql.replaceAll("!=", "<>");
-    return sql.replaceAll("==", "=");
+    for (const parameter of this.transaction.parameters) {
+      const position = this.transaction.parameters.indexOf(parameter) + 1;
+      sql = sql.replace(new RegExp(`(?<![.:])\\b${parameter.name}\\b(?!\\.)`, "g"), `$${position}`);
+    }
+    return sql;
   }
 
   private boundReferenceSql(expression: string): string | undefined {
@@ -608,6 +647,10 @@ function sourceLiteralValue(expression: string): string | undefined {
   }
   if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(value)) return value;
   return undefined;
+}
+
+function isArithmeticExpressionSource(expression: string): boolean {
+  return /[+\-*/()]/.test(expression) && /^[A-Za-z0-9_.$\s+\-*/()]+$/.test(expression);
 }
 
 function quoteIdentifier(value: string): string {

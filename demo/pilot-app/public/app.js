@@ -411,10 +411,10 @@ function loadSessionId() {
 
 function summarizeAction(labelText, result) {
   if (labelText === "processOutbox") {
-    return `<strong>Processed Outbox:</strong> ${result.processed} event(s) succeeded, ${result.failed} failed. Watch Queue Health to see durable events move.`;
+    return `<strong>Processed Outbox:</strong> ${escapeHtml(result.processed)} event(s) succeeded, ${escapeHtml(result.failed)} failed. Watch Queue Health to see durable events move.`;
   }
   const events = result.outboxEvents?.length ?? 0;
-  return `<strong>Ran ${titleCase(labelText)}:</strong> Wrote ${events} outbox event(s). <strong>Next:</strong> Click "Process Outbox" to move them.`;
+  return `<strong>Ran ${escapeHtml(titleCase(labelText))}:</strong> Wrote ${escapeHtml(events)} outbox event(s). <strong>Next:</strong> Click "Process Outbox" to move them.`;
 }
 
 function friendlyError(message) {

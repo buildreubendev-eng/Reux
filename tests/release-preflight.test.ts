@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { afterEach, describe, expect, it } from "vitest";
 
 const dirtyProbePath = ".release-preflight-dirty-test";
@@ -28,5 +28,23 @@ describe("release preflight script", () => {
 
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("working tree is not clean");
+  });
+
+  it("reports public asset drift without masking the clean-tree gate", () => {
+    const generatedPath = "docs/public/reux-public-snapshot.md";
+    const original = readFileSync(generatedPath, "utf8");
+    writeFileSync(generatedPath, `${original}\n`);
+
+    try {
+      const result = spawnSync(process.execPath, ["scripts/release-preflight.mjs"], {
+        encoding: "utf8",
+      });
+
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain("public asset check failed");
+      expect(result.stderr).toContain("working tree is not clean");
+    } finally {
+      writeFileSync(generatedPath, original);
+    }
   });
 });

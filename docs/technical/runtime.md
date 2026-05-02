@@ -269,10 +269,13 @@ Transaction parameters can also be passed as `@params.json`.
 Currently executable:
 
 - `load <entity-param> for update`
-- simple field mutation over loaded state, such as `user.balance += amount`
+- field mutation over loaded state, such as `user.balance += amount` or `account.balance += amount - fee`
+- conditional field mutation over loaded state, such as `if account.balance < ceiling then account.balance += amount - fee`
+- block conditionals for supported conditional statements, such as `if account.active { ... }`
 - `insert Entity { ... }`
 - `let name = insert Entity { ... }`, returned from `tx-run` in `bindings.name`
 - transition-guarded enum assignments over loaded state, such as `order.status = Paid`
+- conditional abort guards, such as `if account.balance < amount then abort InsufficientFunds`
 
 Currently reported but not executed:
 
@@ -282,6 +285,7 @@ Currently reported but not executed:
 Currently executed for durable side-effect coordination:
 
 - `enqueue Event { ... }`, inserted into `_dl_outbox` inside the same transaction.
+- `if condition then enqueue Event { ... }`, inserted only when the condition is true.
 
 Retry behavior:
 
@@ -289,6 +293,7 @@ Retry behavior:
 - PostgreSQL serialization conflicts and deadlocks are retried.
 - Direct external-looking calls are rejected at compile time inside retryable transactions.
 - `after commit ...` hooks are returned in the `afterCommit` array and can be dispatched by application code with `processAfterCommitHooks`.
+- `if condition then after commit ...` hooks are returned in the `afterCommit` array only when the condition emits a hook during the transaction run.
 
 Transition behavior:
 

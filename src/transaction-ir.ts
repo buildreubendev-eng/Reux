@@ -21,6 +21,10 @@ export type TransactionStepIr =
   | EnqueueStepIr
   | IdempotencyKeyStepIr
   | RequireStepIr
+  | ConditionalAbortStepIr
+  | ConditionalMutationStepIr
+  | ConditionalEnqueueStepIr
+  | ConditionalAfterCommitStepIr
   | AfterCommitStepIr
   | ExternalCallStepIr
   | MutationStepIr
@@ -60,6 +64,33 @@ export interface RequireStepIr {
   kind: "Require";
   condition: string;
   error: string;
+}
+
+export interface ConditionalAbortStepIr {
+  kind: "ConditionalAbort";
+  condition: string;
+  error: string;
+}
+
+export interface ConditionalMutationStepIr {
+  kind: "ConditionalMutation";
+  condition: string;
+  target: string;
+  operator: "+=" | "-=" | "=";
+  expression: string;
+}
+
+export interface ConditionalEnqueueStepIr {
+  kind: "ConditionalEnqueue";
+  condition: string;
+  event: string;
+  source: string;
+}
+
+export interface ConditionalAfterCommitStepIr {
+  kind: "ConditionalAfterCommit";
+  condition: string;
+  call: string;
 }
 
 export interface AfterCommitStepIr {
@@ -103,11 +134,7 @@ export function buildTransactionIr(_schema: SchemaIr, transaction: TransactionDe
 }
 
 function parseSteps(body: string): TransactionStepIr[] {
-  return body
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map(parseStep);
+  return transactionBodyLines(body).map(parseStep);
 }
 
 function parseStep(line: string): TransactionStepIr {
@@ -125,6 +152,47 @@ function parseStep(line: string): TransactionStepIr {
       kind: "Require",
       condition: require[1],
       error: require[2],
+    };
+  }
+
+  const conditionalAbort = line.match(/^if\s+(.+)\s+then\s+abort\s+([A-Za-z_][A-Za-z0-9_]*)$/);
+  if (conditionalAbort) {
+    return {
+      kind: "ConditionalAbort",
+      condition: conditionalAbort[1],
+      error: conditionalAbort[2],
+    };
+  }
+
+  const conditionalMutation = line.match(
+    /^if\s+(.+)\s+then\s+([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)+)\s*(\+=|-=|=)\s*(.+)$/,
+  );
+  if (conditionalMutation) {
+    return {
+      kind: "ConditionalMutation",
+      condition: conditionalMutation[1],
+      target: conditionalMutation[2],
+      operator: conditionalMutation[3] as "+=" | "-=" | "=",
+      expression: conditionalMutation[4],
+    };
+  }
+
+  const conditionalEnqueue = line.match(/^if\s+(.+)\s+then\s+enqueue\s+([A-Za-z_][A-Za-z0-9_]*)\s+(.+)$/);
+  if (conditionalEnqueue) {
+    return {
+      kind: "ConditionalEnqueue",
+      condition: conditionalEnqueue[1],
+      event: conditionalEnqueue[2],
+      source: conditionalEnqueue[3],
+    };
+  }
+
+  const conditionalAfterCommit = line.match(/^if\s+(.+)\s+then\s+after\s+commit\s+(.+\([^)]*\))$/);
+  if (conditionalAfterCommit) {
+    return {
+      kind: "ConditionalAfterCommit",
+      condition: conditionalAfterCommit[1],
+      call: conditionalAfterCommit[2],
     };
   }
 
@@ -211,4 +279,35 @@ function parseStep(line: string): TransactionStepIr {
     kind: "Raw",
     source: line,
   };
+}
+
+function transactionBodyLines(body: string): string[] {
+  const lines = body
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const expanded: string[] = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const block = lines[index].match(/^if\s+(.+?)\s*\{$/);
+    if (!block) {
+      expanded.push(lines[index]);
+      continue;
+    }
+
+    const condition = block[1];
+    let closed = false;
+    for (index += 1; index < lines.length; index += 1) {
+      if (lines[index] === "}") {
+        closed = true;
+        break;
+      }
+      expanded.push(`if ${condition} then ${lines[index]}`);
+    }
+    if (!closed) {
+      expanded.push(lines[index - 1] ?? `if ${condition} {`);
+    }
+  }
+
+  return expanded;
 }

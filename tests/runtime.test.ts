@@ -743,6 +743,22 @@ COMMIT;`);
     ]);
   });
 
+  it("parses conditional after-commit transaction SQL", () => {
+    const parsed = parseTransactionSql(`BEGIN;
+-- conditional after commit: notifyAccount(accountRef)
+SELECT CASE WHEN $2 THEN 'notifyAccount(accountRef)' ELSE NULL END AS _dl_after_commit;
+COMMIT;`);
+
+    expect(parsed.statements).toEqual([
+      {
+        sql: "SELECT CASE WHEN $2 THEN 'notifyAccount(accountRef)' ELSE NULL END AS _dl_after_commit;",
+        paramCount: 2,
+        outbox: false,
+        conditionalAfterCommit: "notifyAccount(accountRef)",
+      },
+    ]);
+  });
+
   it("runs transaction SQL inside a managed transaction", async () => {
     const db = new FakeDb();
 
@@ -771,6 +787,23 @@ COMMIT;`,
       { sql: "UPDATE users SET balance = balance + $2 WHERE id = $1;", params: ["user-id", "100"] },
       { sql: "COMMIT;", params: undefined },
     ]);
+  });
+
+  it("returns conditional after-commit hooks when their SQL marker emits one", async () => {
+    const db = new FakeDb();
+
+    const result = await runTransactionSql(
+      db,
+      `BEGIN;
+-- conditional after commit: notifyAccount(accountRef)
+SELECT CASE WHEN $2 THEN 'notifyAccount(accountRef)' ELSE NULL END AS _dl_after_commit;
+COMMIT;`,
+      ["account-id", true],
+      1,
+    );
+
+    expect(result.afterCommit).toEqual(["notifyAccount(accountRef)"]);
+    expect(result.statements).toBe(1);
   });
 
   it("fails transition-guarded transaction updates when no row changes", async () => {
@@ -1559,6 +1592,12 @@ class FakeDb implements Database {
     if (sql.startsWith("SELECT * FROM orders WHERE id = $1 FOR UPDATE")) {
       return {
         rows: [{ id: params?.[0], currency: "USD" }] as T[],
+        rowCount: 1,
+      };
+    }
+    if (sql.includes("_dl_after_commit")) {
+      return {
+        rows: [{ _dl_after_commit: params?.[1] ? "notifyAccount(accountRef)" : null }] as T[],
         rowCount: 1,
       };
     }

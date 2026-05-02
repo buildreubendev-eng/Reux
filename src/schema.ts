@@ -643,7 +643,7 @@ function validateTransactionEffects(
   const loadedEntities = new Map<string, string>();
   const boundEntities = new Map<string, string>();
 
-  for (const line of transaction.body.split("\n").map((sourceLine) => sourceLine.trim()).filter(Boolean)) {
+  for (const line of transactionBodyLines(transaction.body)) {
     const load = line.match(/^let\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*load\s+([A-Za-z_][A-Za-z0-9_]*)\s+for\s+update$/);
     if (load) {
       const entity = parameterEntities.get(load[2]);
@@ -713,6 +713,44 @@ function validateTransactionEffects(
       continue;
     }
 
+    const conditionalAbort = line.match(/^if\s+(.+)\s+then\s+abort\s+([A-Za-z_][A-Za-z0-9_]*)$/);
+    if (conditionalAbort) {
+      validateGuardExpression(transaction.name, conditionalAbort[1], parameterTypes, boundEntities, entities, enumerations, diagnostics);
+      continue;
+    }
+
+    const conditionalMutation = line.match(
+      /^if\s+(.+)\s+then\s+([A-Za-z_][A-Za-z0-9_]*)\.[A-Za-z_][A-Za-z0-9_]*\s*(?:\+=|-=|=)\s*.+$/,
+    );
+    if (conditionalMutation) {
+      validateGuardExpression(transaction.name, conditionalMutation[1], parameterTypes, boundEntities, entities, enumerations, diagnostics);
+      const innerLine = line.slice(line.indexOf(" then ") + " then ".length);
+      const entity = loadedEntities.get(conditionalMutation[2]);
+      if (entity && !writes.has(entity)) {
+        diagnostics.push(`transaction ${transaction.name} mutates ${entity} through ${conditionalMutation[2]} but does not declare writes ${entity}`);
+      }
+      validateMutationExpression(transaction.name, innerLine, entity, entities, enumByName, parameterTypes, boundEntities, transitions, diagnostics);
+      continue;
+    }
+
+    const conditionalEnqueue = line.match(/^if\s+(.+)\s+then\s+(enqueue\s+[A-Za-z_][A-Za-z0-9_]*\s+.+)$/);
+    if (conditionalEnqueue) {
+      validateGuardExpression(transaction.name, conditionalEnqueue[1], parameterTypes, boundEntities, entities, enumerations, diagnostics);
+      const enqueue = conditionalEnqueue[2].match(/^enqueue\s+[A-Za-z_][A-Za-z0-9_]*\s+(.+)$/);
+      if (enqueue) {
+        validateBoundReferences(transaction.name, enqueue[1], entities, boundEntities, diagnostics);
+        validateEventPayload(transaction.name, conditionalEnqueue[2], eventByName, enumByName, parameterTypes, boundEntities, entities, diagnostics);
+      }
+      continue;
+    }
+
+    const conditionalAfterCommit = line.match(/^if\s+(.+)\s+then\s+after\s+commit\s+(.+)$/);
+    if (conditionalAfterCommit) {
+      validateGuardExpression(transaction.name, conditionalAfterCommit[1], parameterTypes, boundEntities, entities, enumerations, diagnostics);
+      validateAfterCommitHook(transaction.name, conditionalAfterCommit[2], parameterTypes, boundEntities, entities, enumerations, diagnostics);
+      continue;
+    }
+
     const afterCommit = line.match(/^after\s+commit\s+(.+)$/);
     if (afterCommit) {
       validateAfterCommitHook(transaction.name, afterCommit[1], parameterTypes, boundEntities, entities, enumerations, diagnostics);
@@ -734,6 +772,37 @@ function validateTransactionEffects(
       diagnostics.push(`transaction ${transaction.name} has unsupported statement '${line}'`);
     }
   }
+}
+
+function transactionBodyLines(body: string): string[] {
+  const lines = body
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const expanded: string[] = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const block = lines[index].match(/^if\s+(.+?)\s*\{$/);
+    if (!block) {
+      expanded.push(lines[index]);
+      continue;
+    }
+
+    const condition = block[1];
+    let closed = false;
+    for (index += 1; index < lines.length; index += 1) {
+      if (lines[index] === "}") {
+        closed = true;
+        break;
+      }
+      expanded.push(`if ${condition} then ${lines[index]}`);
+    }
+    if (!closed) {
+      expanded.push(lines[index - 1] ?? `if ${condition} {`);
+    }
+  }
+
+  return expanded;
 }
 
 function validateBoundReferences(
@@ -907,7 +976,12 @@ function validateAssignmentType(
   diagnostics: string[],
 ): void {
   const expressionType = transactionExpressionType(expression, parameterTypes, boundEntities, entities);
-  if (!expressionType) return;
+  if (!expressionType) {
+    if (isArithmeticExpressionSource(expression)) {
+      diagnostics.push(`transaction ${transactionName} assigns ${target} from unsupported arithmetic expression ${expression}`);
+    }
+    return;
+  }
   if (typesCompatible(targetType, expressionType, enumByName)) return;
   diagnostics.push(`transaction ${transactionName} assigns ${target} from incompatible expression type ${expressionType}`);
 }
@@ -935,7 +1009,76 @@ function transactionExpressionType(
     const field = entity?.fields.find((candidate) => candidate.name === fieldName);
     return field?.type.raw;
   }
+  if (isArithmeticExpressionSource(value)) {
+    return arithmeticExpressionType(value, parameterTypes, boundEntities, entities);
+  }
   return undefined;
+}
+
+function arithmeticExpressionType(
+  expression: string,
+  parameterTypes: Map<string, string>,
+  boundEntities: Map<string, string>,
+  entities: EntityDeclaration[],
+): string | undefined {
+  const tokens = arithmeticExpressionTokens(expression);
+  if (tokens.length === 0 || !isValidArithmeticExpressionTokens(tokens)) return undefined;
+
+  let sawOperand = false;
+  let sawDecimal = false;
+  let sawFloat = false;
+  for (const token of tokens) {
+    if (/^[+\-*/()]$/.test(token)) continue;
+    sawOperand = true;
+    const tokenType = transactionExpressionType(token, parameterTypes, boundEntities, entities);
+    if (!tokenType || !isNumericType(tokenType)) return undefined;
+    if (tokenType === "Float") sawFloat = true;
+    if (tokenType.startsWith("Decimal") || /^-?\d+\.\d+$/.test(token)) sawDecimal = true;
+  }
+  if (!sawOperand) return undefined;
+  if (sawFloat) return "Float";
+  if (sawDecimal) return "Decimal";
+  return "Int64";
+}
+
+function arithmeticExpressionTokens(expression: string): string[] {
+  const tokens: string[] = [];
+  const pattern = /\s*([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)?|-?\d+(?:\.\d+)?|[()+\-*/])\s*/gy;
+  let index = 0;
+  while (index < expression.length) {
+    pattern.lastIndex = index;
+    const match = pattern.exec(expression);
+    if (!match) return [];
+    tokens.push(match[1]);
+    index = pattern.lastIndex;
+  }
+  return tokens;
+}
+
+function isValidArithmeticExpressionTokens(tokens: string[]): boolean {
+  let depth = 0;
+  let expectsOperand = true;
+  for (const token of tokens) {
+    if (token === "(") {
+      if (!expectsOperand) return false;
+      depth += 1;
+      continue;
+    }
+    if (token === ")") {
+      if (expectsOperand || depth === 0) return false;
+      depth -= 1;
+      expectsOperand = false;
+      continue;
+    }
+    if (/^[+\-*/]$/.test(token)) {
+      if (expectsOperand) return false;
+      expectsOperand = true;
+      continue;
+    }
+    if (!expectsOperand) return false;
+    expectsOperand = false;
+  }
+  return depth === 0 && !expectsOperand;
 }
 
 function typesCompatible(
@@ -969,6 +1112,7 @@ function validateGuardExpression(
 ): void {
   const normalized = stripQuotedStrings(condition);
   const enumValues = new Set(enumerations.flatMap((enumeration) => enumeration.values));
+  const enumValueTypes = enumValueTypeMap(enumerations);
   for (const call of normalized.matchAll(/\b([A-Za-z_][A-Za-z0-9_]*)\s*\(/g)) {
     diagnostics.push(`transaction ${transactionName} guard uses unsupported call expression ${call[1]}(...)`);
   }
@@ -991,9 +1135,162 @@ function validateGuardExpression(
       diagnostics.push(`transaction ${transactionName} guard references unknown field ${token}`);
     }
   }
+  validateGuardComparisonTypes(transactionName, condition, parameterTypes, boundEntities, entities, enumByName(enumerations), enumValueTypes, diagnostics);
 }
 
 const guardKeywords = new Set(["and", "or", "not", "is", "in", "true", "false", "null"]);
+
+function validateGuardComparisonTypes(
+  transactionName: string,
+  condition: string,
+  parameterTypes: Map<string, string>,
+  boundEntities: Map<string, string>,
+  entities: EntityDeclaration[],
+  enumTypes: Map<string, Extract<Program["declarations"][number], { kind: "enum" }>>,
+  enumValueTypes: Map<string, string>,
+  diagnostics: string[],
+): void {
+  for (const rawClause of splitGuardClauses(condition)) {
+    const clause = stripOuterParentheses(rawClause);
+    const comparison = splitComparisonClause(clause);
+    if (!comparison) {
+      const operand = clause.startsWith("not ") ? clause.slice("not ".length).trim() : clause;
+      const type = guardOperandType(operand, parameterTypes, boundEntities, entities, enumValueTypes);
+      if (type && type !== "Bool") {
+        diagnostics.push(`transaction ${transactionName} guard clause '${rawClause}' must be Bool, got ${type}`);
+      }
+      continue;
+    }
+
+    const leftType = guardOperandType(comparison.left, parameterTypes, boundEntities, entities, enumValueTypes);
+    const rightType = guardOperandType(comparison.right, parameterTypes, boundEntities, entities, enumValueTypes);
+    if (!leftType || !rightType) continue;
+
+    if (comparison.operator === "<" || comparison.operator === "<=" || comparison.operator === ">" || comparison.operator === ">=") {
+      if (!isNumericType(leftType) || !isNumericType(rightType)) {
+        diagnostics.push(
+          `transaction ${transactionName} guard compares non-numeric operands in '${clause}' (${leftType} ${comparison.operator} ${rightType})`,
+        );
+      }
+      continue;
+    }
+
+    if (!typesCompatible(leftType, rightType, enumTypes) && !typesCompatible(rightType, leftType, enumTypes)) {
+      diagnostics.push(
+        `transaction ${transactionName} guard compares incompatible operands in '${clause}' (${leftType} ${comparison.operator} ${rightType})`,
+      );
+    }
+  }
+}
+
+function guardOperandType(
+  expression: string,
+  parameterTypes: Map<string, string>,
+  boundEntities: Map<string, string>,
+  entities: EntityDeclaration[],
+  enumValueTypes: Map<string, string>,
+): string | undefined {
+  const value = stripOuterParentheses(expression.trim());
+  return transactionExpressionType(value, parameterTypes, boundEntities, entities) ?? enumValueTypes.get(value);
+}
+
+function splitGuardClauses(condition: string): string[] {
+  const clauses: string[] = [];
+  let quote: string | undefined;
+  let depth = 0;
+  let start = 0;
+  for (let index = 0; index < condition.length; index += 1) {
+    const char = condition[index];
+    if (quote) {
+      if (char === quote && condition[index - 1] !== "\\") quote = undefined;
+      continue;
+    }
+    if (char === "\"" || char === "'") {
+      quote = char;
+      continue;
+    }
+    if (char === "(") {
+      depth += 1;
+      continue;
+    }
+    if (char === ")" && depth > 0) {
+      depth -= 1;
+      continue;
+    }
+    if (depth > 0) continue;
+    const rest = condition.slice(index);
+    const connector = rest.match(/^(?:\s+)(and|or)(?:\s+)/);
+    if (!connector) continue;
+    clauses.push(condition.slice(start, index).trim());
+    index += connector[0].length - 1;
+    start = index + 1;
+  }
+  clauses.push(condition.slice(start).trim());
+  return clauses.filter(Boolean);
+}
+
+function splitComparisonClause(clause: string): { left: string; operator: string; right: string } | undefined {
+  const match = clause.match(/^(.+?)\s*(==|!=|<=|>=|<|>)\s*(.+)$/);
+  if (!match) return undefined;
+  return {
+    left: match[1].trim(),
+    operator: match[2],
+    right: match[3].trim(),
+  };
+}
+
+function stripOuterParentheses(source: string): string {
+  let value = source.trim();
+  while (value.startsWith("(") && value.endsWith(")") && wrapsWholeExpression(value)) {
+    value = value.slice(1, -1).trim();
+  }
+  return value;
+}
+
+function wrapsWholeExpression(source: string): boolean {
+  let quote: string | undefined;
+  let depth = 0;
+  for (let index = 0; index < source.length; index += 1) {
+    const char = source[index];
+    if (quote) {
+      if (char === quote && source[index - 1] !== "\\") quote = undefined;
+      continue;
+    }
+    if (char === "\"" || char === "'") {
+      quote = char;
+      continue;
+    }
+    if (char === "(") depth += 1;
+    if (char === ")") depth -= 1;
+    if (depth === 0 && index < source.length - 1) return false;
+    if (depth < 0) return false;
+  }
+  return depth === 0;
+}
+
+function enumByName(
+  enumerations: Extract<Program["declarations"][number], { kind: "enum" }>[],
+): Map<string, Extract<Program["declarations"][number], { kind: "enum" }>> {
+  return new Map(enumerations.map((enumeration) => [enumeration.name, enumeration]));
+}
+
+function enumValueTypeMap(enumerations: Extract<Program["declarations"][number], { kind: "enum" }>[]): Map<string, string> {
+  const valueTypes = new Map<string, string>();
+  const duplicates = new Set<string>();
+  for (const enumeration of enumerations) {
+    for (const value of enumeration.values) {
+      if (valueTypes.has(value)) {
+        duplicates.add(value);
+      } else {
+        valueTypes.set(value, enumeration.name);
+      }
+    }
+  }
+  for (const value of duplicates) {
+    valueTypes.delete(value);
+  }
+  return valueTypes;
+}
 
 function validateAfterCommitHook(
   transactionName: string,
@@ -1169,6 +1466,10 @@ function sourceLiteralValue(expression: string): string | undefined {
     return value;
   }
   return undefined;
+}
+
+function isArithmeticExpressionSource(expression: string): boolean {
+  return /[+\-*/()]/.test(expression) && /^[A-Za-z0-9_.$\s+\-*/()]+$/.test(expression);
 }
 
 function isRetryUnsafeExternalCall(line: string): boolean {

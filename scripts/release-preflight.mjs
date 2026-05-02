@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 
 const allowDirty = process.argv.includes("--allow-dirty");
@@ -113,7 +113,14 @@ if (!publicSnapshot.links?.capabilitiesJson?.endsWith("reux-capabilities.json"))
 if (!nextBacklog.items?.some((item) => item.priority === "P1" && item.ownerTrack === "Language Core")) {
   failures.push("next backlog must include a P1 Language Core item");
 }
-execFileSync(process.execPath, ["scripts/check-public-assets.mjs"], { stdio: "pipe" });
+const publicAssetCheck = spawnSync(process.execPath, ["scripts/check-public-assets.mjs"], { encoding: "utf8" });
+if (publicAssetCheck.status !== 0) {
+  const output = `${publicAssetCheck.stdout ?? ""}${publicAssetCheck.stderr ?? ""}`
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  failures.push(...(output.length > 0 ? output : ["public asset check failed"]));
+}
 
 if (!allowDirty) {
   const statusOutput = execFileSync("git", ["status", "--short"], { encoding: "utf8" }).trim();
