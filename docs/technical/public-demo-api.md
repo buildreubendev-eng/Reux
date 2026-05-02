@@ -90,6 +90,8 @@ Runtime execution request:
 
 Runtime overrides must reference declared assumptions, keep their original primitive type, preserve declared units, and keep changes inside the forecast window. Invalid requests return `400` with `code: "simulation_execution_validation_failed"` and stable `issues[].path` entries such as `$.assumptions.income`.
 
+The hosted generic simulation API follows the package execution limits: at most 12 runtime scenarios, 24 changes per runtime scenario, 64 entries in an override object, and 120 characters per runtime scenario name.
+
 ## Commerce Workflow Routes
 
 | Route | Purpose |

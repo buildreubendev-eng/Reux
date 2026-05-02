@@ -61,6 +61,7 @@ export {
   getReuxSimulation,
   listReuxSimulations,
   ReuxSimulationExecutionError,
+  reuxSimulationExecutionLimits,
   runReuxSimulation,
 } from "./simulation-service.js";
 export type {

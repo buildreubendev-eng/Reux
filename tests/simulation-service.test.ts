@@ -4,6 +4,7 @@ import {
   getReuxSimulation,
   listReuxSimulations,
   ReuxSimulationExecutionError,
+  reuxSimulationExecutionLimits,
   runReuxSimulation,
 } from "../src/simulation-service.js";
 
@@ -133,5 +134,28 @@ describe("product-facing simulation service", () => {
         ]),
       );
     }
+  });
+
+  it("rejects oversized execution requests before running the model", () => {
+    try {
+      runReuxSimulation(financeSource(), {
+        assumptions: Object.fromEntries(Array.from({ length: reuxSimulationExecutionLimits.maxOverrideEntries + 1 }, (_, index) => [`field_${index}`, index])),
+        scenarios: Array.from({ length: reuxSimulationExecutionLimits.maxScenarios + 1 }, (_, index) => ({
+          name: `scenario_${index}`,
+        })),
+      });
+    } catch (error) {
+      expect(error).toBeInstanceOf(ReuxSimulationExecutionError);
+      expect((error as ReuxSimulationExecutionError).statusCode).toBe(400);
+      expect((error as ReuxSimulationExecutionError).issues).toEqual(
+        expect.arrayContaining([
+          { path: "$.assumptions", message: `must include at most ${reuxSimulationExecutionLimits.maxOverrideEntries} entries` },
+          { path: "$.scenarios", message: `must include at most ${reuxSimulationExecutionLimits.maxScenarios} scenarios` },
+        ]),
+      );
+      return;
+    }
+
+    throw new Error("expected oversized request to fail");
   });
 });

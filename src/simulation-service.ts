@@ -9,6 +9,13 @@ import {
 
 export type ReuxSimulationExecutionValue = boolean | number | string;
 
+export const reuxSimulationExecutionLimits = {
+  maxScenarios: 12,
+  maxChangesPerScenario: 24,
+  maxOverrideEntries: 64,
+  maxScenarioNameLength: 120,
+} as const;
+
 export interface ReuxSimulationExecutionChangeInput {
   period: number;
   unit?: SimulationIr["forecast"]["unit"];
@@ -58,6 +65,7 @@ export interface ReuxSimulationExecutionIssue {
 
 export class ReuxSimulationExecutionError extends Error {
   readonly code = "simulation_execution_validation_failed";
+  readonly statusCode = 400;
   readonly issues: ReuxSimulationExecutionIssue[];
 
   constructor(issues: ReuxSimulationExecutionIssue[]) {
@@ -142,10 +150,14 @@ function assertExecutionRequest(value: unknown): asserts value is ReuxSimulation
   }
   if (value.assumptions !== undefined && !isPlainRecord(value.assumptions)) {
     issues.push({ path: "$.assumptions", message: "must be an object when provided" });
+  } else if (value.assumptions !== undefined && Object.keys(value.assumptions).length > reuxSimulationExecutionLimits.maxOverrideEntries) {
+    issues.push({ path: "$.assumptions", message: `must include at most ${reuxSimulationExecutionLimits.maxOverrideEntries} entries` });
   }
   if (value.scenarios !== undefined) {
     if (!Array.isArray(value.scenarios)) {
       issues.push({ path: "$.scenarios", message: "must be an array when provided" });
+    } else if (value.scenarios.length > reuxSimulationExecutionLimits.maxScenarios) {
+      issues.push({ path: "$.scenarios", message: `must include at most ${reuxSimulationExecutionLimits.maxScenarios} scenarios` });
     } else {
       value.scenarios.forEach((scenario, index) => validateScenarioInput(scenario, index, issues));
     }
@@ -161,13 +173,19 @@ function validateScenarioInput(value: unknown, index: number, issues: ReuxSimula
   }
   if (!isNonEmptyString(value.name)) {
     issues.push({ path: `${path}.name`, message: "must be a non-empty string" });
+  } else if (value.name.length > reuxSimulationExecutionLimits.maxScenarioNameLength) {
+    issues.push({ path: `${path}.name`, message: `must be at most ${reuxSimulationExecutionLimits.maxScenarioNameLength} characters` });
   }
   if (value.overrides !== undefined && !isPlainRecord(value.overrides)) {
     issues.push({ path: `${path}.overrides`, message: "must be an object when provided" });
+  } else if (value.overrides !== undefined && Object.keys(value.overrides).length > reuxSimulationExecutionLimits.maxOverrideEntries) {
+    issues.push({ path: `${path}.overrides`, message: `must include at most ${reuxSimulationExecutionLimits.maxOverrideEntries} entries` });
   }
   if (value.changes !== undefined) {
     if (!Array.isArray(value.changes)) {
       issues.push({ path: `${path}.changes`, message: "must be an array when provided" });
+    } else if (value.changes.length > reuxSimulationExecutionLimits.maxChangesPerScenario) {
+      issues.push({ path: `${path}.changes`, message: `must include at most ${reuxSimulationExecutionLimits.maxChangesPerScenario} changes` });
     } else {
       value.changes.forEach((change, changeIndex) => validateChangeInput(change, `${path}.changes[${changeIndex}]`, issues));
     }
@@ -187,6 +205,8 @@ function validateChangeInput(value: unknown, path: string, issues: ReuxSimulatio
   }
   if (!isPlainRecord(value.overrides)) {
     issues.push({ path: `${path}.overrides`, message: "must be an object" });
+  } else if (Object.keys(value.overrides).length > reuxSimulationExecutionLimits.maxOverrideEntries) {
+    issues.push({ path: `${path}.overrides`, message: `must include at most ${reuxSimulationExecutionLimits.maxOverrideEntries} entries` });
   }
 }
 
