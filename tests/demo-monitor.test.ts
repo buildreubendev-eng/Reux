@@ -93,6 +93,18 @@ describe("demo monitor alerts", () => {
           domains: ["commerce", "logistics"],
           databaseUrlEnv: "DATABASE_URL",
           sessionMode: "isolated",
+          rateLimit: {
+            maxRequests: 240,
+            writeMaxRequests: 60,
+          },
+          requests: {
+            total: 1,
+            routes: [],
+          },
+          simulationRuns: {
+            records: 0,
+            storage: "postgres",
+          },
         }));
         return;
       }

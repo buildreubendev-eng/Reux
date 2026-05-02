@@ -4,7 +4,7 @@ if (args.includes("--help") || args.includes("-h")) {
 
 Modes:
   default              Check /api/health only.
-  --deep              Also check outbox stats, CORS, and Business Simulator API endpoints.
+  --deep              Also check outbox stats, CORS, saved runs, and simulation API endpoints.
   --smoke             Run deep checks plus a public reset/transaction/outbox smoke in an isolated session.
 
 Options:
@@ -170,6 +170,7 @@ async function readJson(response) {
 async function runBusinessSimulatorApiCheck(baseUrl) {
   const diagnostics = [];
   const checks = [];
+  const headers = smokeSessionId ? { "x-reux-demo-session": smokeSessionId } : {};
 
   const preflight = await fetchJson(baseUrl, "/api/simulations/run", {
     method: "OPTIONS",
@@ -223,10 +224,24 @@ async function runBusinessSimulatorApiCheck(baseUrl) {
   };
   const run = await fetchJson(baseUrl, "/api/simulations/run", {
     method: "POST",
+    headers,
     body: runRequest,
   });
   checks.push(run);
   diagnostics.push(...validateSimulationRun(run.response, run.body, templateId));
+  const runId = run.body?.run?.id;
+
+  let savedRun = null;
+  let savedRunList = null;
+  if (runId) {
+    savedRun = await fetchJson(baseUrl, `/api/simulation-runs/${encodeURIComponent(runId)}`, { headers });
+    checks.push(savedRun);
+    diagnostics.push(...validateSavedSimulationRun(savedRun.response, savedRun.body, runId));
+
+    savedRunList = await fetchJson(baseUrl, "/api/simulation-runs", { headers });
+    checks.push(savedRunList);
+    diagnostics.push(...validateSavedSimulationRunList(savedRunList.response, savedRunList.body, runId));
+  }
 
   const compare = await fetchJson(baseUrl, "/api/scenarios/compare", {
     method: "POST",
@@ -240,6 +255,7 @@ async function runBusinessSimulatorApiCheck(baseUrl) {
 
   const invalidRun = await fetchJson(baseUrl, "/api/simulations/run", {
     method: "POST",
+    headers,
     body: {
       simulationId: templateId,
       baseline: {
@@ -266,6 +282,9 @@ async function runBusinessSimulatorApiCheck(baseUrl) {
     summary: {
       templateId,
       scenarioCount: run.body?.scenarios?.length ?? 0,
+      savedRunId: runId ?? null,
+      savedRunReloaded: savedRun?.body?.run?.id === runId,
+      recentRunListed: Boolean(savedRunList?.body?.runs?.some((candidate) => candidate.id === runId)),
       recommendedScenarioId: run.body?.comparison?.recommendedScenarioId ?? null,
       reuxSource: typeof run.body?.reuxSource === "string" && run.body.reuxSource.includes("simulate operations_decision"),
       validationIssues: invalidRun.body?.issues?.length ?? 0,
@@ -515,7 +534,44 @@ function validateSimulationRun(response, body, expectedId) {
   if (typeof body?.reuxSource !== "string" || !body.reuxSource.includes("simulate operations_decision")) {
     diagnostics.push("business simulator run did not include Reux source transparency output");
   }
+  if (typeof body?.run?.id !== "string" || !body.run.id.startsWith("live_")) {
+    diagnostics.push("business simulator run did not include a live_ saved-run id");
+  }
+  if (body?.run?.simulationId !== expectedId) {
+    diagnostics.push(`business simulator saved-run metadata expected simulationId=${expectedId}, got ${body?.run?.simulationId ?? "missing"}`);
+  }
   if (!body?.generatedAt) diagnostics.push("business simulator run did not include generatedAt");
+  return diagnostics;
+}
+
+function validateSavedSimulationRun(response, body, expectedId) {
+  const diagnostics = [];
+  if (!response.ok) diagnostics.push(`saved simulation run expected 2xx, got ${response.status}`);
+  if (body?.run?.id !== expectedId) {
+    diagnostics.push(`saved simulation run expected id=${expectedId}, got ${body?.run?.id ?? "missing"}`);
+  }
+  if (body?.run?.response?.run?.id !== expectedId) {
+    diagnostics.push("saved simulation run response did not include matching run metadata");
+  }
+  if (!body?.run?.request?.baseline) {
+    diagnostics.push("saved simulation run did not include original request baseline");
+  }
+  if (!body?.run?.response?.comparison?.recommendedScenarioId) {
+    diagnostics.push("saved simulation run did not include response recommendation");
+  }
+  return diagnostics;
+}
+
+function validateSavedSimulationRunList(response, body, expectedId) {
+  const diagnostics = [];
+  if (!response.ok) diagnostics.push(`saved simulation run list expected 2xx, got ${response.status}`);
+  if (!Array.isArray(body?.runs)) {
+    diagnostics.push("saved simulation run list did not include runs array");
+    return diagnostics;
+  }
+  if (!body.runs.some((run) => run.id === expectedId)) {
+    diagnostics.push(`saved simulation run list did not include ${expectedId}`);
+  }
   return diagnostics;
 }
 
@@ -579,6 +635,15 @@ function validateHealth(response, body) {
   }
   if (!body?.databaseUrlEnv) diagnostics.push("health body did not include databaseUrlEnv");
   if (!body?.sessionMode) diagnostics.push("health body did not include sessionMode");
+  if (!body?.rateLimit || typeof body.rateLimit.maxRequests !== "number" || typeof body.rateLimit.writeMaxRequests !== "number") {
+    diagnostics.push("health body did not include rateLimit max request metadata");
+  }
+  if (!body?.requests || typeof body.requests.total !== "number" || !Array.isArray(body.requests.routes)) {
+    diagnostics.push("health body did not include request counter metadata");
+  }
+  if (!body?.simulationRuns || typeof body.simulationRuns.records !== "number" || !body.simulationRuns.storage) {
+    diagnostics.push("health body did not include saved simulation-run storage metadata");
+  }
   return diagnostics;
 }
 
