@@ -47,4 +47,20 @@ describe("release preflight script", () => {
       writeFileSync(generatedPath, original);
     }
   });
+
+  it("accepts generated public assets with CRLF checkout newlines", () => {
+    const generatedPath = "docs/public/reux-public-snapshot.md";
+    const original = readFileSync(generatedPath, "utf8");
+    writeFileSync(generatedPath, original.replace(/\r?\n/g, "\r\n"));
+
+    try {
+      const output = execFileSync(process.execPath, ["scripts/check-public-assets.mjs"], {
+        encoding: "utf8",
+      });
+
+      expect(output).toContain("public assets ok");
+    } finally {
+      writeFileSync(generatedPath, original);
+    }
+  });
 });

@@ -23,7 +23,7 @@ for (const [path, expected] of expectedFiles) {
     continue;
   }
 
-  const actual = readFileSync(path, "utf8");
+  const actual = normalizeNewlines(readFileSync(path, "utf8"));
   if (actual !== expected) failures.push(`${path} is out of sync; run npm run public:write`);
 }
 
@@ -47,6 +47,10 @@ if (failures.length > 0) {
 }
 
 console.log(write ? "public assets regenerated" : "public assets ok");
+
+function normalizeNewlines(value) {
+  return value.replace(/\r\n/g, "\n");
+}
 
 function buildSnapshot(roadmap, capabilities) {
   return {
