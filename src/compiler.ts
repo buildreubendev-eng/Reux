@@ -57,6 +57,12 @@ export {
   createBusinessSimulatorContractFixture,
   emitBusinessSimulatorContractFixture,
 } from "./business-simulator-fixture.js";
+export {
+  getReuxSimulation,
+  listReuxSimulations,
+  ReuxSimulationExecutionError,
+  runReuxSimulation,
+} from "./simulation-service.js";
 export type {
   BusinessSimulatorAssumptions,
   BusinessSimulatorCompareRequest,
@@ -81,6 +87,17 @@ export type {
   GetBusinessSimulationResponse,
   ListBusinessSimulationsResponse,
 } from "./business-simulator-contract.js";
+export type {
+  ReuxSimulationExecutionChangeInput,
+  ReuxSimulationExecutionIssue,
+  ReuxSimulationExecutionRequest,
+  ReuxSimulationExecutionResponse,
+  ReuxSimulationExecutionScenarioInput,
+  ReuxSimulationExecutionValue,
+  ReuxSimulationGetResponse,
+  ReuxSimulationListResponse,
+  ReuxSimulationMetadata,
+} from "./simulation-service.js";
 
 export interface CompileResult {
   program: Program;

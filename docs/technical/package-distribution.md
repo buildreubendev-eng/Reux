@@ -12,13 +12,18 @@ The package exposes:
 - `reux-prototype` compiler APIs through `dist/compiler.js`.
 - `reux-prototype/runtime` runtime APIs through `dist/runtime.js`.
 - Type declarations from the generated `dist/*.d.ts` files.
+- `reux-prototype/simulation` product-facing simulation APIs through `dist/simulation.js`.
+- `reux-prototype/business-simulator` public Business Simulator APIs through `dist/business-simulator.js`.
 
 Example import from another TypeScript project after installing the package:
 
 ```ts
 import { compileSource, emitPostgresSchema } from "reux-prototype";
 import { createPostgresDatabase, runSqlQuery } from "reux-prototype/runtime";
+import { runReuxSimulation } from "reux-prototype/simulation";
 ```
+
+`runReuxSimulation(source, request)` is the generic backend path for PLOS and business-product prototypes. It accepts runtime baseline/scenario overrides, preserves declared Reux units and objectives, and returns a typed run/comparison result without requiring a custom adapter for every product.
 
 ## Local Tarball
 
@@ -36,7 +41,7 @@ npm install -g ./reux-prototype-0.1.0.tgz
 reux version
 ```
 
-`npm run verify:package` runs a package smoke check. It verifies that the exported JavaScript files, generated declaration files, docs, examples, and editor assets exist and are included in the npm tarball dry run. It then creates a real tarball in a temporary directory, installs that tarball into a temporary consumer project, runs the shipped `reux` binary, and imports the compiler, runtime, and business-simulator entrypoints from the installed package. `release:beta-status` reports whether public npm blockers remain without failing on intentional blockers such as `private: true`. `release-preflight.mjs` checks release documentation, package entrypoints, public roadmap status synchronization, and clean-tree readiness. `release:pack-dry-run` rebuilds and prints the npm tarball contents without publishing. The package includes `dist`, `docs`, `editors`, `examples`, `pilot`, migrations, root config, and the README.
+`npm run verify:package` runs a package smoke check. It verifies that the exported JavaScript files, generated declaration files, docs, examples, and editor assets exist and are included in the npm tarball dry run. It then creates a real tarball in a temporary directory, installs that tarball into a temporary consumer project, runs the shipped `reux` binary, and imports the compiler, runtime, simulation, and business-simulator entrypoints from the installed package. `release:beta-status` reports whether public npm blockers remain without failing on intentional blockers such as `private: true`. `release-preflight.mjs` checks release documentation, package entrypoints, public roadmap status synchronization, and clean-tree readiness. `release:pack-dry-run` rebuilds and prints the npm tarball contents without publishing. The package includes `dist`, `docs`, `editors`, `examples`, `pilot`, migrations, root config, and the README.
 
 ## Private Consumption
 

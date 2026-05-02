@@ -208,6 +208,37 @@ node dist/cli.js simulation-packs examples/simulations/workforce_change.reux
 
 Generated simulation TypeScript contracts include typed dimension names, typed assumption maps, metric maps, scenario names, run/result shapes, explanation summaries, summary helper types, runtime helper functions, and a small metadata constant for each simulation. They also include a generated catalog API (`reuxSimulationCatalog`, `listReuxSimulationNames()`, and `findReuxSimulationMetadata(name)`) so a frontend or product backend can discover simulation models without treating them as unstructured JSON or hard-coding source-file details.
 
+Product backends can also execute simulations through the package API without shelling out to the CLI:
+
+```ts
+import { runReuxSimulation } from "reux-prototype/simulation";
+
+const result = runReuxSimulation(source, {
+  simulationName: "personal_finance",
+  assumptions: {
+    income: 6200,
+  },
+  scenarios: [
+    {
+      name: "lower_rent_runtime",
+      overrides: {
+        rent: 1100,
+      },
+      changes: [
+        {
+          period: 6,
+          overrides: {
+            debt_payment: 0,
+          },
+        },
+      ],
+    },
+  ],
+});
+```
+
+`listReuxSimulations(source)` returns product-facing metadata for every simulation in a source file, `getReuxSimulation(source, name)` returns one model, and `runReuxSimulation(source, request)` returns the same run/comparison shape as the CLI. Runtime overrides must reference declared assumptions, keep the original primitive type, preserve declared units, and keep scenario changes inside the forecast window. Invalid requests throw `ReuxSimulationExecutionError` with stable `issues[].path` values so product APIs can return field-level validation messages.
+
 Domain pack reports use dimensions such as `product`, `domain`, and `audience` to classify a simulation against the built-in PLOS and business simulation pack catalog. The report is advisory: it names a matching pack when one exists, reports coverage by dimensions, assumptions, metrics, scenarios, and objectives, and lists suggested assumptions, metrics, scenarios, or objectives that would make the model more complete for that pack. Current built-in packs cover PLOS finance, PLOS habits, business workforce, and business operations, with executable examples now covering PLOS finance, PLOS habits, business workforce, and business operations. This gives PLOS and business simulations a shared vocabulary without forcing every model to use the same shape.
 
 This is not yet the full simulation language. The next layers are richer domain packs for PLOS/business use cases, deeper generated TypeScript clients, and eventually integration with Reux data modules.

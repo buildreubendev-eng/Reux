@@ -35,6 +35,10 @@
       "types": "./dist/business-simulator.d.ts",
       "import": "./dist/business-simulator.js"
     },
+    "./simulation": {
+      "types": "./dist/simulation.d.ts",
+      "import": "./dist/simulation.js"
+    },
     "./package.json": "./package.json"
   },
   "engines": {

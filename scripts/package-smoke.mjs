@@ -12,6 +12,8 @@ const expectedPaths = [
   pkg.exports?.["."]?.types,
   pkg.exports?.["./runtime"]?.import,
   pkg.exports?.["./runtime"]?.types,
+  pkg.exports?.["./simulation"]?.import,
+  pkg.exports?.["./simulation"]?.types,
   pkg.exports?.["./business-simulator"]?.import,
   pkg.exports?.["./business-simulator"]?.types,
   "docs/technical/business-simulator-api.md",
@@ -99,6 +101,7 @@ try {
     `import { compileSource, emitPostgresSchema, getReuxCapabilities } from "${pkg.name}";
 import { businessSimulatorContractVersion } from "${pkg.name}/business-simulator";
 import { createPostgresDatabase } from "${pkg.name}/runtime";
+import { runReuxSimulation } from "${pkg.name}/simulation";
 
 const source = \`module smoke
 
@@ -106,14 +109,23 @@ entity Account {
   id: Id<Account> primary generated
   email: String unique
 }
+
+simulate cash {
+  income = 100 USD
+  rent = 40 USD
+  formula cash_flow = income - rent
+  forecast 1 month
+}
 \`;
 const compiled = compileSource(source);
 const sql = emitPostgresSchema(source);
+const simulation = runReuxSimulation(source, { simulationName: "cash", assumptions: { income: 120 } });
 if (compiled.schema.entities.length !== 1) throw new Error("compiler import failed");
 if (!sql.includes("CREATE TABLE accounts")) throw new Error("schema emitter import failed");
 if (getReuxCapabilities().project !== "Reux") throw new Error("capabilities export failed");
 if (typeof businessSimulatorContractVersion !== "string") throw new Error("business simulator export failed");
 if (typeof createPostgresDatabase !== "function") throw new Error("runtime export failed");
+if (simulation.run.periods[0].metrics.cash_flow !== 80) throw new Error("simulation export failed");
 console.log("consumer import smoke ok");
 `,
   );

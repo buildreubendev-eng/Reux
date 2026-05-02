@@ -62,8 +62,8 @@ if (!pkg.bin?.reux || !pkg.bin?.dl) {
   failures.push("package must expose both reux and dl binaries");
 }
 
-if (!pkg.exports?.["."]?.import || !pkg.exports?.["./runtime"]?.import || !pkg.exports?.["./business-simulator"]?.import) {
-  failures.push("package exports must include compiler, runtime, and business simulator entrypoints");
+if (!pkg.exports?.["."]?.import || !pkg.exports?.["./runtime"]?.import || !pkg.exports?.["./simulation"]?.import || !pkg.exports?.["./business-simulator"]?.import) {
+  failures.push("package exports must include compiler, runtime, simulation, and business simulator entrypoints");
 }
 
 const status = roadmap.status ?? {};
