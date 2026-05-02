@@ -39,7 +39,7 @@ The browser-facing website should generate one stable session id and reuse it. T
 | `GET /api/health` | Deployment health, active domains, `jsonBodyLimitBytes`, and `sessionCache` counters. |
 | `GET /api/ops` | Cross-domain queue health for the active session. |
 
-`/api/health` is the safest first call after a deploy. It should return `ok: true`, `module: "pilot"`, `apiVersion`, `packageVersion`, `build`, both `commerce` and `logistics` in `domains`, the active request-body limit, and session-cache stats.
+`/api/health` is the safest first call after a deploy. It should return `ok: true`, `module: "pilot"`, `apiVersion`, `packageVersion`, `build`, both `commerce` and `logistics` in `domains`, the active request-body limit, session-cache stats, and saved simulation-run storage stats.
 
 Public API responses also include:
 
@@ -62,7 +62,7 @@ Public API responses also include:
 
 These routes are public and do not require an admin token or visitor session. They are the contract the Reuben website Business Simulator should use.
 
-`POST /api/simulations/run` saves the hosted-demo result in a bounded temporary store and includes a `run` summary with a `live_...` ID. The run-list route is session-scoped; direct lookup by ID is public so result pages can be shared. Saved runs are intentionally temporary in the public demo and can expire.
+`POST /api/simulations/run` saves the hosted-demo result in PostgreSQL with a bounded in-memory fallback and includes a `run` summary with a `live_...` ID. The run-list route is session-scoped; direct lookup by ID is public so result pages can be shared. Saved runs are intentionally temporary in the public demo and can expire.
 
 ## Generic Reux Simulation Routes
 

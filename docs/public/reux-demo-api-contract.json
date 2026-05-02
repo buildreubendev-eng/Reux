@@ -64,7 +64,7 @@
       "path": "/api/health",
       "auth": "public",
       "session": "none",
-      "purpose": "Read deployment health, active domains, body limit, and session-cache counters."
+      "purpose": "Read deployment health, active domains, body limit, session-cache counters, and saved simulation-run storage stats."
     },
     {
       "name": "operationsDashboard",
@@ -96,7 +96,7 @@
       "path": "/api/simulations/run",
       "auth": "public",
       "session": "optional isolated visitor session",
-      "purpose": "Run a baseline plus scenarios, save a temporary run record, and return metrics, forecast timeline, recommendation, optional Reux source, and run metadata."
+      "purpose": "Run a baseline plus scenarios, save a temporary PostgreSQL-backed run record, and return metrics, forecast timeline, recommendation, optional Reux source, and run metadata."
     },
     {
       "name": "listBusinessSimulationRuns",

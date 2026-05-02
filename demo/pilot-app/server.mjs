@@ -49,6 +49,7 @@ import {
   createSimulationRunStore,
   defaultMaxSimulationRunRecords,
   defaultSimulationRunTtlMs,
+  recordSummary,
 } from "./simulation-runs.mjs";
 
 const rootDir = resolve(fileURLToPath(new URL("../..", import.meta.url)));
@@ -67,9 +68,11 @@ const corsMaxAgeSeconds = parsePositiveInteger(process.env.REUX_DEMO_CORS_MAX_AG
 const jsonBodyLimitBytes = parsePositiveInteger(process.env.REUX_DEMO_JSON_BODY_LIMIT_BYTES, defaultJsonBodyLimitBytes);
 const maxSessionContexts = parsePositiveInteger(process.env.REUX_DEMO_MAX_SESSION_CONTEXTS, defaultMaxSessionContexts);
 const sessionIdleMs = parsePositiveInteger(process.env.REUX_DEMO_SESSION_IDLE_MS, defaultSessionIdleMs);
+const maxSimulationRunRecords = parsePositiveInteger(process.env.REUX_DEMO_MAX_SIMULATION_RUNS, defaultMaxSimulationRunRecords);
+const simulationRunTtlMs = parsePositiveInteger(process.env.REUX_DEMO_SIMULATION_RUN_TTL_MS, defaultSimulationRunTtlMs);
 const simulationRunStore = createSimulationRunStore({
-  maxRecords: parsePositiveInteger(process.env.REUX_DEMO_MAX_SIMULATION_RUNS, defaultMaxSimulationRunRecords),
-  ttlMs: parsePositiveInteger(process.env.REUX_DEMO_SIMULATION_RUN_TTL_MS, defaultSimulationRunTtlMs),
+  maxRecords: maxSimulationRunRecords,
+  ttlMs: simulationRunTtlMs,
 });
 const buildId = buildIdentifier();
 const baseDatabaseUrl = process.env[config.databaseUrlEnv];
@@ -179,7 +182,7 @@ async function route(request, response) {
       sessionMode,
       jsonBodyLimitBytes,
       sessionCache: sessionCacheStats(databases, { idleMs: sessionIdleMs, maxContexts: maxSessionContexts }),
-      simulationRuns: simulationRunStore.stats(),
+      simulationRuns: await simulationRunStats(),
       domains: Object.keys(domains),
       productSimulations: listProductSimulations().simulations.map((simulation) => simulation.name),
     });
@@ -214,13 +217,13 @@ async function route(request, response) {
   }
 
   if (url.pathname === "/api/simulation-runs" && method === "GET") {
-    sendJson(response, 200, businessSimulationRuns(request));
+    sendJson(response, 200, await businessSimulationRuns(request));
     return;
   }
 
   if (url.pathname.startsWith("/api/simulation-runs/") && method === "GET") {
     const id = decodeURIComponent(url.pathname.slice("/api/simulation-runs/".length));
-    sendJson(response, 200, businessSimulationRunRecord(id));
+    sendJson(response, 200, await businessSimulationRunRecord(id));
     return;
   }
 
@@ -231,7 +234,7 @@ async function route(request, response) {
   }
 
   if (url.pathname === "/api/simulations/run" && method === "POST") {
-    sendJson(response, 200, businessSimulationRun(request, await readJson(request, { limitBytes: jsonBodyLimitBytes })));
+    sendJson(response, 200, await businessSimulationRun(request, await readJson(request, { limitBytes: jsonBodyLimitBytes })));
     return;
   }
 
@@ -596,14 +599,22 @@ function businessSimulationTemplate(id) {
   }
 }
 
-function businessSimulationRuns(request) {
-  return {
-    runs: simulationRunStore.list({ sessionId: simulationSession(request).id }),
-  };
+async function businessSimulationRuns(request) {
+  const sessionId = simulationSession(request).id;
+  try {
+    return {
+      runs: await listPersistedSimulationRuns(sessionId),
+    };
+  } catch (error) {
+    console.warn(`falling back to in-memory simulation run list: ${error.message}`);
+    return {
+      runs: simulationRunStore.list({ sessionId }),
+    };
+  }
 }
 
-function businessSimulationRunRecord(id) {
-  const record = simulationRunStore.get(id);
+async function businessSimulationRunRecord(id) {
+  const record = simulationRunStore.get(id) ?? (await getPersistedSimulationRun(id));
   if (!record) {
     const error = new Error(`simulation run '${id}' was not found`);
     error.statusCode = 404;
@@ -613,14 +624,20 @@ function businessSimulationRunRecord(id) {
   return { run: record };
 }
 
-function businessSimulationRun(request, body) {
+async function businessSimulationRun(request, body) {
   try {
     const response = runBusinessSimulator(body);
-    return simulationRunStore.save({
+    const record = simulationRunStore.save({
       request: body,
       response,
       session: simulationSession(request),
-    }).response;
+    });
+    try {
+      await savePersistedSimulationRun(record);
+    } catch (error) {
+      console.warn(`failed to persist simulation run ${record.id}: ${error.message}`);
+    }
+    return record.response;
   } catch (error) {
     throw withStatus(error, 400);
   }
@@ -807,6 +824,163 @@ function simulationSession(request) {
   };
 }
 
+async function simulationRunStats() {
+  const fallback = simulationRunStore.stats();
+  try {
+    const context = await simulationRunContext();
+    const result = await context.db.query(`
+SELECT count(*) AS records,
+       min(created_at) AS oldest_created_at,
+       max(created_at) AS newest_created_at
+FROM ${simulationRunTable(context)}
+WHERE expires_at > now();
+`);
+    const row = result.rows[0] ?? {};
+    return {
+      records: Number(row.records ?? 0),
+      maxRecords: maxSimulationRunRecords,
+      ttlMs: simulationRunTtlMs,
+      storage: "postgres",
+      oldestCreatedAt: timestampValue(row.oldest_created_at),
+      newestCreatedAt: timestampValue(row.newest_created_at),
+      memoryFallback: fallback,
+    };
+  } catch (error) {
+    return {
+      ...fallback,
+      storage: "memory",
+      persistenceError: error.message,
+    };
+  }
+}
+
+async function savePersistedSimulationRun(record) {
+  const context = await simulationRunContext();
+  await context.db.query(
+    `
+INSERT INTO ${simulationRunTable(context)}
+  (id, simulation_id, session_id, session_isolated, session_schema, request, response, created_at, expires_at)
+VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8::timestamptz, $9::timestamptz)
+ON CONFLICT (id) DO UPDATE SET
+  simulation_id = excluded.simulation_id,
+  session_id = excluded.session_id,
+  session_isolated = excluded.session_isolated,
+  session_schema = excluded.session_schema,
+  request = excluded.request,
+  response = excluded.response,
+  created_at = excluded.created_at,
+  expires_at = excluded.expires_at;
+`,
+    [
+      record.id,
+      record.simulationId,
+      record.session.id,
+      record.session.isolated,
+      record.session.schema ?? null,
+      JSON.stringify(record.request),
+      JSON.stringify(record.response),
+      record.createdAt,
+      record.expiresAt,
+    ],
+  );
+  await prunePersistedSimulationRuns(context);
+}
+
+async function getPersistedSimulationRun(id) {
+  try {
+    const context = await simulationRunContext();
+    const result = await context.db.query(
+      `
+SELECT id, simulation_id, session_id, session_isolated, session_schema, request, response, created_at, expires_at
+FROM ${simulationRunTable(context)}
+WHERE id = $1 AND expires_at > now();
+`,
+      [id],
+    );
+    return result.rows[0] ? simulationRunRecordFromRow(result.rows[0]) : null;
+  } catch (error) {
+    console.warn(`failed to load persisted simulation run ${id}: ${error.message}`);
+    return null;
+  }
+}
+
+async function listPersistedSimulationRuns(sessionId) {
+  const context = await simulationRunContext();
+  const result = await context.db.query(
+    `
+SELECT id, simulation_id, session_id, session_isolated, session_schema, request, response, created_at, expires_at
+FROM ${simulationRunTable(context)}
+WHERE ($1::text = '' OR session_id = $1) AND expires_at > now()
+ORDER BY created_at DESC
+LIMIT $2;
+`,
+    [sessionId, maxSimulationRunRecords],
+  );
+  return result.rows.map((row) => recordSummary(simulationRunRecordFromRow(row)));
+}
+
+async function prunePersistedSimulationRuns(context) {
+  await context.db.query(`DELETE FROM ${simulationRunTable(context)} WHERE expires_at <= now();`);
+  const extra = await context.db.query(
+    `SELECT id FROM ${simulationRunTable(context)} ORDER BY created_at DESC OFFSET $1;`,
+    [maxSimulationRunRecords],
+  );
+  const ids = extra.rows.map((row) => row.id);
+  if (ids.length > 0) {
+    await context.db.query(`DELETE FROM ${simulationRunTable(context)} WHERE id = ANY($1::text[]);`, [ids]);
+  }
+}
+
+async function simulationRunContext() {
+  const context = schemaContext(demoSchema, "");
+  await ensureDemoSchema(context);
+  await ensureSimulationRunTable(context);
+  return context;
+}
+
+async function ensureSimulationRunTable(context) {
+  await context.db.query(`
+CREATE TABLE IF NOT EXISTS ${simulationRunTable(context)} (
+  id text PRIMARY KEY,
+  simulation_id text NOT NULL,
+  session_id text NOT NULL DEFAULT '',
+  session_isolated boolean NOT NULL DEFAULT false,
+  session_schema text NULL,
+  request jsonb NOT NULL,
+  response jsonb NOT NULL,
+  created_at timestamptz NOT NULL,
+  expires_at timestamptz NOT NULL
+);
+`);
+  await context.db.query(`CREATE INDEX IF NOT EXISTS _reux_simulation_runs_session_created_idx ON ${simulationRunTable(context)} (session_id, created_at DESC);`);
+  await context.db.query(`CREATE INDEX IF NOT EXISTS _reux_simulation_runs_expires_idx ON ${simulationRunTable(context)} (expires_at);`);
+}
+
+function simulationRunTable(context) {
+  return `${context.quotedSchema}._reux_simulation_runs`;
+}
+
+function simulationRunRecordFromRow(row) {
+  const record = {
+    id: row.id,
+    simulationId: row.simulation_id,
+    createdAt: timestampValue(row.created_at),
+    expiresAt: timestampValue(row.expires_at),
+    session: {
+      id: row.session_id ?? "",
+      isolated: Boolean(row.session_isolated),
+      schema: row.session_schema ?? undefined,
+    },
+    request: jsonValue(row.request),
+    response: jsonValue(row.response),
+  };
+  record.response = {
+    ...record.response,
+    run: recordSummary(record),
+  };
+  return record;
+}
+
 function schemaContext(schema, sessionId) {
   assertPostgresIdentifier(schema, "demo schema must be a PostgreSQL identifier");
   pruneSessionContexts(schema);
@@ -893,6 +1067,10 @@ async function tableExists(db, tableName) {
 function timestampValue(value) {
   if (value === null || value === undefined) return null;
   return value instanceof Date ? value.toISOString() : String(value);
+}
+
+function jsonValue(value) {
+  return typeof value === "string" ? JSON.parse(value) : value;
 }
 
 async function ensureDemoOutboxTable(context) {

@@ -158,7 +158,7 @@ Frontend clients should prefer `issues` for field-level UI and fall back to `mes
 
 ## Saved Run Records
 
-The hosted demo stores recent Business Simulator runs in a bounded in-memory store. This is a product-facing contract, not permanent storage yet: it gives frontend result pages and share links a stable backend lookup path while keeping the first public implementation operationally simple.
+The hosted demo stores recent Business Simulator runs in PostgreSQL with a bounded in-memory fallback. This is a product-facing contract, not a full account system yet: it gives frontend result pages and share links a stable backend lookup path while keeping the first public implementation operationally simple.
 
 `POST /api/simulations/run` includes a `run` summary when the hosted server saves the result:
 
@@ -178,14 +178,14 @@ The hosted demo stores recent Business Simulator runs in a bounded in-memory sto
 
 `GET /api/simulation-runs` returns session-scoped summaries so a visitor can revisit recent work without seeing another visitor's run list. `GET /api/simulation-runs/:id` loads the full request and response for a known run ID, which is the shareable result-page path the frontend can use.
 
-The demo store is configured with:
+The persisted demo store is configured with:
 
 | Environment variable | Default | Purpose |
 | --- | ---: | --- |
 | `REUX_DEMO_MAX_SIMULATION_RUNS` | `200` | Maximum saved run records before oldest records are evicted. |
 | `REUX_DEMO_SIMULATION_RUN_TTL_MS` | `86400000` | How long saved runs remain available. |
 
-The future production version should move this store to PostgreSQL with tenant/user ownership, but the response shapes should stay compatible.
+The future production version should add tenant/user ownership, retention controls, and admin cleanup views, but the response shapes should stay compatible.
 
 ## Backend Integration Notes
 

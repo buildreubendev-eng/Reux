@@ -146,7 +146,7 @@ REUX_DEMO_SIMULATION_RUN_TTL_MS=86400000
 
 `REUX_DEMO_MAX_SESSION_CONTEXTS` defaults to `100` and limits how many shared/visitor database contexts the Node process keeps open. `REUX_DEMO_SESSION_IDLE_MS` defaults to `1800000` and lets the service close idle session contexts as new requests arrive. `/api/health` reports `sessionCache.contexts`, isolated/shared counts, idle counts, and the active limits so public-demo operators can spot runaway visitor sessions before they become a hosting problem.
 
-`REUX_DEMO_MAX_SIMULATION_RUNS` defaults to `200` and limits the hosted Business Simulator's temporary saved-result store. `REUX_DEMO_SIMULATION_RUN_TTL_MS` defaults to `86400000` and controls how long `GET /api/simulation-runs/:id` can retrieve a run before it expires. `/api/health` reports `simulationRuns` counters and limits.
+`REUX_DEMO_MAX_SIMULATION_RUNS` defaults to `200` and limits the hosted Business Simulator's PostgreSQL-backed temporary saved-result store. `REUX_DEMO_SIMULATION_RUN_TTL_MS` defaults to `86400000` and controls how long `GET /api/simulation-runs/:id` can retrieve a run before it expires. `/api/health` reports `simulationRuns` counters, storage mode, and limits. If persistence has a transient problem, the demo falls back to the process-local memory store and reports the persistence error in health output.
 
 ## First Setup
 
