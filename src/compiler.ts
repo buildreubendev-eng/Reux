@@ -60,7 +60,10 @@ export {
 export {
   getReuxSimulation,
   listReuxSimulations,
+  createReuxSimulationExecutionFixture,
+  emitReuxSimulationExecutionFixture,
   ReuxSimulationExecutionError,
+  reuxSimulationExecutionFixtureDate,
   reuxSimulationExecutionLimits,
   runReuxSimulation,
 } from "./simulation-service.js";
@@ -90,6 +93,8 @@ export type {
 } from "./business-simulator-contract.js";
 export type {
   ReuxSimulationExecutionChangeInput,
+  ReuxSimulationExecutionErrorResponse,
+  ReuxSimulationExecutionFixture,
   ReuxSimulationExecutionIssue,
   ReuxSimulationExecutionRequest,
   ReuxSimulationExecutionResponse,

@@ -18,6 +18,7 @@ import {
   emitQuerySql,
   emitSchemaManifest,
   emitSimulationIr,
+  emitReuxSimulationExecutionFixture,
   emitSimulationPacks,
   emitSimulationRun,
   emitSimulationTypes,
@@ -550,6 +551,8 @@ try {
       console.log(emitSimulationIr(source, extra));
     } else if (command === "simulation-run") {
       console.log(emitSimulationRun(source, extra));
+    } else if (command === "simulation-execution-fixture") {
+      console.log(emitReuxSimulationExecutionFixture(source, extra));
     } else if (command === "explain") {
       if (!extra) {
         throw new Error("explain requires a query name");

@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   getReuxSimulation,
+  createReuxSimulationExecutionFixture,
   listReuxSimulations,
   ReuxSimulationExecutionError,
   reuxSimulationExecutionLimits,
@@ -157,5 +158,25 @@ describe("product-facing simulation service", () => {
     }
 
     throw new Error("expected oversized request to fail");
+  });
+
+  it("emits a deterministic execution fixture for frontend/backend handoff", () => {
+    const fixture = createReuxSimulationExecutionFixture(financeSource(), "personal_finance");
+
+    expect(fixture).toMatchObject({
+      contract: "reux-simulation-execution",
+      version: "2026-05-02",
+      generatedAt: "2026-05-02T00:00:00.000Z",
+      runRequest: {
+        simulationName: "personal_finance",
+      },
+      invalidRunResponse: {
+        ok: false,
+        code: "simulation_execution_validation_failed",
+      },
+    });
+    expect(fixture.limits.maxScenarios).toBe(reuxSimulationExecutionLimits.maxScenarios);
+    expect(fixture.runResponse.run.name).toBe("personal_finance");
+    expect(fixture.invalidRunResponse.issues[0]?.path).toBe("$.assumptions.income");
   });
 });

@@ -58,6 +58,27 @@ export interface ReuxSimulationExecutionResponse {
   generatedAt: string;
 }
 
+export interface ReuxSimulationExecutionErrorResponse {
+  ok: false;
+  error: string;
+  message: string;
+  code: "simulation_execution_validation_failed";
+  issues: ReuxSimulationExecutionIssue[];
+}
+
+export interface ReuxSimulationExecutionFixture {
+  contract: "reux-simulation-execution";
+  version: string;
+  generatedAt: string;
+  limits: typeof reuxSimulationExecutionLimits;
+  listResponse: ReuxSimulationListResponse;
+  getResponse: ReuxSimulationGetResponse;
+  runRequest: ReuxSimulationExecutionRequest;
+  runResponse: ReuxSimulationExecutionResponse;
+  invalidRunRequest: ReuxSimulationExecutionRequest;
+  invalidRunResponse: ReuxSimulationExecutionErrorResponse;
+}
+
 export interface ReuxSimulationExecutionIssue {
   path: string;
   message: string;
@@ -74,6 +95,8 @@ export class ReuxSimulationExecutionError extends Error {
     this.issues = issues;
   }
 }
+
+export const reuxSimulationExecutionFixtureDate = "2026-05-02T00:00:00.000Z";
 
 export function listReuxSimulations(source: string): ReuxSimulationListResponse {
   return { simulations: compileSimulations(source).map((simulation) => simulationMetadata(simulation)) };
@@ -94,6 +117,35 @@ export function runReuxSimulation(source: string, request: ReuxSimulationExecuti
     run,
     generatedAt: now.toISOString(),
   };
+}
+
+export function createReuxSimulationExecutionFixture(
+  source: string,
+  simulationName?: string,
+  now: Date = new Date(reuxSimulationExecutionFixtureDate),
+): ReuxSimulationExecutionFixture {
+  const listResponse = listReuxSimulations(source);
+  const selectedName = simulationName ?? listResponse.simulations[0]?.name;
+  const getResponse = getReuxSimulation(source, selectedName);
+  const runRequest = sampleRunRequest(getResponse.simulation);
+  const invalidRunRequest = sampleInvalidRunRequest(getResponse.simulation);
+
+  return {
+    contract: "reux-simulation-execution",
+    version: "2026-05-02",
+    generatedAt: now.toISOString(),
+    limits: reuxSimulationExecutionLimits,
+    listResponse,
+    getResponse,
+    runRequest,
+    runResponse: runReuxSimulation(source, runRequest, now),
+    invalidRunRequest,
+    invalidRunResponse: simulationErrorResponse(captureExecutionError(source, invalidRunRequest)),
+  };
+}
+
+export function emitReuxSimulationExecutionFixture(source: string, simulationName?: string, now?: Date): string {
+  return `${JSON.stringify(createReuxSimulationExecutionFixture(source, simulationName, now), null, 2)}\n`;
 }
 
 function compileSimulations(source: string): SimulationIr[] {
@@ -303,6 +355,67 @@ function simulationMetadata(simulation: SimulationIr, run = runSimulationIr(simu
     metrics: metricNames(run),
     objectives: simulation.objectives,
     scenarios: run.scenarios?.map((scenario) => scenario.name) ?? ["baseline"],
+  };
+}
+
+function sampleRunRequest(simulation: ReuxSimulationMetadata): ReuxSimulationExecutionRequest {
+  const override = sampleOverride(simulation);
+  return {
+    simulationName: simulation.name,
+    ...(override ? { assumptions: { [override.name]: override.value } } : {}),
+    scenarios: [
+      {
+        name: "runtime_adjustment",
+        ...(override ? { overrides: { [override.name]: override.value } } : {}),
+      },
+    ],
+  };
+}
+
+function sampleInvalidRunRequest(simulation: ReuxSimulationMetadata): ReuxSimulationExecutionRequest {
+  const assumption = simulation.assumptions[0];
+  return {
+    simulationName: simulation.name,
+    assumptions: assumption ? { [assumption.name]: invalidValueFor(assumption.type) } : { missing: 1 },
+  };
+}
+
+function sampleOverride(simulation: ReuxSimulationMetadata): { name: string; value: ReuxSimulationExecutionValue } | undefined {
+  const numeric = simulation.assumptions.find((assumption) => assumption.type === "number");
+  if (numeric && typeof numeric.value === "number") {
+    const nextValue = numeric.value === 0 ? 1 : Number((numeric.value * 1.1).toFixed(6));
+    return { name: numeric.name, value: nextValue };
+  }
+  const first = simulation.assumptions[0];
+  if (!first) return undefined;
+  if (first.type === "boolean") return { name: first.name, value: !first.value };
+  if (first.type === "string") return { name: first.name, value: `${first.value}_runtime` };
+  return undefined;
+}
+
+function invalidValueFor(type: ReuxSimulationMetadata["assumptions"][number]["type"]): ReuxSimulationExecutionValue {
+  if (type === "number") return "not-a-number";
+  if (type === "boolean") return "not-a-boolean";
+  return 123;
+}
+
+function captureExecutionError(source: string, request: ReuxSimulationExecutionRequest): ReuxSimulationExecutionError {
+  try {
+    runReuxSimulation(source, request, new Date(reuxSimulationExecutionFixtureDate));
+  } catch (error) {
+    if (error instanceof ReuxSimulationExecutionError) return error;
+    throw error;
+  }
+  throw new Error("sample invalid simulation request unexpectedly passed validation");
+}
+
+function simulationErrorResponse(error: ReuxSimulationExecutionError): ReuxSimulationExecutionErrorResponse {
+  return {
+    ok: false,
+    error: error.message,
+    message: error.message,
+    code: error.code,
+    issues: error.issues,
   };
 }
 

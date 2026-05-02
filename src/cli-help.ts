@@ -83,6 +83,7 @@ const commandNames = [
   "tx-run",
   "simulation-ir",
   "simulation-run",
+  "simulation-execution-fixture",
   "explain",
   "migrate-create",
   "migrate-plan",
@@ -513,6 +514,12 @@ const commandDetails: Record<string, Partial<CliCommandInfo>> = {
     summary: "Run a simulation from one source file.",
     usage: "reux simulation-run <source.dl|source.reux> [simulation-name]",
     examples: ["reux simulation-run examples/simulations/workforce_change.reux"],
+  },
+  "simulation-execution-fixture": {
+    category: "Simulation",
+    summary: "Emit a product-facing simulation execution contract fixture.",
+    usage: "reux simulation-execution-fixture <source.dl|source.reux> [simulation-name]",
+    examples: ["reux simulation-execution-fixture examples/simulations/personal_finance.reux personal_finance"],
   },
   "simulation-types-ts": {
     category: "Simulation",
