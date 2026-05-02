@@ -6,6 +6,7 @@ const allowDirty = process.argv.includes("--allow-dirty");
 const requiredDocs = [
   "README.md",
   "docs/technical/business-simulator-api.md",
+  "docs/technical/public-demo-api.md",
   "docs/technical/demo-deployment.md",
   "docs/technical/release.md",
   "docs/technical/package-distribution.md",
@@ -20,6 +21,7 @@ const requiredDocs = [
   "docs/public/reux-public-snapshot.md",
   "docs/public/reux-public-snapshot.json",
   "docs/public/reux-demo-testing-guide.md",
+  "docs/public/reux-demo-api-contract.json",
   "docs/technical/next-backlog.md",
   "docs/technical/next-backlog.json",
 ];
@@ -32,6 +34,7 @@ const requiredScripts = [
   "onboarding:doctor",
   "demo:healthcheck",
   "demo:monitor",
+  "check:demo-contract",
   "check:public",
   "public:write",
   "release:preflight",
@@ -75,6 +78,8 @@ const roadmapMarkdown = readFileSync("docs/public/reux-roadmap.md", "utf8");
 const capabilitiesMarkdown = readFileSync("docs/public/reux-capabilities.md", "utf8");
 const demoDeploymentMarkdown = readFileSync("docs/technical/demo-deployment.md", "utf8");
 const demoTestingMarkdown = readFileSync("docs/public/reux-demo-testing-guide.md", "utf8");
+const publicDemoApiMarkdown = readFileSync("docs/technical/public-demo-api.md", "utf8");
+const publicDemoApiContract = readJson("docs/public/reux-demo-api-contract.json");
 if (!roadmapMarkdown.includes(`Demo readiness: roughly ${status.demoReadinessPercent}%`)) {
   failures.push("public roadmap markdown demo percentage does not match roadmap JSON");
 }
@@ -86,6 +91,12 @@ if (!demoDeploymentMarkdown.includes("REUX_DEMO_MONITOR_ALERT_WEBHOOK_URL")) {
 }
 if (!demoTestingMarkdown.includes("--alert-webhook-url")) {
   failures.push("public demo testing guide must document monitor alert webhook usage");
+}
+if (publicDemoApiContract.contract !== "public-demo-api" || !publicDemoApiMarkdown.includes(publicDemoApiContract.version)) {
+  failures.push("public demo API contract docs must match the JSON contract version");
+}
+if (!publicDemoApiContract.routes?.some((route) => route.path === "/api/simulations/run" && route.method === "POST")) {
+  failures.push("public demo API contract must document the simulator run endpoint");
 }
 if (!roadmap.liveNow?.some((item) => String(item).includes("webhook alerts"))) {
   failures.push("public roadmap JSON must list monitor webhook alerts as live");

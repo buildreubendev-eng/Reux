@@ -1,0 +1,218 @@
+{
+  "project": "Reux",
+  "contract": "public-demo-api",
+  "version": "2026-05-02",
+  "baseUrlEnv": "NEXT_PUBLIC_REUX_DEMO_URL",
+  "defaultBaseUrl": "https://reux-pilot-demo-production.up.railway.app",
+  "headers": [
+    {
+      "name": "content-type",
+      "requiredFor": ["POST"],
+      "value": "application/json"
+    },
+    {
+      "name": "x-reux-demo-session",
+      "requiredFor": ["visitor isolation"],
+      "value": "stable browser session id, 8-16 normalized alphanumeric characters"
+    },
+    {
+      "name": "x-reux-demo-token",
+      "requiredFor": ["admin setup routes when REUX_DEMO_SETUP_TOKEN is set"],
+      "value": "private deployment token"
+    }
+  ],
+  "limits": {
+    "jsonBodyLimitBytesDefault": 65536,
+    "maxSessionContextsDefault": 100,
+    "sessionIdleMsDefault": 1800000,
+    "businessSimulatorMaxRunScenarios": 8,
+    "businessSimulatorMaxCompareScenarios": 12,
+    "businessSimulatorMaxForecastPeriods": 52
+  },
+  "errorCodes": [
+    "business_simulator_validation_failed",
+    "invalid_json",
+    "request_too_large",
+    "not_found",
+    "method_not_allowed",
+    "request_failed"
+  ],
+  "routes": [
+    {
+      "name": "health",
+      "method": "GET",
+      "path": "/api/health",
+      "auth": "public",
+      "session": "none",
+      "purpose": "Read deployment health, active domains, body limit, and session-cache counters."
+    },
+    {
+      "name": "operationsDashboard",
+      "method": "GET",
+      "path": "/api/ops",
+      "auth": "public",
+      "session": "optional isolated visitor session",
+      "purpose": "Read cross-domain queue health for lightweight operations checks."
+    },
+    {
+      "name": "listBusinessSimulations",
+      "method": "GET",
+      "path": "/api/simulations",
+      "auth": "public",
+      "session": "none",
+      "purpose": "List Business Simulator templates for website clients."
+    },
+    {
+      "name": "getBusinessSimulation",
+      "method": "GET",
+      "path": "/api/simulations/operations-decision",
+      "auth": "public",
+      "session": "none",
+      "purpose": "Load the current operations-decision template, defaults, and starter scenarios."
+    },
+    {
+      "name": "runBusinessSimulation",
+      "method": "POST",
+      "path": "/api/simulations/run",
+      "auth": "public",
+      "session": "none",
+      "purpose": "Run a baseline plus scenarios and return metrics, forecast timeline, recommendation, and optional Reux source."
+    },
+    {
+      "name": "compareBusinessScenarios",
+      "method": "POST",
+      "path": "/api/scenarios/compare",
+      "auth": "public",
+      "session": "none",
+      "purpose": "Compare already-run Business Simulator scenario results."
+    },
+    {
+      "name": "commerceDashboard",
+      "method": "GET",
+      "path": "/api/dashboard",
+      "auth": "public",
+      "session": "isolated visitor session",
+      "purpose": "Read commerce demo state, queue health, and setup-required status."
+    },
+    {
+      "name": "commerceResetSession",
+      "method": "POST",
+      "path": "/api/session/reset",
+      "auth": "public",
+      "session": "isolated visitor session",
+      "purpose": "Create/reset the caller's commerce seed data without requiring the admin token."
+    },
+    {
+      "name": "commerceSetup",
+      "method": "POST",
+      "path": "/api/setup",
+      "auth": "admin token when configured",
+      "session": "shared or isolated session",
+      "purpose": "Apply schema and reset commerce seed data for admin setup flows."
+    },
+    {
+      "name": "commerceCapturePayment",
+      "method": "POST",
+      "path": "/api/actions/capture-payment",
+      "auth": "public",
+      "session": "isolated visitor session",
+      "purpose": "Run the commerce payment-capture transaction."
+    },
+    {
+      "name": "commerceMarkPaid",
+      "method": "POST",
+      "path": "/api/actions/mark-paid",
+      "auth": "public",
+      "session": "isolated visitor session",
+      "purpose": "Run the commerce order-paid transaction."
+    },
+    {
+      "name": "commerceCreditAccount",
+      "method": "POST",
+      "path": "/api/actions/credit-account",
+      "auth": "public",
+      "session": "isolated visitor session",
+      "purpose": "Run the commerce account-credit transaction."
+    },
+    {
+      "name": "commerceProcessOutbox",
+      "method": "POST",
+      "path": "/api/outbox/process",
+      "auth": "public",
+      "session": "isolated visitor session",
+      "purpose": "Process pending commerce outbox events for the caller's session."
+    },
+    {
+      "name": "commerceOutboxStats",
+      "method": "GET",
+      "path": "/api/outbox/stats",
+      "auth": "public",
+      "session": "isolated visitor session",
+      "purpose": "Read commerce outbox totals grouped by status."
+    },
+    {
+      "name": "logisticsDashboard",
+      "method": "GET",
+      "path": "/api/logistics/dashboard",
+      "auth": "public",
+      "session": "isolated visitor session",
+      "purpose": "Read logistics demo state, queue health, and setup-required status."
+    },
+    {
+      "name": "logisticsResetSession",
+      "method": "POST",
+      "path": "/api/logistics/session/reset",
+      "auth": "public",
+      "session": "isolated visitor session",
+      "purpose": "Create/reset the caller's logistics seed data without requiring the admin token."
+    },
+    {
+      "name": "logisticsSetup",
+      "method": "POST",
+      "path": "/api/logistics/setup",
+      "auth": "admin token when configured",
+      "session": "shared or isolated session",
+      "purpose": "Apply schema and reset logistics seed data for admin setup flows."
+    },
+    {
+      "name": "logisticsStartShipment",
+      "method": "POST",
+      "path": "/api/logistics/actions/start-shipment",
+      "auth": "public",
+      "session": "isolated visitor session",
+      "purpose": "Run the logistics shipment-start transaction."
+    },
+    {
+      "name": "logisticsMarkDelivered",
+      "method": "POST",
+      "path": "/api/logistics/actions/mark-delivered",
+      "auth": "public",
+      "session": "isolated visitor session",
+      "purpose": "Run the logistics delivered transaction."
+    },
+    {
+      "name": "logisticsCreditDriver",
+      "method": "POST",
+      "path": "/api/logistics/actions/credit-driver",
+      "auth": "public",
+      "session": "isolated visitor session",
+      "purpose": "Run the logistics driver-credit transaction."
+    },
+    {
+      "name": "logisticsProcessOutbox",
+      "method": "POST",
+      "path": "/api/logistics/outbox/process",
+      "auth": "public",
+      "session": "isolated visitor session",
+      "purpose": "Process pending logistics outbox events for the caller's session."
+    },
+    {
+      "name": "logisticsOutboxStats",
+      "method": "GET",
+      "path": "/api/logistics/outbox/stats",
+      "auth": "public",
+      "session": "isolated visitor session",
+      "purpose": "Read logistics outbox totals grouped by status."
+    }
+  ]
+}
