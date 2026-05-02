@@ -166,17 +166,21 @@ The hosted demo stores recent Business Simulator runs in PostgreSQL with a bound
 {
   "run": {
     "id": "live_4f6c9f1a20b3448d",
+    "name": "Q2 Workforce Planning",
     "simulationId": "operations-decision",
     "createdAt": "2026-05-02T00:00:00.000Z",
     "expiresAt": "2026-05-03T00:00:00.000Z",
     "scenarioCount": 2,
+    "bestMargin": 23164,
+    "bestMarginScenario": "Process Improvement",
+    "riskRange": [18.4, 24.8],
     "recommendedScenarioId": "process-improvement",
     "recommendedScenarioName": "Process Improvement"
   }
 }
 ```
 
-`GET /api/simulation-runs` returns session-scoped summaries so a visitor can revisit recent work without seeing another visitor's run list. `GET /api/simulation-runs/:id` loads the full request and response for a known run ID, which is the shareable result-page path the frontend can use.
+`GET /api/simulation-runs` returns session-scoped summaries with display name, scenario count, best margin, best-margin scenario, risk range, recommendation metadata, and expiry time so a visitor can revisit recent work without seeing another visitor's run list. `GET /api/simulation-runs/:id` loads the full request and response for a known run ID, which is the shareable result-page path the frontend can use.
 
 The persisted demo store is configured with:
 

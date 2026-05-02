@@ -10,8 +10,19 @@ describe("demo simulation run store", () => {
       createId: () => "live_test_run",
     });
     const response = {
-      simulation: { id: "operations-decision" },
-      scenarios: [{ id: "process-improvement" }],
+      simulation: { id: "operations-decision", name: "Operations Decision Simulator" },
+      baseline: {
+        id: "baseline",
+        name: "Current Operations",
+        finalMetrics: { margin: 1000, riskScore: 20 },
+      },
+      scenarios: [
+        {
+          id: "process-improvement",
+          name: "Process Improvement",
+          finalMetrics: { margin: 1400, riskScore: 16 },
+        },
+      ],
       comparison: {
         recommendation: {
           scenarioId: "process-improvement",
@@ -29,8 +40,12 @@ describe("demo simulation run store", () => {
     expect(record.id).toBe("live_test_run");
     expect(record.response.run).toMatchObject({
       id: "live_test_run",
+      name: "Operations Decision Simulator",
       simulationId: "operations-decision",
-      scenarioCount: 1,
+      scenarioCount: 2,
+      bestMargin: 1400,
+      bestMarginScenario: "Process Improvement",
+      riskRange: [16, 20],
       recommendedScenarioId: "process-improvement",
       recommendedScenarioName: "Process Improvement",
       session: {

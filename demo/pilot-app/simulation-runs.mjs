@@ -82,13 +82,32 @@ export function createSimulationRunStore(options = {}) {
 
 export function recordSummary(record) {
   const recommendation = record.response?.comparison?.recommendation;
+  const scenarioResults = [
+    record.response?.baseline,
+    ...(Array.isArray(record.response?.scenarios) ? record.response.scenarios : []),
+  ].filter(Boolean);
+  const margins = scenarioResults
+    .map((scenario) => Number(scenario?.finalMetrics?.margin))
+    .filter(Number.isFinite);
+  const risks = scenarioResults
+    .map((scenario) => Number(scenario?.finalMetrics?.riskScore))
+    .filter(Number.isFinite);
+  const bestMargin = margins.length > 0 ? Math.max(...margins) : undefined;
+  const bestMarginScenario = bestMargin === undefined
+    ? undefined
+    : scenarioResults.find((scenario) => Number(scenario?.finalMetrics?.margin) === bestMargin)?.name;
+
   return {
     id: record.id,
+    name: record.request?.name ?? record.response?.simulation?.name ?? record.simulationId,
     simulationId: record.simulationId,
     createdAt: record.createdAt,
     expiresAt: record.expiresAt,
     session: record.session,
-    scenarioCount: record.response?.scenarios?.length ?? 0,
+    scenarioCount: scenarioResults.length || record.response?.scenarios?.length || 0,
+    ...(bestMargin !== undefined ? { bestMargin } : {}),
+    ...(bestMarginScenario ? { bestMarginScenario } : {}),
+    ...(risks.length > 0 ? { riskRange: [Math.min(...risks), Math.max(...risks)] } : {}),
     recommendedScenarioId: recommendation?.scenarioId,
     recommendedScenarioName: recommendation?.scenarioName,
   };
