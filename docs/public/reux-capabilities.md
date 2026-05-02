@@ -59,11 +59,12 @@ The CLI, docs, package smoke checks, and editor tooling are ready for technical 
 
 Status: live.
 
-The hosted demo lets public users test commerce, logistics, and Business Simulator workflows with isolated visitor sessions and PostgreSQL-backed saved simulation runs.
+The hosted demo lets public users test commerce, logistics, and Business Simulator workflows with isolated visitor sessions, public API rate limiting, request counters, and PostgreSQL-backed saved simulation runs.
 
 - Commerce workflow demo with reset, transaction, queue, and outbox behavior.
 - Logistics workflow demo validating non-commerce dispatch workflows.
 - Business Simulator demo with result metadata and PostgreSQL-backed saved run records.
+- Public API rate limiting and request counters for hosted demo protection.
 - Railway-hosted backend connected to PostgreSQL.
 - Reuben website embed/link for public testing.
 - Health checks, deep smoke checks, CI smoke automation, monitor wrapper, webhook alerts, and operations dashboard.

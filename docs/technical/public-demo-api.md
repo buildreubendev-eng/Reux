@@ -36,10 +36,10 @@ The browser-facing website should generate one stable session id and reuse it. T
 
 | Route | Purpose |
 | --- | --- |
-| `GET /api/health` | Deployment health, active domains, `jsonBodyLimitBytes`, and `sessionCache` counters. |
+| `GET /api/health` | Deployment health, active domains, limits, request counters, `jsonBodyLimitBytes`, and `sessionCache` counters. |
 | `GET /api/ops` | Cross-domain queue health for the active session. |
 
-`/api/health` is the safest first call after a deploy. It should return `ok: true`, `module: "pilot"`, `apiVersion`, `packageVersion`, `build`, both `commerce` and `logistics` in `domains`, the active request-body limit, session-cache stats, and saved simulation-run storage stats.
+`/api/health` is the safest first call after a deploy. It should return `ok: true`, `module: "pilot"`, `apiVersion`, `packageVersion`, `build`, both `commerce` and `logistics` in `domains`, the active request-body limit, rate-limit config, request counters, session-cache stats, and saved simulation-run storage stats.
 
 Public API responses also include:
 
@@ -48,6 +48,7 @@ Public API responses also include:
 | `cache-control: no-store` | Keeps visitor dashboards, simulations, and health checks from being cached as stale state. |
 | `x-reux-api-version` | Reports the public demo API contract version served by the deployment. |
 | `x-reux-build` | Reports a short build or commit identifier for hosted troubleshooting. |
+| `retry-after` | Present on `429` responses; tells clients when to retry. |
 
 ## Business Simulator Routes
 
@@ -155,6 +156,7 @@ Known public error codes:
 | `simulation_execution_validation_failed` | `400` | Generic Reux simulation execution request failed validation. |
 | `invalid_json` | `400` | Request body was not valid JSON. |
 | `request_too_large` | `413` | JSON body exceeded `REUX_DEMO_JSON_BODY_LIMIT_BYTES`. |
+| `rate_limited` | `429` | Visitor exceeded the public demo request limit. |
 | `not_found` | `404` | Route or simulation id was not found. |
 | `method_not_allowed` | `405` | Route exists but does not support the method. |
 | `request_failed` | varies | General fallback for unexpected failures. |
@@ -179,13 +181,16 @@ Frontend clients should prefer `issues` for field-level UI and fall back to `mes
 | Limit | Default | Environment variable |
 | --- | ---: | --- |
 | JSON body limit | `65536` bytes | `REUX_DEMO_JSON_BODY_LIMIT_BYTES` |
+| API rate-limit window | `60000` ms | `REUX_DEMO_RATE_LIMIT_WINDOW_MS` |
+| API requests per client/window | `240` | `REUX_DEMO_RATE_LIMIT_MAX_REQUESTS` |
+| Mutating API requests per client/window | `60` | `REUX_DEMO_WRITE_RATE_LIMIT_MAX_REQUESTS` |
 | Cached session contexts | `100` | `REUX_DEMO_MAX_SESSION_CONTEXTS` |
 | Session idle window | `1800000` ms | `REUX_DEMO_SESSION_IDLE_MS` |
 | Business Simulator run scenarios | `8` | source contract |
 | Business Simulator compare scenarios | `12` | source contract |
 | Business Simulator forecast periods | `52` | source contract |
 
-The health response reports the active body and session-cache limits, so host config can be verified after redeploy.
+The health response reports active body, rate-limit, request-counter, and session-cache limits, so host config can be verified after redeploy. Rate-limited responses use `429`, `code: "rate_limited"`, `retryAfterSeconds`, and `resetAt`; frontend clients should show a calm retry message instead of treating this as a broken backend.
 
 ## Verification
 

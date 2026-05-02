@@ -132,6 +132,9 @@ REUX_DEMO_SESSION_MODE=isolated
 REUX_DEMO_ALLOWED_ORIGINS=*
 REUX_DEMO_CORS_MAX_AGE_SECONDS=600
 REUX_DEMO_JSON_BODY_LIMIT_BYTES=65536
+REUX_DEMO_RATE_LIMIT_WINDOW_MS=60000
+REUX_DEMO_RATE_LIMIT_MAX_REQUESTS=240
+REUX_DEMO_WRITE_RATE_LIMIT_MAX_REQUESTS=60
 REUX_DEMO_MAX_SESSION_CONTEXTS=100
 REUX_DEMO_SESSION_IDLE_MS=1800000
 REUX_DEMO_MAX_SIMULATION_RUNS=200
@@ -143,6 +146,8 @@ REUX_DEMO_SIMULATION_RUN_TTL_MS=86400000
 `REUX_DEMO_ALLOWED_ORIGINS` controls browser access to `/api/*` routes. It defaults to `*` for the public demo, which lets the Reuben website call the Business Simulator endpoints from Vercel. Set it to a comma-separated allowlist such as `https://reuben-web.vercel.app,https://www.reuben.example` when the public hostnames are stable. The API also answers `OPTIONS` preflight requests for `GET`, `POST`, `content-type`, `x-reux-demo-session`, and `x-reux-demo-token`.
 
 `REUX_DEMO_JSON_BODY_LIMIT_BYTES` defaults to `65536` and protects public `POST` routes from oversized JSON payloads. `/api/health` reports the active `jsonBodyLimitBytes` value so hosted deployments can confirm the limit after a redeploy. Malformed JSON returns `400` with `code: "invalid_json"`; oversized JSON returns `413` with `code: "request_too_large"`.
+
+`REUX_DEMO_RATE_LIMIT_WINDOW_MS`, `REUX_DEMO_RATE_LIMIT_MAX_REQUESTS`, and `REUX_DEMO_WRITE_RATE_LIMIT_MAX_REQUESTS` protect public `/api/*` routes from accidental refresh storms and lightweight abuse. Defaults allow `240` total API requests and `60` mutating API requests per client per minute. Exceeded limits return `429` with `code: "rate_limited"` and a `retry-after` header. `/api/health` reports active rate-limit configuration plus route-level request counters for troubleshooting.
 
 `REUX_DEMO_MAX_SESSION_CONTEXTS` defaults to `100` and limits how many shared/visitor database contexts the Node process keeps open. `REUX_DEMO_SESSION_IDLE_MS` defaults to `1800000` and lets the service close idle session contexts as new requests arrive. `/api/health` reports `sessionCache.contexts`, isolated/shared counts, idle counts, and the active limits so public-demo operators can spot runaway visitor sessions before they become a hosting problem.
 

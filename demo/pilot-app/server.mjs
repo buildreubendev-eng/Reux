@@ -46,6 +46,16 @@ import {
 import { defaultJsonBodyLimitBytes, readJson } from "./http.mjs";
 import { emptyOutboxSummary, summarizeOperationalDashboard, summarizeOutboxStats } from "./status.mjs";
 import {
+  RateLimitExceededError,
+  clientKeyFromRequest,
+  createRateLimiter,
+  defaultRateLimitMaxRequests,
+  defaultRateLimitWindowMs,
+  defaultWriteRateLimitMaxRequests,
+  rateLimitErrorBody,
+} from "./rate-limit.mjs";
+import { createRequestStats } from "./request-stats.mjs";
+import {
   createSimulationRunStore,
   defaultMaxSimulationRunRecords,
   defaultSimulationRunTtlMs,
@@ -66,10 +76,16 @@ const sessionMode = process.env.REUX_DEMO_SESSION_MODE ?? "isolated";
 const allowedOrigins = parseAllowedOrigins(process.env.REUX_DEMO_ALLOWED_ORIGINS ?? "*");
 const corsMaxAgeSeconds = parsePositiveInteger(process.env.REUX_DEMO_CORS_MAX_AGE_SECONDS, 600);
 const jsonBodyLimitBytes = parsePositiveInteger(process.env.REUX_DEMO_JSON_BODY_LIMIT_BYTES, defaultJsonBodyLimitBytes);
+const rateLimitWindowMs = parsePositiveInteger(process.env.REUX_DEMO_RATE_LIMIT_WINDOW_MS, defaultRateLimitWindowMs);
+const rateLimitMaxRequests = parsePositiveInteger(process.env.REUX_DEMO_RATE_LIMIT_MAX_REQUESTS, defaultRateLimitMaxRequests);
+const writeRateLimitMaxRequests = parsePositiveInteger(process.env.REUX_DEMO_WRITE_RATE_LIMIT_MAX_REQUESTS, defaultWriteRateLimitMaxRequests);
 const maxSessionContexts = parsePositiveInteger(process.env.REUX_DEMO_MAX_SESSION_CONTEXTS, defaultMaxSessionContexts);
 const sessionIdleMs = parsePositiveInteger(process.env.REUX_DEMO_SESSION_IDLE_MS, defaultSessionIdleMs);
 const maxSimulationRunRecords = parsePositiveInteger(process.env.REUX_DEMO_MAX_SIMULATION_RUNS, defaultMaxSimulationRunRecords);
 const simulationRunTtlMs = parsePositiveInteger(process.env.REUX_DEMO_SIMULATION_RUN_TTL_MS, defaultSimulationRunTtlMs);
+const apiRateLimiter = createRateLimiter({ maxRequests: rateLimitMaxRequests, windowMs: rateLimitWindowMs });
+const writeRateLimiter = createRateLimiter({ maxRequests: writeRateLimitMaxRequests, windowMs: rateLimitWindowMs });
+const requestStats = createRequestStats();
 const simulationRunStore = createSimulationRunStore({
   maxRecords: maxSimulationRunRecords,
   ttlMs: simulationRunTtlMs,
@@ -135,15 +151,26 @@ const domains = {
 };
 
 const server = createServer(async (request, response) => {
+  const startedAt = Date.now();
+  const url = new URL(request.url ?? "/", `http://127.0.0.1:${port}`);
+  response.on("finish", () => {
+    requestStats.record({
+      method: request.method ?? "GET",
+      pathname: url.pathname,
+      statusCode: response.statusCode,
+      durationMs: Date.now() - startedAt,
+    });
+  });
+
   try {
-    await route(request, response);
+    await route(request, response, url);
   } catch (error) {
     const statusCode = Number.isInteger(error?.statusCode)
       ? error.statusCode
       : error instanceof BusinessSimulatorValidationError || error instanceof ReuxSimulationExecutionError
         ? 400
         : 500;
-    sendJson(response, statusCode, errorResponseBody(error, statusCode));
+    sendJson(response, statusCode, errorResponseBody(error, statusCode), errorHeaders(error));
   }
 });
 
@@ -159,15 +186,15 @@ for (const signal of ["SIGINT", "SIGTERM"]) {
   });
 }
 
-async function route(request, response) {
+async function route(request, response, url = new URL(request.url ?? "/", `http://127.0.0.1:${port}`)) {
   const method = request.method ?? "GET";
-  const url = new URL(request.url ?? "/", `http://127.0.0.1:${port}`);
   if (url.pathname.startsWith("/api/")) {
     applyCorsHeaders(request, response);
     if (method === "OPTIONS") {
       sendNoContent(response);
       return;
     }
+    enforceApiRateLimit(request, method);
   }
 
   if (url.pathname === "/api/health") {
@@ -181,6 +208,14 @@ async function route(request, response) {
       schema: demoSchema,
       sessionMode,
       jsonBodyLimitBytes,
+      rateLimit: {
+        windowMs: rateLimitWindowMs,
+        maxRequests: rateLimitMaxRequests,
+        writeMaxRequests: writeRateLimitMaxRequests,
+        api: apiRateLimiter.stats(),
+        write: writeRateLimiter.stats(),
+      },
+      requests: requestStats.summary(),
       sessionCache: sessionCacheStats(databases, { idleMs: sessionIdleMs, maxContexts: maxSessionContexts }),
       simulationRuns: await simulationRunStats(),
       domains: Object.keys(domains),
@@ -693,18 +728,22 @@ function serveStatic(pathname, response) {
   createReadStream(resolved).pipe(response);
 }
 
-function sendJson(response, statusCode, body) {
+function sendJson(response, statusCode, body, headers = {}) {
   response.writeHead(statusCode, {
     "content-type": "application/json",
     "cache-control": "no-store",
     "x-reux-api-version": demoApiVersion,
     "x-reux-build": buildId,
+    ...headers,
   });
   response.end(`${JSON.stringify(body, null, 2)}\n`);
 }
 
 function errorResponseBody(error, statusCode) {
   const message = error instanceof Error ? error.message : String(error);
+  if (error instanceof RateLimitExceededError) {
+    return rateLimitErrorBody(error);
+  }
   if (error instanceof BusinessSimulatorValidationError) {
     return {
       ok: false,
@@ -729,6 +768,18 @@ function errorResponseBody(error, statusCode) {
     message,
     code: error?.code ?? (statusCode === 404 ? "not_found" : statusCode === 405 ? "method_not_allowed" : "request_failed"),
   };
+}
+
+function errorHeaders(error) {
+  if (error instanceof RateLimitExceededError) {
+    return {
+      "retry-after": String(error.retryAfterSeconds),
+      "x-ratelimit-limit": String(error.limit),
+      "x-ratelimit-remaining": String(error.remaining),
+      "x-ratelimit-reset": error.resetAt,
+    };
+  }
+  return {};
 }
 
 function sendNoContent(response) {
@@ -763,6 +814,20 @@ function applyCorsHeaders(request, response) {
   response.setHeader("access-control-allow-methods", "GET, POST, OPTIONS");
   response.setHeader("access-control-allow-headers", "content-type, x-reux-demo-session, x-reux-demo-token");
   response.setHeader("access-control-max-age", String(corsMaxAgeSeconds));
+}
+
+function enforceApiRateLimit(request, method) {
+  const clientKey = clientKeyFromRequest(request);
+  const globalResult = apiRateLimiter.check(`${clientKey}:all`);
+  if (!globalResult.allowed) {
+    throw new RateLimitExceededError(globalResult);
+  }
+  if (!["GET", "HEAD"].includes(method)) {
+    const writeResult = writeRateLimiter.check(`${clientKey}:write`);
+    if (!writeResult.allowed) {
+      throw new RateLimitExceededError(writeResult);
+    }
+  }
 }
 
 function corsOrigin(origin) {

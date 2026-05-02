@@ -19,6 +19,11 @@
       "name": "x-reux-build",
       "value": "short build or commit identifier",
       "purpose": "Identify which deployed backend build handled the request."
+    },
+    {
+      "name": "retry-after",
+      "value": "seconds until retry is allowed",
+      "purpose": "Tell clients when to retry after a 429 rate_limited response."
     }
   ],
   "headers": [
@@ -40,6 +45,9 @@
   ],
   "limits": {
     "jsonBodyLimitBytesDefault": 65536,
+    "rateLimitWindowMsDefault": 60000,
+    "rateLimitMaxRequestsDefault": 240,
+    "writeRateLimitMaxRequestsDefault": 60,
     "maxSessionContextsDefault": 100,
     "sessionIdleMsDefault": 1800000,
     "maxSimulationRunRecordsDefault": 200,
@@ -53,6 +61,7 @@
     "simulation_execution_validation_failed",
     "invalid_json",
     "request_too_large",
+    "rate_limited",
     "not_found",
     "method_not_allowed",
     "request_failed"
@@ -64,7 +73,7 @@
       "path": "/api/health",
       "auth": "public",
       "session": "none",
-      "purpose": "Read deployment health, active domains, body limit, session-cache counters, and saved simulation-run storage stats."
+      "purpose": "Read deployment health, active domains, body limit, rate-limit settings, request counters, session-cache counters, and saved simulation-run storage stats."
     },
     {
       "name": "operationsDashboard",
