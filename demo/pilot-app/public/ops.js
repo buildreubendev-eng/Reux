@@ -6,22 +6,37 @@ const elements = {
   dead: document.querySelector("#opsDead"),
   domains: document.querySelector("#opsDomains"),
   toast: document.querySelector("#toast"),
+  lastRefreshed: document.querySelector("#lastRefreshed"),
 };
 
 elements.refresh.addEventListener("click", refresh);
 refresh().catch((error) => notify(error.message, true));
 
 async function refresh() {
-  const response = await fetch("/api/ops", { headers: sessionHeaders() });
-  const dashboard = await response.json();
-  if (!response.ok) throw new Error(dashboard.error ?? "operations dashboard failed");
+  elements.domains.innerHTML = `<div class="empty">Fetching operations data...</div>`;
+  if (elements.lastRefreshed) elements.lastRefreshed.textContent = "Refreshing...";
+  
+  try {
+    const response = await fetch("/api/ops", { headers: sessionHeaders() });
+    const dashboard = await response.json();
+    if (!response.ok) throw new Error(dashboard.error ?? "operations dashboard failed");
 
-  elements.health.textContent = titleCase(dashboard.health);
-  elements.active.textContent = String(dashboard.totals.active);
-  elements.failed.textContent = String(dashboard.totals.failed);
-  elements.dead.textContent = String(dashboard.totals.dead);
-  elements.domains.innerHTML = dashboard.domains.map(renderDomain).join("");
-  notify(`Operations refreshed at ${new Date(dashboard.generatedAt).toLocaleTimeString()}`);
+    elements.health.textContent = titleCase(dashboard.health);
+    elements.active.textContent = String(dashboard.totals.active);
+    elements.failed.textContent = String(dashboard.totals.failed);
+    elements.dead.textContent = String(dashboard.totals.dead);
+    elements.domains.innerHTML = dashboard.domains.length 
+      ? dashboard.domains.map(renderDomain).join("")
+      : `<div class="empty">No active domains found.</div>`;
+      
+    const time = new Date(dashboard.generatedAt).toLocaleTimeString();
+    if (elements.lastRefreshed) elements.lastRefreshed.textContent = `Last refreshed: ${time}`;
+    notify(`Operations refreshed at ${time}`);
+  } catch (error) {
+    elements.domains.innerHTML = `<div class="empty" style="color: var(--red);">Failed to load operations data: ${escapeHtml(error.message)}</div>`;
+    if (elements.lastRefreshed) elements.lastRefreshed.textContent = "Refresh failed";
+    notify(error.message, true);
+  }
 }
 
 function renderDomain(domain) {

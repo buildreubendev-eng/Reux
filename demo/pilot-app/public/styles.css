@@ -15,6 +15,11 @@
   box-sizing: border-box;
 }
 
+*:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
 body {
   margin: 0;
   min-width: 320px;
@@ -96,9 +101,12 @@ button:hover,
   background: #194f87;
 }
 
-button:disabled {
-  cursor: wait;
-  opacity: 0.62;
+button:disabled,
+.button-link:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  background: var(--muted);
+  border-color: var(--muted);
 }
 
 .admin-tools {
@@ -442,12 +450,15 @@ label span {
 
 .table {
   overflow-x: auto;
+  max-width: 100%;
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
+  word-break: normal;
+  overflow-wrap: break-word;
 }
 
 th,

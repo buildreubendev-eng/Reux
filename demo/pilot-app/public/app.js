@@ -198,7 +198,7 @@ elements.resetSessionButton.addEventListener("click", async () => {
     const config = activeDomain();
     const result = await postJson(config.resetUrl, {});
     elements.actionResult.textContent = JSON.stringify(result, null, 2);
-    elements.actionSummary.innerHTML = `Your isolated ${config.title.toLowerCase()} session was reset with fresh private seed data.`;
+    elements.actionSummary.innerHTML = `<strong>Session Reset:</strong> Fresh private seed data loaded for ${config.title.toLowerCase()}. <strong>Next:</strong> Run a transaction.`;
     notify("Session reset with fresh demo data");
     await refresh();
   });
@@ -411,10 +411,10 @@ function loadSessionId() {
 
 function summarizeAction(labelText, result) {
   if (labelText === "processOutbox") {
-    return `<strong>Processed Outbox:</strong> ${escapeHtml(result.processed)} event(s) succeeded, ${escapeHtml(result.failed)} failed. Watch Queue Health to see durable events move.`;
+    return `<strong>Processed Outbox:</strong> ${escapeHtml(String(result.processed))} event(s) succeeded, ${escapeHtml(String(result.failed))} failed. <strong>Next:</strong> Check Queue Health or the Ops dashboard.`;
   }
   const events = result.outboxEvents?.length ?? 0;
-  return `<strong>Ran ${escapeHtml(titleCase(labelText))}:</strong> Wrote ${escapeHtml(events)} outbox event(s). <strong>Next:</strong> Click "Process Outbox" to move them.`;
+  return `<strong>Ran ${escapeHtml(titleCase(labelText))}:</strong> Wrote ${escapeHtml(String(events))} outbox event(s). <strong>Next:</strong> Click "Process Outbox" to move them.`;
 }
 
 function friendlyError(message) {

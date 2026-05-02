@@ -30,16 +30,49 @@
     "Advisory simulation domain-pack coverage for PLOS and business models, including suggested assumptions, metrics, scenarios, and objectives",
     "Executable PLOS habit-consistency example alongside the personal-finance example",
     "Executable business operations simulation example alongside the workforce example",
-    "Generated simulation catalog helpers for product apps"
+    "Generated simulation catalog helpers for product apps",
+    "Keep improving public demo copy as new domains are added",
+    "Keep monitor alert routing aligned with the final hosting and notification setup",
+    "Document public reset/session behavior for testers"
   ],
   "milestones": [
     {
-      "title": "Demo Hardening",
-      "goal": "Make the public demo feel stable, explainable, and safe for repeat visitors.",
+      "title": "Frontend Completion",
+      "goal": "Get the public frontend/demo surfaces close to completion.",
       "items": [
-        "Keep improving public demo copy as new domains are added",
-        "Keep monitor alert routing aligned with the final hosting and notification setup",
-        "Document public reset/session behavior for testers"
+        "Add a polished public tester flow from landing/demo entry to successful transaction to outbox processing",
+        "Make 'what just happened' summaries consistent across commerce and logistics",
+        "Ensure the demo always shows the next best action after reset, transaction, and process-outbox"
+      ]
+    },
+    {
+      "title": "Website & Status Sync",
+      "goal": "Keep public project cards, roadmap badges, live/demo links, and completed/in-progress labels current.",
+      "items": [
+        "Never complete frontend work without updating the status surfaces that describe it",
+        "Run a full responsive polish pass (Visual QA)",
+        "Fix all mobile layout issues",
+        "Ensure no cards/buttons/tables overflow or overlap"
+      ]
+    },
+    {
+      "title": "Frontend Reliability & Ops Depth",
+      "goal": "Add graceful failure states and deepen ops observability.",
+      "items": [
+        "Add graceful API failure states",
+        "Add retry affordances where useful",
+        "Make session/setup/reset failures understandable to non-developers",
+        "Improve queue/worker observability presentation",
+        "Add clearer stale/dead-letter explanations",
+        "Make the dashboard usable as a real operational page, not just a debug screen"
+      ]
+    },
+    {
+      "title": "Documentation Handoff",
+      "goal": "Keep docs aligned with the actual demo.",
+      "items": [
+        "Update public testing docs and screenshots/copy references if UI changes",
+        "Keep docs/public/reux-demo-testing-guide.md aligned with the actual demo"
       ]
     },
     {

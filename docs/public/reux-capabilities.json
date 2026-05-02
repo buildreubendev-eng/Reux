@@ -59,7 +59,8 @@
         "Logistics workflow demo validating non-commerce dispatch workflows",
         "Railway-hosted backend connected to PostgreSQL",
         "Reuben website embed/link for public testing",
-        "Health checks, deep smoke checks, CI smoke automation, monitor wrapper, webhook alerts, and operations dashboard"
+        "Health checks, deep smoke checks, CI smoke automation, monitor wrapper, webhook alerts, and operations dashboard",
+        "Responsive, accessible UI with mobile layout polish"
       ]
     },
     {

@@ -32,7 +32,10 @@
     "Advisory simulation domain-pack coverage for PLOS and business models, including suggested assumptions, metrics, scenarios, and objectives",
     "Executable PLOS habit-consistency example alongside the personal-finance example",
     "Executable business operations simulation example alongside the workforce example",
-    "Generated simulation catalog helpers for product apps"
+    "Generated simulation catalog helpers for product apps",
+    "Keep improving public demo copy as new domains are added",
+    "Keep monitor alert routing aligned with the final hosting and notification setup",
+    "Document public reset/session behavior for testers"
   ],
   "capabilityGroups": [
     {
@@ -57,7 +60,7 @@
       "name": "Public Demo",
       "status": "live",
       "summary": "The hosted demo lets public users test commerce and logistics workflows with isolated visitor sessions.",
-      "capabilityCount": 5
+      "capabilityCount": 6
     },
     {
       "name": "Pilots And Validation",
@@ -69,30 +72,48 @@
   "nextMilestones": [
     {
       "order": 1,
-      "title": "Demo Hardening",
-      "goal": "Make the public demo feel stable, explainable, and safe for repeat visitors.",
+      "title": "Frontend Completion",
+      "goal": "Get the public frontend/demo surfaces close to completion.",
       "itemCount": 3
     },
     {
       "order": 2,
+      "title": "Website & Status Sync",
+      "goal": "Keep public project cards, roadmap badges, live/demo links, and completed/in-progress labels current.",
+      "itemCount": 4
+    },
+    {
+      "order": 3,
+      "title": "Frontend Reliability & Ops Depth",
+      "goal": "Add graceful failure states and deepen ops observability.",
+      "itemCount": 6
+    },
+    {
+      "order": 4,
+      "title": "Documentation Handoff",
+      "goal": "Keep docs aligned with the actual demo.",
+      "itemCount": 2
+    },
+    {
+      "order": 5,
       "title": "Reux Language Depth",
       "goal": "Turn the current useful subset into a stronger application language foundation.",
       "itemCount": 5
     },
     {
-      "order": 3,
+      "order": 6,
       "title": "Simulation Foundation",
       "goal": "Make Reux useful for structured forecasting and scenario comparison.",
       "itemCount": 5
     },
     {
-      "order": 4,
+      "order": 7,
       "title": "Product Ecosystem",
       "goal": "Keep Reux grounded in real products instead of building language features in isolation.",
       "itemCount": 5
     },
     {
-      "order": 5,
+      "order": 8,
       "title": "Developer Experience",
       "goal": "Make Reux approachable for technical reviewers and early users.",
       "itemCount": 4

@@ -47,125 +47,209 @@
     },
     {
       "priority": "P1",
-      "ownerTrack": "Demo Hardening",
-      "title": "Keep improving public demo copy as new domains are added",
-      "why": "Make the public demo feel stable, explainable, and safe for repeat visitors.",
+      "ownerTrack": "Frontend Completion",
+      "title": "Add a polished public tester flow from landing/demo entry to successful transaction to outbox processing",
+      "why": "Get the public frontend/demo surfaces close to completion.",
       "source": "public-roadmap"
     },
     {
       "priority": "P1",
-      "ownerTrack": "Demo Hardening",
-      "title": "Keep monitor alert routing aligned with the final hosting and notification setup",
-      "why": "Make the public demo feel stable, explainable, and safe for repeat visitors.",
+      "ownerTrack": "Frontend Completion",
+      "title": "Make 'what just happened' summaries consistent across commerce and logistics",
+      "why": "Get the public frontend/demo surfaces close to completion.",
       "source": "public-roadmap"
     },
     {
       "priority": "P2",
-      "ownerTrack": "Demo Hardening",
-      "title": "Document public reset/session behavior for testers",
-      "why": "Make the public demo feel stable, explainable, and safe for repeat visitors.",
+      "ownerTrack": "Frontend Completion",
+      "title": "Ensure the demo always shows the next best action after reset, transaction, and process-outbox",
+      "why": "Get the public frontend/demo surfaces close to completion.",
       "source": "public-roadmap"
     },
     {
       "priority": "P1",
+      "ownerTrack": "Website & Status Sync",
+      "title": "Never complete frontend work without updating the status surfaces that describe it",
+      "why": "Keep public project cards, roadmap badges, live/demo links, and completed/in-progress labels current.",
+      "source": "public-roadmap"
+    },
+    {
+      "priority": "P1",
+      "ownerTrack": "Website & Status Sync",
+      "title": "Run a full responsive polish pass (Visual QA)",
+      "why": "Keep public project cards, roadmap badges, live/demo links, and completed/in-progress labels current.",
+      "source": "public-roadmap"
+    },
+    {
+      "priority": "P2",
+      "ownerTrack": "Website & Status Sync",
+      "title": "Fix all mobile layout issues",
+      "why": "Keep public project cards, roadmap badges, live/demo links, and completed/in-progress labels current.",
+      "source": "public-roadmap"
+    },
+    {
+      "priority": "P2",
+      "ownerTrack": "Website & Status Sync",
+      "title": "Ensure no cards/buttons/tables overflow or overlap",
+      "why": "Keep public project cards, roadmap badges, live/demo links, and completed/in-progress labels current.",
+      "source": "public-roadmap"
+    },
+    {
+      "priority": "P2",
+      "ownerTrack": "Frontend Reliability & Ops Depth",
+      "title": "Add graceful API failure states",
+      "why": "Add graceful failure states and deepen ops observability.",
+      "source": "public-roadmap"
+    },
+    {
+      "priority": "P2",
+      "ownerTrack": "Frontend Reliability & Ops Depth",
+      "title": "Add retry affordances where useful",
+      "why": "Add graceful failure states and deepen ops observability.",
+      "source": "public-roadmap"
+    },
+    {
+      "priority": "P2",
+      "ownerTrack": "Frontend Reliability & Ops Depth",
+      "title": "Make session/setup/reset failures understandable to non-developers",
+      "why": "Add graceful failure states and deepen ops observability.",
+      "source": "public-roadmap"
+    },
+    {
+      "priority": "P2",
+      "ownerTrack": "Frontend Reliability & Ops Depth",
+      "title": "Improve queue/worker observability presentation",
+      "why": "Add graceful failure states and deepen ops observability.",
+      "source": "public-roadmap"
+    },
+    {
+      "priority": "P2",
+      "ownerTrack": "Frontend Reliability & Ops Depth",
+      "title": "Add clearer stale/dead-letter explanations",
+      "why": "Add graceful failure states and deepen ops observability.",
+      "source": "public-roadmap"
+    },
+    {
+      "priority": "P2",
+      "ownerTrack": "Frontend Reliability & Ops Depth",
+      "title": "Make the dashboard usable as a real operational page, not just a debug screen",
+      "why": "Add graceful failure states and deepen ops observability.",
+      "source": "public-roadmap"
+    },
+    {
+      "priority": "P2",
+      "ownerTrack": "Documentation Handoff",
+      "title": "Update public testing docs and screenshots/copy references if UI changes",
+      "why": "Keep docs aligned with the actual demo.",
+      "source": "public-roadmap"
+    },
+    {
+      "priority": "P2",
+      "ownerTrack": "Documentation Handoff",
+      "title": "Keep docs/public/reux-demo-testing-guide.md aligned with the actual demo",
+      "why": "Keep docs aligned with the actual demo.",
+      "source": "public-roadmap"
+    },
+    {
+      "priority": "P3",
       "ownerTrack": "Reux Language Depth",
       "title": "Broaden transaction control flow",
       "why": "Turn the current useful subset into a stronger application language foundation.",
       "source": "public-roadmap"
     },
     {
-      "priority": "P1",
+      "priority": "P3",
       "ownerTrack": "Reux Language Depth",
       "title": "Deepen expression typing",
       "why": "Turn the current useful subset into a stronger application language foundation.",
       "source": "public-roadmap"
     },
     {
-      "priority": "P2",
+      "priority": "P3",
       "ownerTrack": "Reux Language Depth",
       "title": "Improve generated worker contracts",
       "why": "Turn the current useful subset into a stronger application language foundation.",
       "source": "public-roadmap"
     },
     {
-      "priority": "P2",
+      "priority": "P3",
       "ownerTrack": "Reux Language Depth",
       "title": "Expand reusable query patterns",
       "why": "Turn the current useful subset into a stronger application language foundation.",
       "source": "public-roadmap"
     },
     {
-      "priority": "P2",
+      "priority": "P3",
       "ownerTrack": "Reux Language Depth",
       "title": "Continue tightening compiler diagnostics and safety checks",
       "why": "Turn the current useful subset into a stronger application language foundation.",
       "source": "public-roadmap"
     },
     {
-      "priority": "P2",
+      "priority": "P3",
       "ownerTrack": "Simulation Foundation",
       "title": "Expand simulation domain packs for PLOS and business operations",
       "why": "Make Reux useful for structured forecasting and scenario comparison.",
       "source": "public-roadmap"
     },
     {
-      "priority": "P2",
+      "priority": "P3",
       "ownerTrack": "Simulation Foundation",
       "title": "Add richer time-series and assumption modeling",
       "why": "Make Reux useful for structured forecasting and scenario comparison.",
       "source": "public-roadmap"
     },
     {
-      "priority": "P2",
+      "priority": "P3",
       "ownerTrack": "Simulation Foundation",
       "title": "Add stronger unit and formula validation",
       "why": "Make Reux useful for structured forecasting and scenario comparison.",
       "source": "public-roadmap"
     },
     {
-      "priority": "P2",
+      "priority": "P3",
       "ownerTrack": "Simulation Foundation",
       "title": "Improve comparison reports and explanation output",
       "why": "Make Reux useful for structured forecasting and scenario comparison.",
       "source": "public-roadmap"
     },
     {
-      "priority": "P2",
+      "priority": "P3",
       "ownerTrack": "Simulation Foundation",
       "title": "Expand simulation APIs from generated catalog discovery into full product-facing execution services",
       "why": "Make Reux useful for structured forecasting and scenario comparison.",
       "source": "public-roadmap"
     },
     {
-      "priority": "P2",
+      "priority": "P3",
       "ownerTrack": "Product Ecosystem",
       "title": "Build PLOS as a personal simulation product using normal web technology first",
       "why": "Keep Reux grounded in real products instead of building language features in isolation.",
       "source": "public-roadmap"
     },
     {
-      "priority": "P2",
+      "priority": "P3",
       "ownerTrack": "Product Ecosystem",
       "title": "Build the real-time business simulation engine as an enterprise product prototype",
       "why": "Keep Reux grounded in real products instead of building language features in isolation.",
       "source": "public-roadmap"
     },
     {
-      "priority": "P2",
+      "priority": "P3",
       "ownerTrack": "Product Ecosystem",
       "title": "Use Reux underneath both products as the rule, workflow, and simulation layer as it matures",
       "why": "Keep Reux grounded in real products instead of building language features in isolation.",
       "source": "public-roadmap"
     },
     {
-      "priority": "P2",
+      "priority": "P3",
       "ownerTrack": "Product Ecosystem",
       "title": "Use clinic, logistics, and future product pilots to keep language features grounded in real workflows",
       "why": "Keep Reux grounded in real products instead of building language features in isolation.",
       "source": "public-roadmap"
     },
     {
-      "priority": "P2",
+      "priority": "P3",
       "ownerTrack": "Product Ecosystem",
       "title": "Add deeper product pilots for PLOS and enterprise operations once the core language/runtime path is stable",
       "why": "Keep Reux grounded in real products instead of building language features in isolation.",

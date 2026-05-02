@@ -16,16 +16,19 @@ Updated: 2026-05-01
 - Language Core: prototype-complete. The MVP language subset can model schemas, enums, queries, transaction functions, durable events, migrations, and simulations. (5 capabilities)
 - Runtime And Database: prototype-complete. The runtime path uses PostgreSQL today and supports compiled query execution, transaction execution, migrations, seeds, and outbox processing. (5 capabilities)
 - Developer Experience: prototype-complete. The CLI, docs, package smoke checks, and editor tooling are ready for technical review and local experimentation. (5 capabilities)
-- Public Demo: live. The hosted demo lets public users test commerce and logistics workflows with isolated visitor sessions. (5 capabilities)
+- Public Demo: live. The hosted demo lets public users test commerce and logistics workflows with isolated visitor sessions. (6 capabilities)
 - Pilots And Validation: active. Commerce, logistics, clinic, PLOS, and business operations examples keep Reux grounded in real product needs. (5 capabilities)
 
 ## Next Milestones
 
-1. Demo Hardening: Make the public demo feel stable, explainable, and safe for repeat visitors. (3 items)
-2. Reux Language Depth: Turn the current useful subset into a stronger application language foundation. (5 items)
-3. Simulation Foundation: Make Reux useful for structured forecasting and scenario comparison. (5 items)
-4. Product Ecosystem: Keep Reux grounded in real products instead of building language features in isolation. (5 items)
-5. Developer Experience: Make Reux approachable for technical reviewers and early users. (4 items)
+1. Frontend Completion: Get the public frontend/demo surfaces close to completion. (3 items)
+2. Website & Status Sync: Keep public project cards, roadmap badges, live/demo links, and completed/in-progress labels current. (4 items)
+3. Frontend Reliability & Ops Depth: Add graceful failure states and deepen ops observability. (6 items)
+4. Documentation Handoff: Keep docs aligned with the actual demo. (2 items)
+5. Reux Language Depth: Turn the current useful subset into a stronger application language foundation. (5 items)
+6. Simulation Foundation: Make Reux useful for structured forecasting and scenario comparison. (5 items)
+7. Product Ecosystem: Keep Reux grounded in real products instead of building language features in isolation. (5 items)
+8. Developer Experience: Make Reux approachable for technical reviewers and early users. (4 items)
 
 ## Website Data Links
 
