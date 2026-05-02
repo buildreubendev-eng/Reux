@@ -1816,6 +1816,62 @@ transaction function bad(accountRef: Account, amount: Decimal) writes Account {
     ).toThrow(DlAggregateError);
   });
 
+  it("rejects nullable transaction expressions assigned to required targets", () => {
+    const diagnostics = diagnoseSource(`module broken
+
+entity Account {
+  id: Id<Account> primary generated
+  email: String?
+  displayName: String
+  balance: Decimal
+}
+
+event AccountRenamed {
+  displayName: String
+}
+
+transaction function renameAccount(accountRef: Account, maybeName: String?, maybeAmount: Decimal?) writes Account {
+  let account = load accountRef for update
+  account.displayName = maybeName
+  account.displayName = account.email
+  account.balance = maybeAmount + 1
+  enqueue AccountRenamed { displayName: account.email }
+}
+`);
+
+    expect(diagnostics.diagnostics.map((diagnostic) => diagnostic.message)).toEqual(
+      expect.arrayContaining([
+        "transaction renameAccount assigns required Account.displayName from nullable expression type String?",
+        "transaction renameAccount assigns required Account.displayName from nullable expression type String?",
+        "transaction renameAccount assigns Account.balance from unsupported arithmetic expression maybeAmount + 1",
+        "transaction renameAccount assigns required AccountRenamed.displayName from nullable expression type String?",
+      ]),
+    );
+  });
+
+  it("accepts nullable transaction expressions assigned to optional targets", () => {
+    expect(() =>
+      compileSource(`module nullable
+
+entity Account {
+  id: Id<Account> primary generated
+  email: String?
+  displayName: String?
+}
+
+event AccountRenamed {
+  displayName: String?
+}
+
+transaction function renameAccount(accountRef: Account, maybeName: String?) writes Account {
+  let account = load accountRef for update
+  account.displayName = maybeName
+  enqueue AccountRenamed { displayName: account.email }
+}
+`),
+    ).not.toThrow();
+  });
+
   it("lowers explicit transaction abort steps", () => {
     const source = `module commerce
 

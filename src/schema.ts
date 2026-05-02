@@ -982,6 +982,10 @@ function validateAssignmentType(
     }
     return;
   }
+  if (isOptionalType(expressionType) && !isOptionalType(targetType)) {
+    diagnostics.push(`transaction ${transactionName} assigns required ${target} from nullable expression type ${expressionType}`);
+    return;
+  }
   if (typesCompatible(targetType, expressionType, enumByName)) return;
   diagnostics.push(`transaction ${transactionName} assigns ${target} from incompatible expression type ${expressionType}`);
 }
@@ -1031,7 +1035,7 @@ function arithmeticExpressionType(
     if (/^[+\-*/()]$/.test(token)) continue;
     sawOperand = true;
     const tokenType = transactionExpressionType(token, parameterTypes, boundEntities, entities);
-    if (!tokenType || !isNumericType(tokenType)) return undefined;
+    if (!tokenType || isOptionalType(tokenType) || !isNumericType(tokenType)) return undefined;
     if (tokenType === "Float") sawFloat = true;
     if (tokenType.startsWith("Decimal") || /^-?\d+\.\d+$/.test(token)) sawDecimal = true;
   }
@@ -1099,6 +1103,10 @@ function typesCompatible(
 function isNumericType(type: string): boolean {
   const required = type.endsWith("?") ? type.slice(0, -1) : type;
   return required === "Int" || required === "Int64" || required === "Float" || required.startsWith("Decimal");
+}
+
+function isOptionalType(type: string): boolean {
+  return type.endsWith("?");
 }
 
 function validateGuardExpression(

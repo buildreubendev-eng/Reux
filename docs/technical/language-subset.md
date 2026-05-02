@@ -376,7 +376,7 @@ The compiler also validates the first effect boundary:
 - mutation or `save` of an entity loaded from an entity-typed parameter requires `writes Entity`.
 - enum-valued inserts and assignments accept bare enum literals and reject values that are not declared by the enum.
 - enum-valued inserts and assignments from transaction parameters require the parameter enum type to match the target field enum type.
-- mutation and insert expressions are checked against target field types for simple parameters, literals, loaded rows, bound insert references, and numeric arithmetic over those values.
+- mutation, insert, and event payload expressions are checked against target field types for simple parameters, literals, loaded rows, bound insert references, and numeric arithmetic over those values. Nullable expressions may only flow into nullable targets, and nullable numeric values are rejected in arithmetic until the transaction language has explicit null handling.
 - `idempotency key expr` lowers to an insert into `_dl_idempotency_keys`, giving retryable callers a first-class durable key.
 - `require condition else abort ErrorName` lowers to a SQL guard that rolls back the transaction when the condition is false.
 - `if condition then abort ErrorName` lowers to a SQL guard that rolls back the transaction when the condition is true.
