@@ -45,6 +45,11 @@ import {
 } from "./session-cache.mjs";
 import { defaultJsonBodyLimitBytes, readJson } from "./http.mjs";
 import { emptyOutboxSummary, summarizeOperationalDashboard, summarizeOutboxStats } from "./status.mjs";
+import {
+  createSimulationRunStore,
+  defaultMaxSimulationRunRecords,
+  defaultSimulationRunTtlMs,
+} from "./simulation-runs.mjs";
 
 const rootDir = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 const publicDir = join(rootDir, "demo", "pilot-app", "public");
@@ -62,6 +67,10 @@ const corsMaxAgeSeconds = parsePositiveInteger(process.env.REUX_DEMO_CORS_MAX_AG
 const jsonBodyLimitBytes = parsePositiveInteger(process.env.REUX_DEMO_JSON_BODY_LIMIT_BYTES, defaultJsonBodyLimitBytes);
 const maxSessionContexts = parsePositiveInteger(process.env.REUX_DEMO_MAX_SESSION_CONTEXTS, defaultMaxSessionContexts);
 const sessionIdleMs = parsePositiveInteger(process.env.REUX_DEMO_SESSION_IDLE_MS, defaultSessionIdleMs);
+const simulationRunStore = createSimulationRunStore({
+  maxRecords: parsePositiveInteger(process.env.REUX_DEMO_MAX_SIMULATION_RUNS, defaultMaxSimulationRunRecords),
+  ttlMs: parsePositiveInteger(process.env.REUX_DEMO_SIMULATION_RUN_TTL_MS, defaultSimulationRunTtlMs),
+});
 const buildId = buildIdentifier();
 const baseDatabaseUrl = process.env[config.databaseUrlEnv];
 const databases = new Map();
@@ -170,6 +179,7 @@ async function route(request, response) {
       sessionMode,
       jsonBodyLimitBytes,
       sessionCache: sessionCacheStats(databases, { idleMs: sessionIdleMs, maxContexts: maxSessionContexts }),
+      simulationRuns: simulationRunStore.stats(),
       domains: Object.keys(domains),
       productSimulations: listProductSimulations().simulations.map((simulation) => simulation.name),
     });
@@ -203,6 +213,17 @@ async function route(request, response) {
     return;
   }
 
+  if (url.pathname === "/api/simulation-runs" && method === "GET") {
+    sendJson(response, 200, businessSimulationRuns(request));
+    return;
+  }
+
+  if (url.pathname.startsWith("/api/simulation-runs/") && method === "GET") {
+    const id = decodeURIComponent(url.pathname.slice("/api/simulation-runs/".length));
+    sendJson(response, 200, businessSimulationRunRecord(id));
+    return;
+  }
+
   if (url.pathname.startsWith("/api/simulations/") && method === "GET") {
     const id = decodeURIComponent(url.pathname.slice("/api/simulations/".length));
     sendJson(response, 200, businessSimulationTemplate(id));
@@ -210,7 +231,7 @@ async function route(request, response) {
   }
 
   if (url.pathname === "/api/simulations/run" && method === "POST") {
-    sendJson(response, 200, businessSimulationRun(await readJson(request, { limitBytes: jsonBodyLimitBytes })));
+    sendJson(response, 200, businessSimulationRun(request, await readJson(request, { limitBytes: jsonBodyLimitBytes })));
     return;
   }
 
@@ -575,9 +596,31 @@ function businessSimulationTemplate(id) {
   }
 }
 
-function businessSimulationRun(body) {
+function businessSimulationRuns(request) {
+  return {
+    runs: simulationRunStore.list({ sessionId: simulationSession(request).id }),
+  };
+}
+
+function businessSimulationRunRecord(id) {
+  const record = simulationRunStore.get(id);
+  if (!record) {
+    const error = new Error(`simulation run '${id}' was not found`);
+    error.statusCode = 404;
+    error.code = "not_found";
+    throw error;
+  }
+  return { run: record };
+}
+
+function businessSimulationRun(request, body) {
   try {
-    return runBusinessSimulator(body);
+    const response = runBusinessSimulator(body);
+    return simulationRunStore.save({
+      request: body,
+      response,
+      session: simulationSession(request),
+    }).response;
   } catch (error) {
     throw withStatus(error, 400);
   }
@@ -753,6 +796,15 @@ function requestContext(request) {
   const sessionId = sessionMode === "shared" ? "" : sessionIdFromHeader(request.headers["x-reux-demo-session"]);
   const schema = sessionSchema(demoSchema, sessionId);
   return schemaContext(schema, sessionId);
+}
+
+function simulationSession(request) {
+  const sessionId = sessionMode === "shared" ? "" : sessionIdFromHeader(request.headers["x-reux-demo-session"]);
+  return {
+    id: sessionId,
+    isolated: Boolean(sessionId),
+    schema: sessionSchema(demoSchema, sessionId),
+  };
 }
 
 function schemaContext(schema, sessionId) {

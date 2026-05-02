@@ -15,7 +15,7 @@ describe("release preflight script", () => {
     });
 
     expect(output).toContain("release preflight ok: reux-prototype@0.1.0");
-    expect(output).toContain("demo readiness 99%, full completion 100%");
+    expect(output).toContain("demo readiness 100%, full completion 100%");
     expect(output).toContain("distribution mode: private/local tarball");
   });
 

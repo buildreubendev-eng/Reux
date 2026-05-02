@@ -53,13 +53,14 @@
     {
       "name": "Public Demo",
       "status": "live",
-      "summary": "The hosted demo lets public users test commerce, logistics, and Business Simulator workflows with isolated visitor sessions and generic Reux simulation execution.",
+      "summary": "The hosted demo lets public users test commerce, logistics, and Business Simulator workflows with isolated visitor sessions, generic Reux simulation execution, and temporary saved simulation runs.",
       "capabilities": [
         "Commerce workflow demo with reset, transaction, queue, and outbox behavior",
         "Logistics workflow demo validating non-commerce dispatch workflows",
         "Railway-hosted backend connected to PostgreSQL",
         "Reuben website embed/link for public testing",
         "Business Simulator frontend wired to generic Reux simulation execution",
+        "Temporary saved Business Simulator run records for result pages and sharing",
         "Health checks, deep smoke checks, CI smoke automation, monitor wrapper, webhook alerts, and operations dashboard",
         "Responsive, accessible UI with mobile layout polish"
       ]

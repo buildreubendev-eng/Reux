@@ -134,6 +134,8 @@ REUX_DEMO_CORS_MAX_AGE_SECONDS=600
 REUX_DEMO_JSON_BODY_LIMIT_BYTES=65536
 REUX_DEMO_MAX_SESSION_CONTEXTS=100
 REUX_DEMO_SESSION_IDLE_MS=1800000
+REUX_DEMO_MAX_SIMULATION_RUNS=200
+REUX_DEMO_SIMULATION_RUN_TTL_MS=86400000
 ```
 
 `DATABASE_URL` is required. `REUX_DEMO_SCHEMA` defaults to `reux_demo`, which keeps demo objects separate from other tables in the same database. `REUX_DEMO_SESSION_MODE` defaults to `isolated`, which maps each browser session to its own schema derived from `REUX_DEMO_SCHEMA`; set it to `shared` only for local debugging. `REUX_DEMO_SETUP_TOKEN` is optional for local development but should be set on public deployments; when set, the admin setup/reset endpoint requires the token before applying migrations or resetting shared seed data.
@@ -143,6 +145,8 @@ REUX_DEMO_SESSION_IDLE_MS=1800000
 `REUX_DEMO_JSON_BODY_LIMIT_BYTES` defaults to `65536` and protects public `POST` routes from oversized JSON payloads. `/api/health` reports the active `jsonBodyLimitBytes` value so hosted deployments can confirm the limit after a redeploy. Malformed JSON returns `400` with `code: "invalid_json"`; oversized JSON returns `413` with `code: "request_too_large"`.
 
 `REUX_DEMO_MAX_SESSION_CONTEXTS` defaults to `100` and limits how many shared/visitor database contexts the Node process keeps open. `REUX_DEMO_SESSION_IDLE_MS` defaults to `1800000` and lets the service close idle session contexts as new requests arrive. `/api/health` reports `sessionCache.contexts`, isolated/shared counts, idle counts, and the active limits so public-demo operators can spot runaway visitor sessions before they become a hosting problem.
+
+`REUX_DEMO_MAX_SIMULATION_RUNS` defaults to `200` and limits the hosted Business Simulator's temporary saved-result store. `REUX_DEMO_SIMULATION_RUN_TTL_MS` defaults to `86400000` and controls how long `GET /api/simulation-runs/:id` can retrieve a run before it expires. `/api/health` reports `simulationRuns` counters and limits.
 
 ## First Setup
 

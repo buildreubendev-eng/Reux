@@ -82,6 +82,8 @@ export type {
   BusinessSimulatorRecommendation,
   BusinessSimulatorRunRequest,
   BusinessSimulatorRunResponse,
+  BusinessSimulatorRunRecord,
+  BusinessSimulatorRunSummary,
   BusinessSimulatorScenarioInput,
   BusinessSimulatorScenarioResult,
   BusinessSimulatorSummary,
@@ -89,7 +91,9 @@ export type {
   BusinessSimulatorValidationErrorResponse,
   BusinessSimulatorValidationIssue,
   GetBusinessSimulationResponse,
+  GetBusinessSimulatorRunResponse,
   ListBusinessSimulationsResponse,
+  ListBusinessSimulatorRunsResponse,
 } from "./business-simulator-contract.js";
 export type {
   ReuxSimulationExecutionChangeInput,

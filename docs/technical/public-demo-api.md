@@ -56,9 +56,13 @@ Public API responses also include:
 | `GET /api/simulations` | List available Business Simulator templates. |
 | `GET /api/simulations/operations-decision` | Load the current operations-decision template. |
 | `POST /api/simulations/run` | Run a baseline plus scenarios and return metrics, timeline, recommendation, and optional Reux source. |
+| `GET /api/simulation-runs` | List recent saved run summaries for the current visitor session. |
+| `GET /api/simulation-runs/:id` | Load one saved Business Simulator run by ID for result pages or sharing. |
 | `POST /api/scenarios/compare` | Compare already-run scenario results. |
 
 These routes are public and do not require an admin token or visitor session. They are the contract the Reuben website Business Simulator should use.
+
+`POST /api/simulations/run` saves the hosted-demo result in a bounded temporary store and includes a `run` summary with a `live_...` ID. The run-list route is session-scoped; direct lookup by ID is public so result pages can be shared. Saved runs are intentionally temporary in the public demo and can expire.
 
 ## Generic Reux Simulation Routes
 

@@ -12,6 +12,7 @@
     "Public commerce workflow demo",
     "Public logistics workflow demo",
     "Public Business Simulator powered by generic Reux simulation execution",
+    "Temporary saved Business Simulator run records for result pages and sharing",
     "Clinic pilot source and walkthrough for appointment and care-task workflows",
     "In-page public testing guide and clearer empty states",
     "Hosted Railway backend connected to PostgreSQL",
@@ -62,8 +63,8 @@
     {
       "name": "Public Demo",
       "status": "live",
-      "summary": "The hosted demo lets public users test commerce, logistics, and Business Simulator workflows with isolated visitor sessions and generic Reux simulation execution.",
-      "capabilityCount": 7
+      "summary": "The hosted demo lets public users test commerce, logistics, and Business Simulator workflows with isolated visitor sessions, generic Reux simulation execution, and temporary saved simulation runs.",
+      "capabilityCount": 8
     },
     {
       "name": "Pilots And Validation",

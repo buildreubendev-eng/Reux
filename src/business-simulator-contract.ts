@@ -2,6 +2,8 @@ export const businessSimulatorEndpoints = {
   listSimulations: "GET /api/simulations",
   getSimulation: "GET /api/simulations/:id",
   runSimulation: "POST /api/simulations/run",
+  listSimulationRuns: "GET /api/simulation-runs",
+  getSimulationRun: "GET /api/simulation-runs/:id",
   compareScenarios: "POST /api/scenarios/compare",
 } as const;
 
@@ -159,12 +161,41 @@ export interface BusinessSimulatorComparison {
 }
 
 export interface BusinessSimulatorRunResponse {
+  run?: BusinessSimulatorRunSummary;
   simulation: BusinessSimulatorSummary;
   baseline: BusinessSimulatorScenarioResult;
   scenarios: BusinessSimulatorScenarioResult[];
   comparison: BusinessSimulatorComparison;
   reuxSource?: string;
   generatedAt: string;
+}
+
+export interface BusinessSimulatorRunSummary {
+  id: string;
+  simulationId: string;
+  createdAt: string;
+  expiresAt?: string;
+  session?: {
+    id: string;
+    isolated: boolean;
+    schema?: string;
+  };
+  scenarioCount: number;
+  recommendedScenarioId?: string;
+  recommendedScenarioName?: string;
+}
+
+export interface BusinessSimulatorRunRecord extends BusinessSimulatorRunSummary {
+  request: BusinessSimulatorRunRequest;
+  response: BusinessSimulatorRunResponse;
+}
+
+export interface ListBusinessSimulatorRunsResponse {
+  runs: BusinessSimulatorRunSummary[];
+}
+
+export interface GetBusinessSimulatorRunResponse {
+  run: BusinessSimulatorRunRecord;
 }
 
 export interface BusinessSimulatorCompareResponse {

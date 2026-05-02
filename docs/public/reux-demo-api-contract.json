@@ -42,6 +42,8 @@
     "jsonBodyLimitBytesDefault": 65536,
     "maxSessionContextsDefault": 100,
     "sessionIdleMsDefault": 1800000,
+    "maxSimulationRunRecordsDefault": 200,
+    "simulationRunTtlMsDefault": 86400000,
     "businessSimulatorMaxRunScenarios": 8,
     "businessSimulatorMaxCompareScenarios": 12,
     "businessSimulatorMaxForecastPeriods": 52
@@ -93,8 +95,24 @@
       "method": "POST",
       "path": "/api/simulations/run",
       "auth": "public",
-      "session": "none",
-      "purpose": "Run a baseline plus scenarios and return metrics, forecast timeline, recommendation, and optional Reux source."
+      "session": "optional isolated visitor session",
+      "purpose": "Run a baseline plus scenarios, save a temporary run record, and return metrics, forecast timeline, recommendation, optional Reux source, and run metadata."
+    },
+    {
+      "name": "listBusinessSimulationRuns",
+      "method": "GET",
+      "path": "/api/simulation-runs",
+      "auth": "public",
+      "session": "isolated visitor session",
+      "purpose": "List recent saved Business Simulator run summaries for the caller's session."
+    },
+    {
+      "name": "getBusinessSimulationRun",
+      "method": "GET",
+      "path": "/api/simulation-runs/:id",
+      "auth": "public",
+      "session": "shareable run id",
+      "purpose": "Load one saved Business Simulator run by ID for result pages or sharing."
     },
     {
       "name": "compareBusinessScenarios",

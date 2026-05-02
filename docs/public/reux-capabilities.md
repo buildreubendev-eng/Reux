@@ -2,14 +2,14 @@
 
 Reux is a data-native language prototype for reliable backend workflows and simulation-driven applications.
 
-Updated: 2026-05-01
+Updated: 2026-05-02
 
 ## Status
 
-- Demo readiness: roughly 99%.
+- Demo readiness: roughly 100%.
 - Full platform completion: roughly 100%.
 - Release track: prototype-complete.
-- Reux is demo-ready for public commerce and logistics testing, and prototype-complete for the current language/runtime foundation. The current language-core completion pass is closed; remaining work is product expansion, simulation depth, and developer tooling rather than closing the original MVP bar.
+- Reux is demo-ready for public commerce, logistics, and Business Simulator testing, and prototype-complete for the current language/runtime foundation. The current language-core completion pass is closed; remaining work is product expansion, simulation depth, package distribution, and developer onboarding polish rather than closing the original MVP bar.
 
 ## Positioning
 
@@ -59,10 +59,11 @@ The CLI, docs, package smoke checks, and editor tooling are ready for technical 
 
 Status: live.
 
-The hosted demo lets public users test commerce and logistics workflows with isolated visitor sessions.
+The hosted demo lets public users test commerce, logistics, and Business Simulator workflows with isolated visitor sessions and temporary saved simulation runs.
 
 - Commerce workflow demo with reset, transaction, queue, and outbox behavior.
 - Logistics workflow demo validating non-commerce dispatch workflows.
+- Business Simulator demo with result metadata and temporary saved run records.
 - Railway-hosted backend connected to PostgreSQL.
 - Reuben website embed/link for public testing.
 - Health checks, deep smoke checks, CI smoke automation, monitor wrapper, webhook alerts, and operations dashboard.

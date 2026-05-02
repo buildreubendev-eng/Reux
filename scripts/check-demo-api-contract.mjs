@@ -13,6 +13,8 @@ const requiredRoutes = [
   "GET /api/simulations",
   "GET /api/simulations/operations-decision",
   "POST /api/simulations/run",
+  "GET /api/simulation-runs",
+  "GET /api/simulation-runs/:id",
   "POST /api/scenarios/compare",
   "GET /api/reux/simulations",
   "GET /api/reux/simulations/:name",

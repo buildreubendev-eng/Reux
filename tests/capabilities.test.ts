@@ -29,7 +29,7 @@ describe("public capabilities", () => {
     const markdown = formatReuxCapabilitiesMarkdown();
 
     expect(markdown).toContain("# Reux Capabilities");
-    expect(markdown).toContain("Demo readiness: roughly 99%.");
+    expect(markdown).toContain("Demo readiness: roughly 100%.");
     expect(markdown).toContain("### Public Demo");
     expect(markdown).toContain("## Next Research Tracks");
   });

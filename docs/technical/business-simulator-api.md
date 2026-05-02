@@ -13,6 +13,8 @@ Runtime request validators live in `src/business-simulator-validation.ts`.
 | `GET /api/simulations` | List available business simulation templates. |
 | `GET /api/simulations/:id` | Load one simulation template, its default assumptions, and starter scenarios. |
 | `POST /api/simulations/run` | Run a baseline plus one or more scenarios and return metrics, timeline, and recommendation output. |
+| `GET /api/simulation-runs` | List recent simulation run summaries for the current visitor session. |
+| `GET /api/simulation-runs/:id` | Load one saved simulation run by its shareable run ID. |
 | `POST /api/scenarios/compare` | Compare already-run scenario results without rerunning the simulation model. |
 
 The hosted demo server exposes these routes from `demo/pilot-app/server.mjs`. The first implementation is intentionally a thin HTTP wrapper around the adapter functions so the frontend can switch from mock data to live backend calls without changing its data model.
@@ -75,6 +77,7 @@ Rate values use decimal form. For example, `0.08` means 8%.
 
 `POST /api/simulations/run` returns:
 
+- `run`: optional hosted-demo run metadata when the server persists the response.
 - `simulation`: template metadata.
 - `baseline`: baseline scenario result.
 - `scenarios`: scenario results.
@@ -153,6 +156,37 @@ The hosted demo server serializes those failures as `400` responses:
 
 Frontend clients should prefer `issues` for field-level UI and fall back to `message` or `error` for a page-level alert.
 
+## Saved Run Records
+
+The hosted demo stores recent Business Simulator runs in a bounded in-memory store. This is a product-facing contract, not permanent storage yet: it gives frontend result pages and share links a stable backend lookup path while keeping the first public implementation operationally simple.
+
+`POST /api/simulations/run` includes a `run` summary when the hosted server saves the result:
+
+```json
+{
+  "run": {
+    "id": "live_4f6c9f1a20b3448d",
+    "simulationId": "operations-decision",
+    "createdAt": "2026-05-02T00:00:00.000Z",
+    "expiresAt": "2026-05-03T00:00:00.000Z",
+    "scenarioCount": 2,
+    "recommendedScenarioId": "process-improvement",
+    "recommendedScenarioName": "Process Improvement"
+  }
+}
+```
+
+`GET /api/simulation-runs` returns session-scoped summaries so a visitor can revisit recent work without seeing another visitor's run list. `GET /api/simulation-runs/:id` loads the full request and response for a known run ID, which is the shareable result-page path the frontend can use.
+
+The demo store is configured with:
+
+| Environment variable | Default | Purpose |
+| --- | ---: | --- |
+| `REUX_DEMO_MAX_SIMULATION_RUNS` | `200` | Maximum saved run records before oldest records are evicted. |
+| `REUX_DEMO_SIMULATION_RUN_TTL_MS` | `86400000` | How long saved runs remain available. |
+
+The future production version should move this store to PostgreSQL with tenant/user ownership, but the response shapes should stay compatible.
+
 ## Backend Integration Notes
 
 The first backend implementation can adapt the existing Reux simulation runner:
@@ -223,6 +257,8 @@ The output includes a recommended scenario, reasons, and tradeoffs so the fronte
 - `GET /api/simulations` returns `ListBusinessSimulationsResponse`.
 - `GET /api/simulations/operations-decision` returns the default assumptions and starter scenarios.
 - `POST /api/simulations/run` accepts `BusinessSimulatorRunRequest`.
+- `GET /api/simulation-runs` returns recent run summaries for the current visitor session.
+- `GET /api/simulation-runs/:id` returns a saved run record with the original request and normalized response.
 - `POST /api/scenarios/compare` accepts `BusinessSimulatorCompareRequest`.
 - Unknown simulation IDs return `404`.
 - Malformed run/compare requests return `400`.

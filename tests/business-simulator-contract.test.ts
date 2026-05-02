@@ -30,6 +30,8 @@ describe("business simulator API contract", () => {
       listSimulations: "GET /api/simulations",
       getSimulation: "GET /api/simulations/:id",
       runSimulation: "POST /api/simulations/run",
+      listSimulationRuns: "GET /api/simulation-runs",
+      getSimulationRun: "GET /api/simulation-runs/:id",
       compareScenarios: "POST /api/scenarios/compare",
     });
     expect(businessSimulatorForecastUnits).toEqual(["week", "month", "quarter"]);
