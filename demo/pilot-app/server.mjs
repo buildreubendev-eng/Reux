@@ -4,13 +4,17 @@ import { extname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   BusinessSimulatorValidationError,
+  ReuxSimulationExecutionError,
   compareBusinessSimulatorScenarios,
   emitPostgresSchema,
   emitQuerySql,
   emitTransactionSql,
   getBusinessSimulation,
+  getReuxSimulation,
   listBusinessSimulations,
+  listReuxSimulations,
   runBusinessSimulator,
+  runReuxSimulation,
   transactionRetryAttempts,
 } from "../../dist/compiler.js";
 import { loadConfig } from "../../dist/config.js";
@@ -65,6 +69,16 @@ if (!baseDatabaseUrl) {
 
 const commerceSource = readFileSync(join(rootDir, "examples", "pilot_reux.dl"), "utf8");
 const logisticsSource = readFileSync(join(rootDir, "examples", "logistics_reux.dl"), "utf8");
+const productSimulationSources = [
+  "personal_finance.reux",
+  "habit_consistency.reux",
+  "workforce_change.reux",
+  "operations_throughput.reux",
+  "business_simulator.reux",
+].map((filename) => ({
+  filename,
+  source: readFileSync(join(rootDir, "examples", "simulations", filename), "utf8"),
+}));
 
 const domains = {
   commerce: {
@@ -109,7 +123,11 @@ const server = createServer(async (request, response) => {
   try {
     await route(request, response);
   } catch (error) {
-    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    const statusCode = Number.isInteger(error?.statusCode)
+      ? error.statusCode
+      : error instanceof BusinessSimulatorValidationError || error instanceof ReuxSimulationExecutionError
+        ? 400
+        : 500;
     sendJson(response, statusCode, errorResponseBody(error, statusCode));
   }
 });
@@ -147,12 +165,30 @@ async function route(request, response) {
       jsonBodyLimitBytes,
       sessionCache: sessionCacheStats(databases, { idleMs: sessionIdleMs, maxContexts: maxSessionContexts }),
       domains: Object.keys(domains),
+      productSimulations: listProductSimulations().simulations.map((simulation) => simulation.name),
     });
     return;
   }
 
   if (url.pathname === "/api/ops" && method === "GET") {
     sendJson(response, 200, await operationsDashboard(request));
+    return;
+  }
+
+  if (url.pathname === "/api/reux/simulations" && method === "GET") {
+    sendJson(response, 200, listProductSimulations());
+    return;
+  }
+
+  if (url.pathname.startsWith("/api/reux/simulations/") && url.pathname.endsWith("/run") && method === "POST") {
+    const name = decodeURIComponent(url.pathname.slice("/api/reux/simulations/".length, -"/run".length));
+    sendJson(response, 200, runProductSimulation(name, await readJson(request, { limitBytes: jsonBodyLimitBytes })));
+    return;
+  }
+
+  if (url.pathname.startsWith("/api/reux/simulations/") && method === "GET") {
+    const name = decodeURIComponent(url.pathname.slice("/api/reux/simulations/".length));
+    sendJson(response, 200, getProductSimulation(name));
     return;
   }
 
@@ -282,6 +318,45 @@ async function setupDemo(request, domain) {
   await ensureDemoOutboxTable(context);
   const reset = await resetSeed(context.db, domain.source, domain.seed);
   return { ok: true, domain: domain.key, reset, session: sessionInfo(context) };
+}
+
+function listProductSimulations() {
+  return {
+    simulations: productSimulationSources.flatMap(({ filename, source }) =>
+      listReuxSimulations(source).simulations.map((simulation) => ({
+        ...simulation,
+        sourceFile: filename,
+      })),
+    ),
+  };
+}
+
+function getProductSimulation(name) {
+  const source = findProductSimulationSource(name);
+  return {
+    ...getReuxSimulation(source.source, name),
+    sourceFile: source.filename,
+  };
+}
+
+function runProductSimulation(name, body) {
+  const source = findProductSimulationSource(name);
+  return {
+    ...runReuxSimulation(source.source, { ...body, simulationName: name }),
+    sourceFile: source.filename,
+  };
+}
+
+function findProductSimulationSource(name) {
+  for (const source of productSimulationSources) {
+    if (listReuxSimulations(source.source).simulations.some((simulation) => simulation.name === name)) {
+      return source;
+    }
+  }
+  const error = new Error(`simulation '${name}' was not found`);
+  error.statusCode = 404;
+  error.code = "not_found";
+  throw error;
 }
 
 async function commerceDashboard(request) {
@@ -565,6 +640,15 @@ function errorResponseBody(error, statusCode) {
       error: message,
       message,
       code: "business_simulator_validation_failed",
+      issues: error.issues,
+    };
+  }
+  if (error instanceof ReuxSimulationExecutionError) {
+    return {
+      ok: false,
+      error: message,
+      message,
+      code: error.code,
       issues: error.issues,
     };
   }

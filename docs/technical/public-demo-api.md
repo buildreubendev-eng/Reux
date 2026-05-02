@@ -52,6 +52,44 @@ The browser-facing website should generate one stable session id and reuse it. T
 
 These routes are public and do not require an admin token or visitor session. They are the contract the Reuben website Business Simulator should use.
 
+## Generic Reux Simulation Routes
+
+| Route | Purpose |
+| --- | --- |
+| `GET /api/reux/simulations` | List executable Reux simulation examples with dimensions, assumptions, metrics, objectives, and source file names. |
+| `GET /api/reux/simulations/:name` | Load one Reux simulation model by name. |
+| `POST /api/reux/simulations/:name/run` | Execute one Reux simulation with optional runtime baseline assumptions and runtime scenarios. |
+
+These routes are public and do not require an admin token or visitor session. They are the generic product-facing path for PLOS and business-product prototypes that want Reux-backed simulation execution without using the specialized Business Simulator contract.
+
+Runtime execution request:
+
+```json
+{
+  "assumptions": {
+    "income": 6200
+  },
+  "scenarios": [
+    {
+      "name": "lower_rent_runtime",
+      "overrides": {
+        "rent": 1100
+      },
+      "changes": [
+        {
+          "period": 6,
+          "overrides": {
+            "debt_payment": 0
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+Runtime overrides must reference declared assumptions, keep their original primitive type, preserve declared units, and keep changes inside the forecast window. Invalid requests return `400` with `code: "simulation_execution_validation_failed"` and stable `issues[].path` entries such as `$.assumptions.income`.
+
 ## Commerce Workflow Routes
 
 | Route | Purpose |
@@ -100,6 +138,7 @@ Known public error codes:
 | Code | HTTP status | Meaning |
 | --- | ---: | --- |
 | `business_simulator_validation_failed` | `400` | Run/compare request failed contract validation. |
+| `simulation_execution_validation_failed` | `400` | Generic Reux simulation execution request failed validation. |
 | `invalid_json` | `400` | Request body was not valid JSON. |
 | `request_too_large` | `413` | JSON body exceeded `REUX_DEMO_JSON_BODY_LIMIT_BYTES`. |
 | `not_found` | `404` | Route or simulation id was not found. |

@@ -36,12 +36,14 @@ try {
   let commerceOutbox = null;
   let logisticsOutbox = null;
   let businessReport = null;
+  let reuxSimulationReport = null;
   let smokeReport = null;
   if (deep) {
     commerceOutbox = await fetchJson(baseUrl, "/api/outbox/stats");
     logisticsOutbox = await fetchJson(baseUrl, "/api/logistics/outbox/stats");
     businessReport = await runBusinessSimulatorApiCheck(baseUrl);
-    checks.push(commerceOutbox, logisticsOutbox, ...businessReport.checks);
+    reuxSimulationReport = await runReuxSimulationApiCheck(baseUrl);
+    checks.push(commerceOutbox, logisticsOutbox, ...businessReport.checks, ...reuxSimulationReport.checks);
   }
   if (smoke) {
     smokeReport = await runSmokeCheck(baseUrl, health.body);
@@ -52,6 +54,7 @@ try {
     ...(deep ? validateOutboxStats(commerceOutbox?.response, commerceOutbox?.body, "commerce") : []),
     ...(deep ? validateOutboxStats(logisticsOutbox?.response, logisticsOutbox?.body, "logistics") : []),
     ...(businessReport?.diagnostics ?? []),
+    ...(reuxSimulationReport?.diagnostics ?? []),
     ...(smokeReport?.diagnostics ?? []),
   ];
   const report = {
@@ -61,6 +64,7 @@ try {
     latencyMs: Date.now() - startedAt,
     diagnostics,
     businessSimulator: businessReport?.summary,
+    reuxSimulations: reuxSimulationReport?.summary,
     smoke: smokeReport?.summary,
     checks: checks.map((check) => ({
       path: check.path,
@@ -78,6 +82,61 @@ try {
     diagnostics: [error instanceof Error ? error.message : String(error)],
   }, null, 2));
   process.exitCode = 1;
+}
+
+async function runReuxSimulationApiCheck(baseUrl) {
+  const diagnostics = [];
+  const checks = [];
+
+  const list = await fetchJson(baseUrl, "/api/reux/simulations");
+  checks.push(list);
+  diagnostics.push(...validateReuxSimulationList(list.response, list.body));
+
+  const templateId = list.body?.simulations?.find((simulation) => simulation.name === "personal_finance")?.name ?? "personal_finance";
+  const template = await fetchJson(baseUrl, `/api/reux/simulations/${encodeURIComponent(templateId)}`);
+  checks.push(template);
+  diagnostics.push(...validateReuxSimulationTemplate(template.response, template.body, templateId));
+
+  const run = await fetchJson(baseUrl, `/api/reux/simulations/${encodeURIComponent(templateId)}/run`, {
+    method: "POST",
+    body: {
+      assumptions: {
+        income: 6200,
+      },
+      scenarios: [
+        {
+          name: "lower_rent_healthcheck",
+          overrides: {
+            rent: 1100,
+          },
+        },
+      ],
+    },
+  });
+  checks.push(run);
+  diagnostics.push(...validateReuxSimulationRun(run.response, run.body, templateId));
+
+  const invalidRun = await fetchJson(baseUrl, `/api/reux/simulations/${encodeURIComponent(templateId)}/run`, {
+    method: "POST",
+    body: {
+      assumptions: {
+        income: "too much",
+      },
+    },
+  });
+  checks.push(invalidRun);
+  diagnostics.push(...validateReuxSimulationValidationError(invalidRun.response, invalidRun.body, "$.assumptions.income"));
+
+  return {
+    diagnostics,
+    checks,
+    summary: {
+      simulationCount: list.body?.simulations?.length ?? 0,
+      templateId,
+      scenarioCount: run.body?.run?.scenarios?.length ?? 0,
+      validationIssues: invalidRun.body?.issues?.length ?? 0,
+    },
+  };
 }
 
 async function fetchJson(baseUrl, path, options = {}) {
@@ -350,6 +409,72 @@ function validateSimulationList(response, body) {
   }
   if (!body?.simulations?.some((simulation) => simulation.id === "operations-decision")) {
     diagnostics.push("business simulator list did not include operations-decision");
+  }
+  return diagnostics;
+}
+
+function validateReuxSimulationList(response, body) {
+  const diagnostics = [];
+  if (!response.ok) diagnostics.push(`Reux simulation list expected 2xx, got ${response.status}`);
+  if (!Array.isArray(body?.simulations) || body.simulations.length === 0) {
+    diagnostics.push("Reux simulation list did not include simulations");
+  }
+  if (!body?.simulations?.some((simulation) => simulation.name === "personal_finance")) {
+    diagnostics.push("Reux simulation list did not include personal_finance");
+  }
+  if (!body?.simulations?.some((simulation) => simulation.name === "operations_throughput")) {
+    diagnostics.push("Reux simulation list did not include operations_throughput");
+  }
+  return diagnostics;
+}
+
+function validateReuxSimulationTemplate(response, body, expectedName) {
+  const diagnostics = [];
+  if (!response.ok) diagnostics.push(`Reux simulation template expected 2xx, got ${response.status}`);
+  if (body?.simulation?.name !== expectedName) {
+    diagnostics.push(`Reux simulation template expected name=${expectedName}, got ${body?.simulation?.name ?? "missing"}`);
+  }
+  if (!Array.isArray(body?.simulation?.assumptions) || body.simulation.assumptions.length === 0) {
+    diagnostics.push("Reux simulation template did not include assumptions");
+  }
+  if (!Array.isArray(body?.simulation?.metrics) || body.simulation.metrics.length === 0) {
+    diagnostics.push("Reux simulation template did not include metrics");
+  }
+  if (!body?.sourceFile) diagnostics.push("Reux simulation template did not include sourceFile");
+  return diagnostics;
+}
+
+function validateReuxSimulationRun(response, body, expectedName) {
+  const diagnostics = [];
+  if (!response.ok) diagnostics.push(`Reux simulation run expected 2xx, got ${response.status}`);
+  if (body?.simulation?.name !== expectedName) {
+    diagnostics.push(`Reux simulation run expected name=${expectedName}, got ${body?.simulation?.name ?? "missing"}`);
+  }
+  if (!Array.isArray(body?.run?.periods) || body.run.periods.length === 0) {
+    diagnostics.push("Reux simulation run did not include periods");
+  }
+  if (!Array.isArray(body?.run?.scenarios) || body.run.scenarios.length < 2) {
+    diagnostics.push("Reux simulation run did not include baseline and runtime scenario");
+  }
+  if (!body?.run?.comparison?.metricRankings?.length) {
+    diagnostics.push("Reux simulation run did not include comparison metric rankings");
+  }
+  if (!body?.generatedAt) diagnostics.push("Reux simulation run did not include generatedAt");
+  return diagnostics;
+}
+
+function validateReuxSimulationValidationError(response, body, expectedPath) {
+  const diagnostics = [];
+  if (response.status !== 400) diagnostics.push(`Reux simulation invalid run expected 400, got ${response.status}`);
+  if (body?.ok !== false) diagnostics.push("Reux simulation validation error did not include ok=false");
+  if (body?.code !== "simulation_execution_validation_failed") {
+    diagnostics.push(`Reux simulation validation error had unexpected code=${body?.code ?? "missing"}`);
+  }
+  if (!Array.isArray(body?.issues) || body.issues.length === 0) {
+    diagnostics.push("Reux simulation validation error did not include issues");
+  }
+  if (!body?.issues?.some((issue) => issue.path === expectedPath)) {
+    diagnostics.push(`Reux simulation validation error did not include issue path ${expectedPath}`);
   }
   return diagnostics;
 }

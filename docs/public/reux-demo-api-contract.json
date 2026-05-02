@@ -31,6 +31,7 @@
   },
   "errorCodes": [
     "business_simulator_validation_failed",
+    "simulation_execution_validation_failed",
     "invalid_json",
     "request_too_large",
     "not_found",
@@ -85,6 +86,30 @@
       "auth": "public",
       "session": "none",
       "purpose": "Compare already-run Business Simulator scenario results."
+    },
+    {
+      "name": "listReuxSimulations",
+      "method": "GET",
+      "path": "/api/reux/simulations",
+      "auth": "public",
+      "session": "none",
+      "purpose": "List executable Reux simulation examples with dimensions, assumptions, metrics, objectives, and source file names."
+    },
+    {
+      "name": "getReuxSimulation",
+      "method": "GET",
+      "path": "/api/reux/simulations/:name",
+      "auth": "public",
+      "session": "none",
+      "purpose": "Load one Reux simulation model by name."
+    },
+    {
+      "name": "runReuxSimulation",
+      "method": "POST",
+      "path": "/api/reux/simulations/:name/run",
+      "auth": "public",
+      "session": "none",
+      "purpose": "Execute one Reux simulation with optional runtime baseline assumptions and runtime scenarios."
     },
     {
       "name": "commerceDashboard",
