@@ -75,7 +75,7 @@ describe("business simulator API contract", () => {
     } satisfies BusinessSimulatorRunRequest;
 
     expect(request.scenarios[0].assumptions.productivityGainRate).toBe(0.12);
-    expect(businessSimulatorContractVersion).toBe("2026-05-01");
+    expect(businessSimulatorContractVersion).toBe("2026-05-02");
   });
 
   it("keeps the Reux business simulator model aligned with frontend assumptions and metrics", () => {
@@ -223,11 +223,12 @@ describe("business simulator API contract", () => {
   it("emits a deterministic frontend handoff fixture", () => {
     const fixture = createBusinessSimulatorContractFixture(new Date("2026-05-01T00:00:00.000Z"));
 
-    expect(fixture.contractVersion).toBe("2026-05-01");
+    expect(fixture.contractVersion).toBe("2026-05-02");
     expect(fixture.endpoints.runSimulation).toBe("POST /api/simulations/run");
     expect(fixture.limits.maxRunScenarios).toBe(8);
     expect(fixture.templateResponse.simulation.id).toBe("operations-decision");
     expect(fixture.runRequest.options?.includeReuxSource).toBe(true);
+    expect(fixture.runRequest.name).toBe("Contract Fixture Business Simulation");
     expect(fixture.runResponse.reuxSource).toContain("simulate operations_decision");
     expect(fixture.runResponse.comparison.recommendedScenarioId).toBeTruthy();
     expect(fixture.compareResponse.comparison.metricDeltasByScenario["process-improvement"]).toBeTruthy();
@@ -333,6 +334,7 @@ describe("business simulator API contract", () => {
   it("rejects oversized or unstable run request inputs with stable validation paths", () => {
     try {
       assertBusinessSimulatorRunRequest({
+        name: "x".repeat(businessSimulatorLimits.maxScenarioNameLength + 1),
         baseline: {
           ...businessSimulatorDefaultAssumptions,
           forecastPeriods: businessSimulatorLimits.maxForecastPeriods + 1,
@@ -350,6 +352,7 @@ describe("business simulator API contract", () => {
     } catch (error) {
       expect(error).toBeInstanceOf(BusinessSimulatorValidationError);
       const issueMap = new Map((error as BusinessSimulatorValidationError).issues.map((issue) => [issue.path, issue.message]));
+      expect(issueMap.get("$.name")).toBe("name must be 120 characters or fewer");
       expect(issueMap.get("$.baseline.forecastPeriods")).toBe("must be 52 or less");
       expect(issueMap.get("$.scenarios")).toBe("must contain 8 or fewer scenarios");
       expect(issueMap.get("$.scenarios[0].id")).toContain("must use letters");

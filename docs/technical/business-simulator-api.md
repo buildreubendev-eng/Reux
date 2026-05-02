@@ -41,7 +41,8 @@ Rate values use decimal form. For example, `0.08` means 8%.
 
 ```json
 {
-  "simulationId": "operations-throughput",
+  "name": "Q2 Workforce Planning",
+  "simulationId": "operations-decision",
   "baseline": {
     "employees": 50,
     "averageHourlyCost": 32,

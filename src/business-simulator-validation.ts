@@ -54,6 +54,13 @@ export function assertBusinessSimulatorRunRequest(value: unknown): asserts value
   validateAssumptions(value.baseline, "$.baseline", issues);
   validateScenarioInputs(value.scenarios, "$.scenarios", issues);
 
+  validateOptionalBoundedString(
+    value.name,
+    "$.name",
+    "name",
+    businessSimulatorLimits.maxScenarioNameLength,
+    issues,
+  );
   if (value.simulationId !== undefined) {
     if (!isNonEmptyString(value.simulationId)) {
       issues.push({ path: "$.simulationId", message: "must be a non-empty string when provided" });

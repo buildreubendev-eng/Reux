@@ -44,6 +44,7 @@ export function createBusinessSimulatorContractFixture(now: Date = new Date(busi
   const templateId = listResponse.simulations[0]?.id ?? "operations-decision";
   const templateResponse = getBusinessSimulation(templateId);
   const runRequest: BusinessSimulatorRunRequest = {
+    name: "Contract Fixture Business Simulation",
     simulationId: templateId,
     baseline: templateResponse.defaultAssumptions,
     scenarios: templateResponse.exampleScenarios.slice(0, 2),

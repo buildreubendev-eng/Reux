@@ -94,6 +94,7 @@ export interface BusinessSimulatorScenarioInput {
 }
 
 export interface BusinessSimulatorRunRequest {
+  name?: string;
   simulationId?: string;
   baseline: BusinessSimulatorAssumptions;
   scenarios: BusinessSimulatorScenarioInput[];
@@ -172,6 +173,7 @@ export interface BusinessSimulatorRunResponse {
 
 export interface BusinessSimulatorRunSummary {
   id: string;
+  name?: string;
   simulationId: string;
   createdAt: string;
   expiresAt?: string;
@@ -181,6 +183,9 @@ export interface BusinessSimulatorRunSummary {
     schema?: string;
   };
   scenarioCount: number;
+  bestMargin?: number;
+  bestMarginScenario?: string;
+  riskRange?: [number, number];
   recommendedScenarioId?: string;
   recommendedScenarioName?: string;
 }
@@ -236,4 +241,4 @@ export const businessSimulatorDefaultAssumptions: BusinessSimulatorAssumptions =
   forecastUnit: "week",
 };
 
-export const businessSimulatorContractVersion = "2026-05-01";
+export const businessSimulatorContractVersion = "2026-05-02";
