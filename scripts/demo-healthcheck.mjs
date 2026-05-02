@@ -193,6 +193,7 @@ async function runBusinessSimulatorApiCheck(baseUrl) {
   diagnostics.push(...validateSimulationTemplate(template.response, template.body, templateId));
 
   const runRequest = {
+    name: "Healthcheck Business Simulation",
     simulationId: templateId,
     baseline: template.body?.defaultAssumptions ?? {
       employees: 50,
@@ -553,6 +554,8 @@ function validateSavedSimulationRun(response, body, expectedId) {
   if (body?.run?.response?.run?.id !== expectedId) {
     diagnostics.push("saved simulation run response did not include matching run metadata");
   }
+  diagnostics.push(...validateSavedSimulationRunSummary(body?.run, expectedId, "saved simulation run"));
+  diagnostics.push(...validateSavedSimulationRunSummary(body?.run?.response?.run, expectedId, "saved simulation run response metadata"));
   if (!body?.run?.request?.baseline) {
     diagnostics.push("saved simulation run did not include original request baseline");
   }
@@ -572,6 +575,27 @@ function validateSavedSimulationRunList(response, body, expectedId) {
   if (!body.runs.some((run) => run.id === expectedId)) {
     diagnostics.push(`saved simulation run list did not include ${expectedId}`);
   }
+  const listedRun = body.runs.find((run) => run.id === expectedId);
+  diagnostics.push(...validateSavedSimulationRunSummary(listedRun, expectedId, "saved simulation run list summary"));
+  return diagnostics;
+}
+
+function validateSavedSimulationRunSummary(summary, expectedId, label) {
+  const diagnostics = [];
+  if (!summary) {
+    diagnostics.push(`${label} was missing`);
+    return diagnostics;
+  }
+  if (summary.id !== expectedId) diagnostics.push(`${label} expected id=${expectedId}, got ${summary.id ?? "missing"}`);
+  if (typeof summary.name !== "string" || summary.name.length === 0) diagnostics.push(`${label} did not include a display name`);
+  if (summary.simulationId !== "operations-decision") diagnostics.push(`${label} had unexpected simulationId=${summary.simulationId ?? "missing"}`);
+  if (typeof summary.scenarioCount !== "number" || summary.scenarioCount < 2) diagnostics.push(`${label} did not include baseline plus scenario count`);
+  if (typeof summary.bestMargin !== "number") diagnostics.push(`${label} did not include numeric bestMargin`);
+  if (typeof summary.bestMarginScenario !== "string" || summary.bestMarginScenario.length === 0) diagnostics.push(`${label} did not include bestMarginScenario`);
+  if (!Array.isArray(summary.riskRange) || summary.riskRange.length !== 2) diagnostics.push(`${label} did not include riskRange`);
+  if (typeof summary.recommendedScenarioId !== "string" || summary.recommendedScenarioId.length === 0) diagnostics.push(`${label} did not include recommendedScenarioId`);
+  if (typeof summary.recommendedScenarioName !== "string" || summary.recommendedScenarioName.length === 0) diagnostics.push(`${label} did not include recommendedScenarioName`);
+  if (typeof summary.expiresAt !== "string" || Number.isNaN(Date.parse(summary.expiresAt))) diagnostics.push(`${label} did not include a valid expiresAt timestamp`);
   return diagnostics;
 }
 
