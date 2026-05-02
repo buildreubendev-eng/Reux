@@ -8,6 +8,20 @@ Reux is a data-native language for reliable backend workflows and simulation-dri
 
 It helps teams model data, run state-changing workflows, emit durable events, and compare scenarios before decisions become production changes.
 
+## Category Framing
+
+Reux should be positioned as a backend decision language, not as "another general-purpose programming language."
+
+The clearest public category is:
+
+> A backend language for data-aware workflows and simulation-driven decisions.
+
+That category keeps the message specific enough to be credible while still leaving room for the long-term ecosystem.
+
+## Public One-Liner
+
+Reux lets teams define data models, workflows, events, and simulations in one auditable backend language, then use normal web technology to build the product interface around it.
+
 ## What To Say
 
 Use this language publicly:
@@ -17,6 +31,7 @@ Use this language publicly:
 - Reux is designed to sit underneath normal web applications, not replace every layer on day one.
 - Reux is being validated through real products: the Reuben website, the public Reux demo, PLOS, and the business simulation engine.
 - The goal is explainable software for systems where data state and future outcomes matter.
+- The Business Simulator is the current proof point: a real interface using Reux-backed simulation logic to compare operational decisions.
 
 ## What To Avoid Saying For Now
 
@@ -66,3 +81,19 @@ For demo users:
 Reuben is the public home for the work. Reux is the language and runtime layer. PLOS is the personal simulation product that validates individual planning use cases. The real-time business simulation engine is the enterprise product that validates operational and financial decision use cases.
 
 Together, those products make the language easier to understand because Reux is not only a syntax experiment. It is being shaped by products that need it.
+
+## Investor / Customer Translation
+
+If the audience is not technical, avoid leading with compiler details. Lead with the operational pain:
+
+- Modern products scatter important business rules across application code, SQL, queues, spreadsheets, and dashboards.
+- Reux brings those rules closer to the data and makes them easier to inspect, test, and simulate.
+- The first commercial wedge is simulation-driven software: business operators can compare choices before committing money, staff, time, or risk.
+
+## Developer Translation
+
+If the audience is technical, lead with the architecture:
+
+- Reux compiles a focused source language into PostgreSQL and TypeScript-facing artifacts.
+- It keeps boring infrastructure underneath: Node.js, PostgreSQL, generated SQL, generated TypeScript, and normal web apps.
+- The differentiated layer is semantic: schemas, workflows, state transitions, durable events, and simulation models live in one inspectable source language.

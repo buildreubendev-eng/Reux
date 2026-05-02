@@ -2,21 +2,21 @@
 
 A data-native language prototype for reliable backend workflows and simulation-driven applications.
 
-Updated: 2026-05-01
+Updated: 2026-05-02
 
 ## Status
 
-- Demo readiness: roughly 99%.
+- Demo readiness: roughly 100%.
 - Full platform completion: roughly 100%.
 - Release track: prototype-complete.
-- Reux is demo-ready for public commerce and logistics testing, and prototype-complete for the current language/runtime foundation. The current language-core completion pass is closed; remaining work is product expansion, simulation depth, and developer tooling rather than closing the original MVP bar.
+- Reux is demo-ready for public commerce, logistics, and Business Simulator testing, and prototype-complete for the current language/runtime foundation. The current language-core completion pass is closed; remaining work is product expansion, simulation depth, package distribution, and developer onboarding polish rather than closing the original MVP bar.
 
 ## Capability Groups
 
 - Language Core: prototype-complete. The prototype language core can model schemas, enums, reusable typed queries, guarded transaction functions, durable events, migrations, and simulations. (5 capabilities)
 - Runtime And Database: prototype-complete. The runtime path uses PostgreSQL today and supports compiled query execution, transaction execution, migrations, seeds, and outbox processing. (5 capabilities)
 - Developer Experience: prototype-complete. The CLI, docs, package smoke checks, and editor tooling are ready for technical review and local experimentation. (5 capabilities)
-- Public Demo: live. The hosted demo lets public users test commerce and logistics workflows with isolated visitor sessions. (6 capabilities)
+- Public Demo: live. The hosted demo lets public users test commerce, logistics, and Business Simulator workflows with isolated visitor sessions and generic Reux simulation execution. (7 capabilities)
 - Pilots And Validation: active. Commerce, logistics, clinic, PLOS, and business operations examples keep Reux grounded in real product needs. (5 capabilities)
 
 ## Next Milestones
@@ -37,4 +37,5 @@ Updated: 2026-05-01
 - capabilitiesJson: `docs/public/reux-capabilities.json`
 - demoApiContract: `docs/public/reux-demo-api-contract.json`
 - demoTestingGuide: `docs/public/reux-demo-testing-guide.md`
+- developerAccess: `docs/public/reux-developer-access.md`
 - positioningGuide: `docs/public/reux-positioning.md`

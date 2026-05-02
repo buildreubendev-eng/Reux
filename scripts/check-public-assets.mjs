@@ -80,6 +80,7 @@ function buildSnapshot(roadmap, capabilities) {
       capabilitiesJson: "docs/public/reux-capabilities.json",
       demoApiContract: "docs/public/reux-demo-api-contract.json",
       demoTestingGuide: "docs/public/reux-demo-testing-guide.md",
+      developerAccess: "docs/public/reux-developer-access.md",
       positioningGuide: "docs/public/reux-positioning.md",
     },
   };

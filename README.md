@@ -177,6 +177,7 @@ Technical documentation:
 - [Public Reux snapshot](docs/public/reux-public-snapshot.md)
 - [Public Reux snapshot data](docs/public/reux-public-snapshot.json)
 - [Public Reux positioning guide](docs/public/reux-positioning.md)
+- [Public Reux developer access](docs/public/reux-developer-access.md)
 - [Next backlog](docs/technical/next-backlog.md)
 
 GitHub Actions runs `npm run verify` and PostgreSQL-backed `npm run verify:postgres` on pushes and pull requests to `main`.
