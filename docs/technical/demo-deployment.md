@@ -75,13 +75,13 @@ For periodic hosted demo database cleanup, run maintenance in dry-run mode first
 npm run demo:maintenance
 ```
 
-The maintenance command lists managed isolated visitor schemas matching `REUX_DEMO_SCHEMA_s_<session>`, keeps `healthcheck` and `healthcheckci` by default, and does not change the database unless `--apply` is passed. To drop the listed candidates after reviewing them:
+The maintenance command lists managed isolated visitor schemas matching `REUX_DEMO_SCHEMA_s_<session>`, keeps `healthcheck` and `healthcheckci` by default, reports expired or over-limit saved Business Simulator run records in `_reux_simulation_runs`, and does not change the database unless `--apply` is passed. To drop the listed schemas and delete the listed saved-run records after reviewing them:
 
 ```bash
 npm run demo:maintenance -- --apply
 ```
 
-Use `--keep=session1,session2` or `REUX_DEMO_MAINTENANCE_KEEP_SESSIONS` for sessions that should survive cleanup. The command only targets normalized session schemas such as `reux_demo_s_public123` and refuses invalid base schema names.
+Use `--keep=session1,session2` or `REUX_DEMO_MAINTENANCE_KEEP_SESSIONS` for sessions that should survive cleanup. Use `--max-simulation-runs=200` or `REUX_DEMO_MAX_SIMULATION_RUNS` to align saved-run overflow cleanup with the deployed retention cap. The command only targets normalized session schemas such as `reux_demo_s_public123`, refuses invalid base schema names, and handles missing saved-run tables as an empty cleanup plan.
 
 For release validation after a production redeploy, run the full public smoke path:
 
