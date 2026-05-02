@@ -14,8 +14,11 @@ From the repository root:
 
 ```powershell
 npm install
+npm run onboarding:doctor
 npm run onboarding:smoke
 ```
+
+`onboarding:doctor` is a fast prerequisite check. It verifies the Node version, important package scripts, examples, seed fixtures, docs, and editor files before the heavier build path starts.
 
 The smoke path builds the CLI and runs a representative no-database workflow:
 

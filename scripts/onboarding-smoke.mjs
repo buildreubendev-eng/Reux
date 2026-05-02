@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 
 const cli = ["dist/cli.js"];
 
+run("Check source onboarding prerequisites", process.execPath, ["scripts/onboarding-doctor.mjs"]);
 run("Clean generated build output", process.execPath, ["scripts/clean-dist.mjs"]);
 run("Build the Reux CLI", process.execPath, ["node_modules/typescript/bin/tsc", "-p", "tsconfig.json"]);
 

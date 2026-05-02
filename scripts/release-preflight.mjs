@@ -29,6 +29,7 @@ const requiredScripts = [
   "verify:package",
   "verify:postgres:full",
   "verify:demo:smoke",
+  "onboarding:doctor",
   "demo:healthcheck",
   "demo:monitor",
   "check:public",
