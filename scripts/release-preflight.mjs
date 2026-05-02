@@ -34,6 +34,7 @@ const requiredScripts = [
   "onboarding:doctor",
   "demo:healthcheck",
   "demo:monitor",
+  "demo:maintenance",
   "check:demo-contract",
   "check:public",
   "public:write",
@@ -88,6 +89,9 @@ if (!roadmapMarkdown.includes(`Full platform completion: roughly ${status.fullCo
 }
 if (!demoDeploymentMarkdown.includes("REUX_DEMO_MONITOR_ALERT_WEBHOOK_URL")) {
   failures.push("demo deployment docs must document monitor alert webhook configuration");
+}
+if (!demoDeploymentMarkdown.includes("demo:maintenance")) {
+  failures.push("demo deployment docs must document demo maintenance cleanup");
 }
 if (!demoTestingMarkdown.includes("--alert-webhook-url")) {
   failures.push("public demo testing guide must document monitor alert webhook usage");

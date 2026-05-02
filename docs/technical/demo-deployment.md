@@ -69,6 +69,20 @@ npm run demo:monitor -- https://your-demo-host.example.com --deep --max-failures
 
 You can also set `REUX_DEMO_MONITOR_ALERT_WEBHOOK_URL` and optional `REUX_DEMO_MONITOR_ALERT_TIMEOUT_MS`. The monitor sends a JSON `POST` when a one-shot check fails, when a continuous check reaches the configured failure threshold, and when a continuous check recovers after transient failures. The payload includes the target URL, check mode, timestamp, failure counts, elapsed time, and truncated healthcheck stdout/stderr for debugging.
 
+For periodic hosted demo database cleanup, run maintenance in dry-run mode first:
+
+```bash
+npm run demo:maintenance
+```
+
+The maintenance command lists managed isolated visitor schemas matching `REUX_DEMO_SCHEMA_s_<session>`, keeps `healthcheck` and `healthcheckci` by default, and does not change the database unless `--apply` is passed. To drop the listed candidates after reviewing them:
+
+```bash
+npm run demo:maintenance -- --apply
+```
+
+Use `--keep=session1,session2` or `REUX_DEMO_MAINTENANCE_KEEP_SESSIONS` for sessions that should survive cleanup. The command only targets normalized session schemas such as `reux_demo_s_public123` and refuses invalid base schema names.
+
 For release validation after a production redeploy, run the full public smoke path:
 
 ```bash
