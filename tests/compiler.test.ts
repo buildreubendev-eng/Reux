@@ -570,9 +570,37 @@ simulate personal_finance {
     expect(run.periods[0].metrics.productivity_index).toBe(108);
     expect(run.periods[0].metrics.operating_relief).toBe(0.18);
     expect(run.periods[0].metricUnits).toEqual({ operating_relief: "percent" });
+    expect(run.periods[3].assumptionDeltas.productivity_gain).toMatchObject({
+      name: "productivity_gain",
+      baseline: 0.08,
+      previous: 0.08,
+      current: 0.1,
+      changedFromPrevious: true,
+      changedFromBaseline: true,
+      deltaFromPrevious: 0.02,
+      deltaFromBaseline: 0.02,
+      unit: "percent",
+    });
+    expect(run.periods[4].assumptionDeltas.productivity_gain).toMatchObject({
+      previous: 0.1,
+      current: 0.1,
+      changedFromPrevious: false,
+      changedFromBaseline: true,
+      deltaFromPrevious: 0,
+      deltaFromBaseline: 0.02,
+    });
     expect(run.comparison.scenarios.map((scenario: { name: string }) => scenario.name)).toEqual(["stronger_training", "no_overtime_change"]);
     expect(run.scenarios[1].periods[3].metrics.productivity_index).toBe(114);
     expect(run.scenarios[1].periods[3].metrics.operating_relief).toBe(0.24);
+    expect(run.scenarios[1].periods[3].assumptionDeltas.productivity_gain).toMatchObject({
+      baseline: 0.12,
+      previous: 0.12,
+      current: 0.14,
+      changedFromPrevious: true,
+      changedFromBaseline: true,
+      deltaFromPrevious: 0.02,
+      deltaFromBaseline: 0.02,
+    });
     expect(run.comparison.scenarios[0].metricDeltas).toEqual({ productivity_index: 4, operating_relief: 0.04 });
     expect(run.comparison.scenarios[0].periodDeltas[0].metricDeltas).toEqual({ productivity_index: 4, operating_relief: 0.04 });
     expect(run.comparison.scenarios[0].periodDeltas[3].metricDeltas).toEqual({ productivity_index: 4, operating_relief: 0.04 });
@@ -642,7 +670,9 @@ simulate support_cost {
     expect(types).toContain("export type WorkforceChangeScenarioName = \"baseline\" | \"stronger_training\" | \"no_overtime_change\";");
     expect(types).toContain("export interface WorkforceChangeAssumptions");
     expect(types).toContain("export interface ReuxSimulationExplanation<ScenarioName extends string, MetricName extends string>");
+    expect(types).toContain("export interface ReuxSimulationAssumptionDelta<Value = ReuxSimulationValue>");
     expect(types).toContain("export interface ReuxSimulationMetricSummary<ScenarioName extends string, MetricName extends string>");
+    expect(types).toContain("assumptionDeltas: Partial<{ [Name in keyof Assumptions]: ReuxSimulationAssumptionDelta<Assumptions[Name]> }>;");
     expect(types).toContain("export function formatReuxSimulationDelta(delta: number | undefined, unit?: string): string");
     expect(types).toContain("export function summarizeReuxSimulationComparison<ScenarioName extends string, Metrics extends object, MetricName extends string>");
     expect(types).toContain("export function listReuxSimulationScenarioDeltas<ScenarioName extends string, Metrics extends object, MetricName extends string>");

@@ -67,9 +67,22 @@ export interface SimulationPeriodResult {
   label: string;
   assumptions: Record<string, boolean | number | string>;
   assumptionUnits: Record<string, string>;
+  assumptionDeltas: Record<string, SimulationAssumptionDelta>;
   appliedChanges: Array<{ period: number; unit: SimulationDeclaration["forecast"]["unit"] }>;
   metrics: Record<string, number>;
   metricUnits: Record<string, string>;
+}
+
+export interface SimulationAssumptionDelta {
+  name: string;
+  baseline: boolean | number | string;
+  previous: boolean | number | string;
+  current: boolean | number | string;
+  changedFromPrevious: boolean;
+  changedFromBaseline: boolean;
+  deltaFromPrevious?: number;
+  deltaFromBaseline?: number;
+  unit?: string;
 }
 
 export interface SimulationScenarioRunResult {
@@ -417,6 +430,8 @@ function runScenarioPeriods(
 ): SimulationPeriodResult[] {
   const periods: SimulationPeriodResult[] = [];
   const changes = [...simulation.changes, ...scenarioChanges];
+  const baselineAssumptions = { ...assumptions };
+  let previousAssumptions = { ...assumptions };
 
   for (let period = 1; period <= simulation.forecast.periods; period += 1) {
     const periodState = applyChangesForPeriod(changes, assumptions, assumptionUnits, period);
@@ -450,12 +465,46 @@ function runScenarioPeriods(
       label: `${period} ${pluralize(simulation.forecast.unit, period)}`,
       assumptions: periodState.assumptions,
       assumptionUnits: periodState.assumptionUnits,
+      assumptionDeltas: assumptionDeltas(baselineAssumptions, previousAssumptions, periodState.assumptions, periodState.assumptionUnits),
       appliedChanges: periodState.appliedChanges,
       metrics: periodMetrics,
       metricUnits,
     });
+    previousAssumptions = periodState.assumptions;
   }
   return periods;
+}
+
+function assumptionDeltas(
+  baseline: Record<string, boolean | number | string>,
+  previous: Record<string, boolean | number | string>,
+  current: Record<string, boolean | number | string>,
+  units: Record<string, string>,
+): Record<string, SimulationAssumptionDelta> {
+  return Object.fromEntries(
+    Object.keys({ ...baseline, ...previous, ...current }).sort().flatMap((name): Array<[string, SimulationAssumptionDelta]> => {
+      const baseValue = baseline[name];
+      const previousValue = previous[name];
+      const currentValue = current[name];
+      if (baseValue === undefined || previousValue === undefined || currentValue === undefined) return [];
+      const numeric = typeof baseValue === "number" && typeof previousValue === "number" && typeof currentValue === "number";
+      return [
+        [
+          name,
+          {
+            name,
+            baseline: baseValue,
+            previous: previousValue,
+            current: currentValue,
+            changedFromPrevious: currentValue !== previousValue,
+            changedFromBaseline: currentValue !== baseValue,
+            ...(numeric ? { deltaFromPrevious: Number((currentValue - previousValue).toFixed(6)), deltaFromBaseline: Number((currentValue - baseValue).toFixed(6)) } : {}),
+            ...(units[name] ? { unit: units[name] } : {}),
+          },
+        ],
+      ];
+    }),
+  );
 }
 
 function applyChangesForPeriod(
