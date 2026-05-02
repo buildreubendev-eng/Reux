@@ -78,10 +78,18 @@ describe("demo monitor alerts", () => {
           return;
         }
 
-        response.writeHead(200, { "content-type": "application/json" });
+        response.writeHead(200, {
+          "content-type": "application/json",
+          "cache-control": "no-store",
+          "x-reux-api-version": "2026-05-02",
+          "x-reux-build": "testbuild",
+        });
         response.end(JSON.stringify({
           ok: true,
           module: "pilot",
+          apiVersion: "2026-05-02",
+          packageVersion: "0.1.0",
+          build: "testbuild",
           domains: ["commerce", "logistics"],
           databaseUrlEnv: "DATABASE_URL",
           sessionMode: "isolated",

@@ -20,7 +20,7 @@ You can verify a hosted deployment from a terminal with:
 npm run demo:healthcheck -- https://your-demo-host.example.com
 ```
 
-The health check calls `/api/health`, verifies the service identifies the pilot module, confirms both `commerce` and `logistics` domains are listed, and exits nonzero if the deployment is not ready.
+The health check calls `/api/health`, verifies the service identifies the pilot module, confirms both `commerce` and `logistics` domains are listed, confirms the API version/build headers are present, and exits nonzero if the deployment is not ready.
 
 After a deploy that includes the queue stats endpoints, run a deeper smoke check with:
 

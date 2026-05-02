@@ -49,6 +49,8 @@ import { emptyOutboxSummary, summarizeOperationalDashboard, summarizeOutboxStats
 const rootDir = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 const publicDir = join(rootDir, "demo", "pilot-app", "public");
 const config = loadConfig(rootDir, "pilot/dl.json");
+const packageInfo = JSON.parse(readFileSync(join(rootDir, "package.json"), "utf8"));
+const demoApiVersion = "2026-05-02";
 const demoSchema = process.env.REUX_DEMO_SCHEMA ?? "reux_demo";
 const setupToken = process.env.REUX_DEMO_SETUP_TOKEN ?? "";
 const host = process.env.HOST ?? "0.0.0.0";
@@ -60,6 +62,7 @@ const corsMaxAgeSeconds = parsePositiveInteger(process.env.REUX_DEMO_CORS_MAX_AG
 const jsonBodyLimitBytes = parsePositiveInteger(process.env.REUX_DEMO_JSON_BODY_LIMIT_BYTES, defaultJsonBodyLimitBytes);
 const maxSessionContexts = parsePositiveInteger(process.env.REUX_DEMO_MAX_SESSION_CONTEXTS, defaultMaxSessionContexts);
 const sessionIdleMs = parsePositiveInteger(process.env.REUX_DEMO_SESSION_IDLE_MS, defaultSessionIdleMs);
+const buildId = buildIdentifier();
 const baseDatabaseUrl = process.env[config.databaseUrlEnv];
 const databases = new Map();
 
@@ -159,6 +162,9 @@ async function route(request, response) {
     sendJson(response, 200, {
       ok: true,
       module: "pilot",
+      apiVersion: demoApiVersion,
+      packageVersion: packageInfo.version,
+      build: buildId,
       databaseUrlEnv: config.databaseUrlEnv,
       schema: demoSchema,
       sessionMode,
@@ -628,7 +634,12 @@ function serveStatic(pathname, response) {
 }
 
 function sendJson(response, statusCode, body) {
-  response.writeHead(statusCode, { "content-type": "application/json" });
+  response.writeHead(statusCode, {
+    "content-type": "application/json",
+    "cache-control": "no-store",
+    "x-reux-api-version": demoApiVersion,
+    "x-reux-build": buildId,
+  });
   response.end(`${JSON.stringify(body, null, 2)}\n`);
 }
 
@@ -661,8 +672,21 @@ function errorResponseBody(error, statusCode) {
 }
 
 function sendNoContent(response) {
-  response.writeHead(204);
+  response.writeHead(204, {
+    "cache-control": "no-store",
+    "x-reux-api-version": demoApiVersion,
+    "x-reux-build": buildId,
+  });
   response.end();
+}
+
+function buildIdentifier() {
+  const source = process.env.RAILWAY_GIT_COMMIT_SHA ??
+    process.env.VERCEL_GIT_COMMIT_SHA ??
+    process.env.GITHUB_SHA ??
+    process.env.REUX_DEMO_BUILD_ID ??
+    "";
+  return source ? source.slice(0, 12) : "local";
 }
 
 function parseAllowedOrigins(value) {

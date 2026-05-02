@@ -4,6 +4,23 @@
   "version": "2026-05-02",
   "baseUrlEnv": "NEXT_PUBLIC_REUX_DEMO_URL",
   "defaultBaseUrl": "https://reux-pilot-demo-production.up.railway.app",
+  "responseHeaders": [
+    {
+      "name": "cache-control",
+      "value": "no-store",
+      "purpose": "Prevent stale public demo API responses from being cached."
+    },
+    {
+      "name": "x-reux-api-version",
+      "value": "2026-05-02",
+      "purpose": "Identify the public demo API contract version served by the deployment."
+    },
+    {
+      "name": "x-reux-build",
+      "value": "short build or commit identifier",
+      "purpose": "Identify which deployed backend build handled the request."
+    }
+  ],
   "headers": [
     {
       "name": "content-type",

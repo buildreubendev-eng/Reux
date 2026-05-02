@@ -558,6 +558,22 @@ function validateHealth(response, body) {
   if (!response.ok) diagnostics.push(`expected 2xx health response, got ${response.status}`);
   if (body?.ok !== true) diagnostics.push("health body did not include ok=true");
   if (body?.module !== "pilot") diagnostics.push("health body did not identify the pilot module");
+  const apiVersionHeader = response.headers.get("x-reux-api-version");
+  const buildHeader = response.headers.get("x-reux-build");
+  if (!body?.apiVersion) diagnostics.push("health body did not include apiVersion");
+  if (!body?.packageVersion) diagnostics.push("health body did not include packageVersion");
+  if (!body?.build) diagnostics.push("health body did not include build");
+  if (!apiVersionHeader) diagnostics.push("health response did not include x-reux-api-version");
+  if (!buildHeader) diagnostics.push("health response did not include x-reux-build");
+  if ((response.headers.get("cache-control") ?? "").toLowerCase() !== "no-store") {
+    diagnostics.push("health response did not include cache-control=no-store");
+  }
+  if (apiVersionHeader && body?.apiVersion && apiVersionHeader !== body.apiVersion) {
+    diagnostics.push("health apiVersion header did not match body");
+  }
+  if (buildHeader && body?.build && buildHeader !== body.build) {
+    diagnostics.push("health build header did not match body");
+  }
   if (!Array.isArray(body?.domains) || !body.domains.includes("commerce") || !body.domains.includes("logistics")) {
     diagnostics.push("health body did not list both commerce and logistics domains");
   }

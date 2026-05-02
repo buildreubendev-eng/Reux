@@ -39,7 +39,15 @@ The browser-facing website should generate one stable session id and reuse it. T
 | `GET /api/health` | Deployment health, active domains, `jsonBodyLimitBytes`, and `sessionCache` counters. |
 | `GET /api/ops` | Cross-domain queue health for the active session. |
 
-`/api/health` is the safest first call after a deploy. It should return `ok: true`, `module: "pilot"`, both `commerce` and `logistics` in `domains`, the active request-body limit, and session-cache stats.
+`/api/health` is the safest first call after a deploy. It should return `ok: true`, `module: "pilot"`, `apiVersion`, `packageVersion`, `build`, both `commerce` and `logistics` in `domains`, the active request-body limit, and session-cache stats.
+
+Public API responses also include:
+
+| Header | Purpose |
+| --- | --- |
+| `cache-control: no-store` | Keeps visitor dashboards, simulations, and health checks from being cached as stale state. |
+| `x-reux-api-version` | Reports the public demo API contract version served by the deployment. |
+| `x-reux-build` | Reports a short build or commit identifier for hosted troubleshooting. |
 
 ## Business Simulator Routes
 

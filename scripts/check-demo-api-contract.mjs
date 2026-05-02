@@ -54,6 +54,14 @@ for (const code of contract.errorCodes ?? []) {
   if (!docs.includes(code)) failures.push(`docs missing error code: ${code}`);
 }
 
+for (const header of contract.responseHeaders ?? []) {
+  if (!header.name || !header.value || !header.purpose) {
+    failures.push("every response header must include name, value, and purpose");
+    continue;
+  }
+  if (!docs.includes(header.name)) failures.push(`docs missing response header: ${header.name}`);
+}
+
 for (const [key, value] of Object.entries(contract.limits ?? {})) {
   if (value === undefined || value === null) failures.push(`contract limit ${key} must have a value`);
 }
