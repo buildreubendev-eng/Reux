@@ -31,6 +31,7 @@ import {
   sessionInfo,
   sessionSchema,
 } from "./session.mjs";
+import { defaultJsonBodyLimitBytes, readJson } from "./http.mjs";
 import { emptyOutboxSummary, summarizeOperationalDashboard, summarizeOutboxStats } from "./status.mjs";
 
 const rootDir = resolve(fileURLToPath(new URL("../..", import.meta.url)));
@@ -44,6 +45,10 @@ const port = Number.parseInt(process.env.PORT ?? process.env.REUX_DEMO_PORT ?? "
 const sessionMode = process.env.REUX_DEMO_SESSION_MODE ?? "isolated";
 const allowedOrigins = parseAllowedOrigins(process.env.REUX_DEMO_ALLOWED_ORIGINS ?? "*");
 const corsMaxAgeSeconds = Number.parseInt(process.env.REUX_DEMO_CORS_MAX_AGE_SECONDS ?? "600", 10);
+const configuredJsonBodyLimitBytes = Number.parseInt(process.env.REUX_DEMO_JSON_BODY_LIMIT_BYTES ?? String(defaultJsonBodyLimitBytes), 10);
+const jsonBodyLimitBytes = Number.isFinite(configuredJsonBodyLimitBytes) && configuredJsonBodyLimitBytes > 0
+  ? configuredJsonBodyLimitBytes
+  : defaultJsonBodyLimitBytes;
 const baseDatabaseUrl = process.env[config.databaseUrlEnv];
 const databases = new Map();
 
@@ -126,7 +131,7 @@ async function route(request, response) {
   }
 
   if (url.pathname === "/api/health") {
-    sendJson(response, 200, { ok: true, module: "pilot", databaseUrlEnv: config.databaseUrlEnv, schema: demoSchema, sessionMode, domains: Object.keys(domains) });
+    sendJson(response, 200, { ok: true, module: "pilot", databaseUrlEnv: config.databaseUrlEnv, schema: demoSchema, sessionMode, jsonBodyLimitBytes, domains: Object.keys(domains) });
     return;
   }
 
@@ -147,17 +152,17 @@ async function route(request, response) {
   }
 
   if (url.pathname === "/api/simulations/run" && method === "POST") {
-    sendJson(response, 200, businessSimulationRun(await readJson(request)));
+    sendJson(response, 200, businessSimulationRun(await readJson(request, { limitBytes: jsonBodyLimitBytes })));
     return;
   }
 
   if (url.pathname === "/api/scenarios/compare" && method === "POST") {
-    sendJson(response, 200, businessScenarioCompare(await readJson(request)));
+    sendJson(response, 200, businessScenarioCompare(await readJson(request, { limitBytes: jsonBodyLimitBytes })));
     return;
   }
 
   if (url.pathname === "/api/setup" && method === "POST") {
-    const body = await readJson(request);
+    const body = await readJson(request, { limitBytes: jsonBodyLimitBytes });
     assertSetupAllowed(request, body);
     sendJson(response, 200, await setupDemo(request, domains.commerce));
     return;
@@ -174,19 +179,19 @@ async function route(request, response) {
   }
 
   if (url.pathname === "/api/actions/capture-payment" && method === "POST") {
-    const body = await readJson(request);
+    const body = await readJson(request, { limitBytes: jsonBodyLimitBytes });
     sendJson(response, 200, await runTransaction(request, domains.commerce, "capturePayment", [body.orderId ?? domains.commerce.ids.order, body.amount ?? "250"]));
     return;
   }
 
   if (url.pathname === "/api/actions/mark-paid" && method === "POST") {
-    const body = await readJson(request);
+    const body = await readJson(request, { limitBytes: jsonBodyLimitBytes });
     sendJson(response, 200, await runTransaction(request, domains.commerce, "markOrderPaid", [body.orderId ?? domains.commerce.ids.order]));
     return;
   }
 
   if (url.pathname === "/api/actions/credit-account" && method === "POST") {
-    const body = await readJson(request);
+    const body = await readJson(request, { limitBytes: jsonBodyLimitBytes });
     sendJson(response, 200, await runTransaction(request, domains.commerce, "creditAccount", [body.accountId ?? domains.commerce.ids.account, body.amount ?? "25"]));
     return;
   }
@@ -202,7 +207,7 @@ async function route(request, response) {
   }
 
   if (url.pathname === "/api/logistics/setup" && method === "POST") {
-    const body = await readJson(request);
+    const body = await readJson(request, { limitBytes: jsonBodyLimitBytes });
     assertSetupAllowed(request, body);
     sendJson(response, 200, await setupDemo(request, domains.logistics));
     return;
@@ -219,19 +224,19 @@ async function route(request, response) {
   }
 
   if (url.pathname === "/api/logistics/actions/start-shipment" && method === "POST") {
-    const body = await readJson(request);
+    const body = await readJson(request, { limitBytes: jsonBodyLimitBytes });
     sendJson(response, 200, await runTransaction(request, domains.logistics, "startShipment", [body.shipmentId ?? domains.logistics.ids.shipment]));
     return;
   }
 
   if (url.pathname === "/api/logistics/actions/mark-delivered" && method === "POST") {
-    const body = await readJson(request);
+    const body = await readJson(request, { limitBytes: jsonBodyLimitBytes });
     sendJson(response, 200, await runTransaction(request, domains.logistics, "markDelivered", [body.shipmentId ?? domains.logistics.ids.shipment]));
     return;
   }
 
   if (url.pathname === "/api/logistics/actions/credit-driver" && method === "POST") {
-    const body = await readJson(request);
+    const body = await readJson(request, { limitBytes: jsonBodyLimitBytes });
     sendJson(response, 200, await runTransaction(request, domains.logistics, "creditDriver", [body.driverId ?? domains.logistics.ids.driver, body.amount ?? "40"]));
     return;
   }
@@ -531,28 +536,6 @@ function serveStatic(pathname, response) {
   createReadStream(resolved).pipe(response);
 }
 
-function readJson(request) {
-  return new Promise((resolveJson, reject) => {
-    let body = "";
-    request.setEncoding("utf8");
-    request.on("data", (chunk) => {
-      body += chunk;
-    });
-    request.on("end", () => {
-      if (!body.trim()) {
-        resolveJson({});
-        return;
-      }
-      try {
-        resolveJson(JSON.parse(body));
-      } catch (error) {
-        reject(new Error("invalid JSON request body"));
-      }
-    });
-    request.on("error", reject);
-  });
-}
-
 function sendJson(response, statusCode, body) {
   response.writeHead(statusCode, { "content-type": "application/json" });
   response.end(`${JSON.stringify(body, null, 2)}\n`);
@@ -573,7 +556,7 @@ function errorResponseBody(error, statusCode) {
     ok: false,
     error: message,
     message,
-    code: statusCode === 404 ? "not_found" : statusCode === 405 ? "method_not_allowed" : "request_failed",
+    code: error?.code ?? (statusCode === 404 ? "not_found" : statusCode === 405 ? "method_not_allowed" : "request_failed"),
   };
 }
 
