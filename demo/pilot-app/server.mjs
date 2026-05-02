@@ -31,6 +31,14 @@ import {
   sessionInfo,
   sessionSchema,
 } from "./session.mjs";
+import {
+  collectSessionContextEvictions,
+  defaultMaxSessionContexts,
+  defaultSessionIdleMs,
+  parsePositiveInteger,
+  sessionCacheStats,
+  touchSessionContext,
+} from "./session-cache.mjs";
 import { defaultJsonBodyLimitBytes, readJson } from "./http.mjs";
 import { emptyOutboxSummary, summarizeOperationalDashboard, summarizeOutboxStats } from "./status.mjs";
 
@@ -44,11 +52,10 @@ const publicHost = host === "0.0.0.0" ? "127.0.0.1" : host;
 const port = Number.parseInt(process.env.PORT ?? process.env.REUX_DEMO_PORT ?? "4173", 10);
 const sessionMode = process.env.REUX_DEMO_SESSION_MODE ?? "isolated";
 const allowedOrigins = parseAllowedOrigins(process.env.REUX_DEMO_ALLOWED_ORIGINS ?? "*");
-const corsMaxAgeSeconds = Number.parseInt(process.env.REUX_DEMO_CORS_MAX_AGE_SECONDS ?? "600", 10);
-const configuredJsonBodyLimitBytes = Number.parseInt(process.env.REUX_DEMO_JSON_BODY_LIMIT_BYTES ?? String(defaultJsonBodyLimitBytes), 10);
-const jsonBodyLimitBytes = Number.isFinite(configuredJsonBodyLimitBytes) && configuredJsonBodyLimitBytes > 0
-  ? configuredJsonBodyLimitBytes
-  : defaultJsonBodyLimitBytes;
+const corsMaxAgeSeconds = parsePositiveInteger(process.env.REUX_DEMO_CORS_MAX_AGE_SECONDS, 600);
+const jsonBodyLimitBytes = parsePositiveInteger(process.env.REUX_DEMO_JSON_BODY_LIMIT_BYTES, defaultJsonBodyLimitBytes);
+const maxSessionContexts = parsePositiveInteger(process.env.REUX_DEMO_MAX_SESSION_CONTEXTS, defaultMaxSessionContexts);
+const sessionIdleMs = parsePositiveInteger(process.env.REUX_DEMO_SESSION_IDLE_MS, defaultSessionIdleMs);
 const baseDatabaseUrl = process.env[config.databaseUrlEnv];
 const databases = new Map();
 
@@ -131,7 +138,16 @@ async function route(request, response) {
   }
 
   if (url.pathname === "/api/health") {
-    sendJson(response, 200, { ok: true, module: "pilot", databaseUrlEnv: config.databaseUrlEnv, schema: demoSchema, sessionMode, jsonBodyLimitBytes, domains: Object.keys(domains) });
+    sendJson(response, 200, {
+      ok: true,
+      module: "pilot",
+      databaseUrlEnv: config.databaseUrlEnv,
+      schema: demoSchema,
+      sessionMode,
+      jsonBodyLimitBytes,
+      sessionCache: sessionCacheStats(databases, { idleMs: sessionIdleMs, maxContexts: maxSessionContexts }),
+      domains: Object.keys(domains),
+    });
     return;
   }
 
@@ -633,8 +649,9 @@ function requestContext(request) {
 
 function schemaContext(schema, sessionId) {
   assertPostgresIdentifier(schema, "demo schema must be a PostgreSQL identifier");
+  pruneSessionContexts(schema);
   let context = databases.get(schema);
-  if (context) return context;
+  if (context) return touchSessionContext(context);
 
   const quotedSchema = quoteIdentifier(schema);
   const previousUrl = process.env[config.databaseUrlEnv];
@@ -647,7 +664,8 @@ function schemaContext(schema, sessionId) {
       outboxTable: `${quotedSchema}._dl_outbox`,
       sessionId,
     };
-    databases.set(schema, context);
+    databases.set(schema, touchSessionContext(context));
+    pruneSessionContexts(schema);
     return context;
   } finally {
     if (previousUrl === undefined) {
@@ -655,6 +673,29 @@ function schemaContext(schema, sessionId) {
     } else {
       process.env[config.databaseUrlEnv] = previousUrl;
     }
+  }
+}
+
+function pruneSessionContexts(keepSchema = "") {
+  const evictions = collectSessionContextEvictions(databases, {
+    idleMs: sessionIdleMs,
+    maxContexts: maxSessionContexts,
+    keepSchema,
+  });
+
+  for (const schema of evictions) {
+    const context = databases.get(schema);
+    databases.delete(schema);
+    closeContext(context);
+  }
+}
+
+function closeContext(context) {
+  const close = context?.db?.end?.();
+  if (close && typeof close.catch === "function") {
+    close.catch((error) => {
+      console.warn(`failed to close demo database context for ${context.schema}: ${error.message}`);
+    });
   }
 }
 
