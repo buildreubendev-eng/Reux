@@ -279,11 +279,11 @@ query activeUserPage(cursorBalance: Decimal<12,2>, pageSize: Int): Query<{ email
 where (user.balance >= min and user.email != blockedEmail) or user.active == true
 ```
 
-Supported comparison operators are `==`, `!=`, `>`, `>=`, `<`, and `<=`. Predicate operands may be entity field references, query parameters, string literals, numeric literals, boolean literals, `null`, joined range aliases, or enum literals when compared with enum-typed fields. Query lowering validates bare predicate values so misspelled parameter names fail before SQL execution.
+Supported comparison operators are `==`, `!=`, `>`, `>=`, `<`, and `<=`. Predicate operands may be entity field references, query parameters, string literals, numeric literals, boolean literals, `null`, joined range aliases, or enum literals when compared with enum-typed fields. Query lowering validates bare predicate values so misspelled parameter names fail before SQL execution, and `== null` / `!= null` lower to SQL `IS NULL` / `IS NOT NULL` checks.
 
 Enum fields can be compared with bare enum literals in query predicates. For example, `order.status == Paid` lowers to a PostgreSQL enum literal comparison, and invalid values are rejected during query lowering.
 
-Reusable query fragments package common filters for queries that scan the same range/entity pair:
+Reusable query fragments package common filters for queries that scan the same entity. Fragment predicates are written against the fragment's range alias; consuming queries may use a different alias, and the compiler remaps the fragment predicate to the query alias:
 
 ```dl
 query fragment activeUsers(user in User) = where user.active == true
@@ -383,9 +383,9 @@ The compiler also validates the first effect boundary:
 - `if condition then target.field += expr` and `if condition then enqueue Event { ... }` lower to conditional SQL side effects.
 - `if condition then after commit callName(args)` lowers to a runtime-collected after-commit hook that is returned only when the condition is true.
 - `if condition { ... }` block syntax is accepted as a compact form for multiple conditional `abort`, mutation, `enqueue`, or `after commit` statements.
-- `require` and `if` guard expressions validate transaction parameters, loaded row fields, bound insert references, enum literals, parenthesized clauses, `not` boolean clauses, and comparison operand types. Unknown bare references, unknown loaded fields, function-call-shaped guard expressions, non-boolean bare clauses, non-numeric ordering comparisons, and incompatible equality comparisons are rejected before SQL lowering.
+- `require` and `if` guard expressions validate transaction parameters, loaded row fields, bound insert references, enum literals, parenthesized clauses, `not` boolean clauses, `null` checks, and comparison operand types. Unknown bare references, unknown loaded fields, function-call-shaped guard expressions, non-boolean bare clauses, non-numeric ordering comparisons, and incompatible equality comparisons are rejected before SQL lowering.
 - `abort ErrorName` lowers to an explicit failing SQL statement so supported transaction runners roll back immediately.
-- declared event payloads validate `enqueue Event { ... }` and generate typed worker payload contracts.
+- declared event payloads validate `enqueue Event { ... }` and generate typed worker payload contracts. Generated worker scaffolds also infer after-commit hook names and resolved argument tuple types for supported hook arguments.
 - retryable transactions use `retry N`;
 - direct external-looking calls such as `sendEmail(user)` are rejected inside retryable transactions;
 - `after commit sendEmail(user)` and `enqueue Event { ... }` are allowed retry-safe fences;

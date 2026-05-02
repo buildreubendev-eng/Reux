@@ -110,8 +110,8 @@ if (publicSnapshot.status?.demoReadinessPercent !== status.demoReadinessPercent)
 if (!publicSnapshot.links?.capabilitiesJson?.endsWith("reux-capabilities.json")) {
   failures.push("public snapshot must link to the public capabilities JSON");
 }
-if (!nextBacklog.items?.some((item) => item.priority === "P1" && item.ownerTrack === "Language Core")) {
-  failures.push("next backlog must include a P1 Language Core item");
+if (!nextBacklog.items?.some((item) => item.priority === "P1")) {
+  failures.push("next backlog must include at least one P1 item");
 }
 const publicAssetCheck = spawnSync(process.execPath, ["scripts/check-public-assets.mjs"], { encoding: "utf8" });
 if (publicAssetCheck.status !== 0) {

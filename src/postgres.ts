@@ -224,6 +224,7 @@ function expressionSegmentSql(source: string, expression: ExpressionIr): string 
 
   sql = sql.replace(/\bcount\(\s*\)/g, "count(*)");
   sql = sql.replace(/\band\b/g, "AND").replace(/\bor\b/g, "OR");
+  sql = normalizeNullComparisons(sql);
   sql = sql.replaceAll("!=", "<>");
 
   return sql.replaceAll("==", "=");
@@ -513,6 +514,7 @@ class TransactionLowering {
   private conditionSql(expression: string): string {
     let sql = this.replaceExpressionReferences(expression);
     sql = sql.replace(/\band\b/g, "AND").replace(/\bor\b/g, "OR");
+    sql = normalizeNullComparisons(sql);
     sql = sql.replaceAll("!=", "<>");
     return sql.replaceAll("==", "=");
   }
@@ -647,6 +649,14 @@ function sourceLiteralValue(expression: string): string | undefined {
   }
   if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(value)) return value;
   return undefined;
+}
+
+function normalizeNullComparisons(sql: string): string {
+  return sql
+    .replace(/([A-Za-z0-9_".:$]+)\s*==\s*null\b/g, "$1 IS NULL")
+    .replace(/\bnull\s*==\s*([A-Za-z0-9_".:$]+)/g, "$1 IS NULL")
+    .replace(/([A-Za-z0-9_".:$]+)\s*!=\s*null\b/g, "$1 IS NOT NULL")
+    .replace(/\bnull\s*!=\s*([A-Za-z0-9_".:$]+)/g, "$1 IS NOT NULL");
 }
 
 function isArithmeticExpressionSource(expression: string): boolean {

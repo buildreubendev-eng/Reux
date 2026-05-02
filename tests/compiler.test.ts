@@ -1109,6 +1109,7 @@ entity Invoice {
     expect(worker).toContain("AccountCredited: async (event) => {");
     expect(worker).toContain("sendReceipt: async (hook) => {");
     expect(worker).toContain("notifyOrderPaid: async (hook) => {");
+    expect(worker).toContain('type AfterCommitHandlerForsendReceipt = (hook: AfterCommitHook & { name: "sendReceipt"; resolvedArgs?: [string] }) => Promise<void> | void;');
     expect(worker).toContain("hook.resolvedArgs ?? hook.args");
     expect(worker).toContain("REUX_WORKER_INTERVAL_MS");
     expect(worker).toContain("REUX_WORKER_REQUEUE_STALE_SECONDS");
@@ -1222,6 +1223,29 @@ query namedUsers(min: Decimal): Query<User> =
     expect(sql).toBe('SELECT "user".*\nFROM users AS "user"\nWHERE "user".email <> \'min\' AND "user".balance > $1;');
   });
 
+  it("lowers null comparisons in query predicates", () => {
+    const source = `module commerce
+
+entity User {
+  id: Id<User> primary generated
+  email: String?
+}
+
+query missingEmail(): Query<User> =
+  from user in User
+  where user.email == null
+  select user
+
+query knownEmail(): Query<User> =
+  from user in User
+  where null != user.email
+  select user
+`;
+
+    expect(emitQuerySql(source, "missingEmail")).toBe('SELECT "user".*\nFROM users AS "user"\nWHERE "user".email IS NULL;');
+    expect(emitQuerySql(source, "knownEmail")).toBe('SELECT "user".*\nFROM users AS "user"\nWHERE "user".email IS NOT NULL;');
+  });
+
   it("expands reusable query fragments into query predicates", () => {
     const source = `module commerce
 
@@ -1247,6 +1271,31 @@ query activePremiumUsers(min: Decimal): Query<infer> =
     expect(sql).toContain('WHERE ("user".active = true) AND ("user".balance > $1)');
     expect(queryIr.inferredResultType).toBe("Query<{ email: String, balance: Decimal }>");
     expect(api).toContain("export type ActivePremiumUsersRow = { email: string; balance: number | string };");
+  });
+
+  it("reuses query fragments across aliases for the same source entity", () => {
+    const source = `module commerce
+
+entity User {
+  id: Id<User> primary generated
+  email: String
+  balance: Decimal
+  active: Bool
+}
+
+query fragment activeUsers(user in User) = where user.active == true
+
+query activeAccounts(min: Decimal): Query<infer> =
+  from account in User
+  with activeUsers
+  where account.balance > min
+  select { email: account.email, balance: account.balance }
+`;
+    const sql = emitQuerySql(source, "activeAccounts");
+    const queryIr = JSON.parse(emitQueryIr(source, "activeAccounts"));
+
+    expect(sql).toContain('WHERE ("account".active = true) AND ("account".balance > $1)');
+    expect(queryIr.inferredResultType).toBe("Query<{ email: String, balance: Decimal }>");
   });
 
   it("lowers nullable left joins and infers nullable joined fields", () => {
@@ -1759,6 +1808,28 @@ transaction function debitAccount(accountRef: Account, amount: Decimal, label: S
     expect(compileSource(source("account.active"))).toBeTruthy();
     expect(compileSource(source("not account.active"))).toBeTruthy();
     expect(compileSource(source("(account.balance > amount) and account.active"))).toBeTruthy();
+  });
+
+  it("lowers null comparisons in transaction guards", () => {
+    const source = `module commerce
+
+entity Account {
+  id: Id<Account> primary generated
+  email: String?
+  balance: Decimal
+}
+
+transaction function requireEmail(accountRef: Account) writes Account {
+  let account = load accountRef for update
+  require account.email != null else abort MissingEmail
+  if null == account.email then abort MissingEmail
+  account.balance += 1
+}
+`;
+    const sql = emitTransactionSql(source, "requireEmail");
+
+    expect(sql).toContain("SELECT CASE WHEN :account.email IS NOT NULL THEN 1 ELSE 1 / 0 END;");
+    expect(sql).toContain("SELECT CASE WHEN :account.email IS NULL THEN 1 / 0 ELSE 1 END;");
   });
 
   it("accepts compatible enum transaction guard comparisons", () => {

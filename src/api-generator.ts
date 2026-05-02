@@ -242,7 +242,7 @@ export function emitTypeScriptWorker(source: string, options: TypeScriptWorkerOp
     (declaration): declaration is TransactionDeclaration => declaration.kind === "transaction",
   );
   const events = unique(transactions.flatMap((transaction) => enqueueEvents(transaction.body)));
-  const hooks = unique(transactions.flatMap((transaction) => afterCommitHooks(transaction.body)));
+  const hooks = collectAfterCommitHookSignatures(transactions, schema);
   const configImport = options.configImport ?? "./config.js";
   const runtimeImport = options.runtimeImport ?? "./runtime.js";
 
@@ -271,7 +271,7 @@ export function emitTypeScriptWorker(source: string, options: TypeScriptWorkerOp
     "",
     afterCommitHandlerDeclaration(hooks),
     ...(hooks.length > 0
-      ? hooks.map((hook) => `  ${hook}: async (hook) => {\n    console.log("after commit hook", hook.call, hook.resolvedArgs ?? hook.args);\n  },`)
+      ? hooks.map((hook) => `  ${hook.name}: async (hook) => {\n    console.log("after commit hook", hook.call, hook.resolvedArgs ?? hook.args);\n  },`)
       : ["  // No after commit hooks were found in this Reux source."]),
     "};",
     "",
@@ -341,9 +341,14 @@ function eventPayloadTypes(schema: SchemaIr): string[] {
   ]);
 }
 
-function hookTypes(hooks: string[]): string[] {
+interface AfterCommitHookSignature {
+  name: string;
+  resolvedArgsType: string;
+}
+
+function hookTypes(hooks: AfterCommitHookSignature[]): string[] {
   return hooks.flatMap((hook) => [
-    `type AfterCommitHandlerFor${hook} = (hook: AfterCommitHook & { name: ${quoteString(hook)} }) => Promise<void> | void;`,
+    `type AfterCommitHandlerFor${hook.name} = (hook: AfterCommitHook & { name: ${quoteString(hook.name)}; resolvedArgs?: ${hook.resolvedArgsType} }) => Promise<void> | void;`,
     "",
   ]);
 }
@@ -359,9 +364,9 @@ function outboxHandlerDeclaration(events: string[], schema: SchemaIr): string {
   return `const outboxHandlers: { ${fields} } = {`;
 }
 
-function afterCommitHandlerDeclaration(hooks: string[]): string {
+function afterCommitHandlerDeclaration(hooks: AfterCommitHookSignature[]): string {
   if (hooks.length === 0) return "const afterCommitHandlers = {";
-  return `const afterCommitHandlers: { ${hooks.map((hook) => `${hook}: AfterCommitHandlerFor${hook}`).join("; ")} } = {`;
+  return `const afterCommitHandlers: { ${hooks.map((hook) => `${hook.name}: AfterCommitHandlerFor${hook.name}`).join("; ")} } = {`;
 }
 
 function routeHandler(group: "queries" | "transactions", name: string, parameterType: string | undefined): string {
@@ -397,6 +402,67 @@ function afterCommitHooks(body: string): string[] {
     const match = line.match(/^(?:if\s+.+\s+then\s+)?after\s+commit\s+([A-Za-z_][A-Za-z0-9_]*)\(/);
     return match ? [match[1]] : [];
   });
+}
+
+function collectAfterCommitHookSignatures(transactions: TransactionDeclaration[], schema: SchemaIr): AfterCommitHookSignature[] {
+  const signatures = new Map<string, Set<string>>();
+  for (const transaction of transactions) {
+    const parameterTypes = new Map(transaction.parameters.map((parameter) => [parameter.name, parameter.type]));
+    const boundEntities = new Map<string, string>();
+    for (const line of transactionBodyLines(transaction.body)) {
+      const load = line.match(/^let\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*load\s+([A-Za-z_][A-Za-z0-9_]*)\s+for\s+update$/);
+      if (load) {
+        const parameterType = parameterTypes.get(load[2]);
+        if (parameterType && schema.entities.some((entity) => entity.name === parameterType.name)) {
+          boundEntities.set(load[1], parameterType.name);
+        }
+        continue;
+      }
+
+      const insert = line.match(/^(?:if\s+.+\s+then\s+)?let\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*insert\s+([A-Za-z_][A-Za-z0-9_]*)\s+/);
+      if (insert && schema.entities.some((entity) => entity.name === insert[2])) {
+        boundEntities.set(insert[1], insert[2]);
+        continue;
+      }
+
+      const hook = line.match(/^(?:if\s+.+\s+then\s+)?after\s+commit\s+([A-Za-z_][A-Za-z0-9_]*)\((.*)\)$/);
+      if (!hook) continue;
+      const args = splitTopLevel(hook[2].trim(), ",");
+      const tuple = `[${args.map((arg) => afterCommitArgType(arg, parameterTypes, boundEntities, schema)).join(", ")}]`;
+      const existing = signatures.get(hook[1]) ?? new Set<string>();
+      existing.add(tuple);
+      signatures.set(hook[1], existing);
+    }
+  }
+
+  return [...signatures.entries()].map(([name, tuples]) => ({
+    name,
+    resolvedArgsType: [...tuples].join(" | ") || "[]",
+  }));
+}
+
+function afterCommitArgType(
+  arg: string,
+  parameterTypes: Map<string, TypeRef>,
+  boundEntities: Map<string, string>,
+  schema: SchemaIr,
+): string {
+  const value = arg.trim();
+  const parameterType = parameterTypes.get(value);
+  if (parameterType) return typeRefToTs(parameterType, schema);
+  const boundField = value.match(/^([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)$/);
+  if (boundField) {
+    const entity = boundEntities.get(boundField[1]);
+    const field = entity ? schema.entities.find((candidate) => candidate.name === entity)?.fields.find((candidate) => candidate.name === boundField[2]) : undefined;
+    if (field) return typeRefToTs(field.type, schema);
+  }
+  if (value === "true" || value === "false") return "boolean";
+  if (value === "null") return "null";
+  if (/^-?\d+(\.\d+)?$/.test(value)) return "number";
+  if ((value.startsWith("\"") && value.endsWith("\"")) || (value.startsWith("'") && value.endsWith("'"))) return "string";
+  const enumType = schema.enums.find((enumeration) => enumeration.values.includes(value));
+  if (enumType) return enumType.name;
+  return "unknown";
 }
 
 function transactionBodyLines(body: string): string[] {

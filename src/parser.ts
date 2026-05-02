@@ -899,12 +899,12 @@ function expandQueryFragments(declarations: Program["declarations"]): Program["d
       if (!fragment) {
         throw new DlError(`query ${declaration.name} uses unknown query fragment ${name}`);
       }
-      if (fragment.rangeName !== declaration.body.rangeName || fragment.sourceEntity !== declaration.body.sourceEntity) {
+      if (fragment.sourceEntity !== declaration.body.sourceEntity) {
         throw new DlError(
           `query ${declaration.name} uses fragment ${name} for ${fragment.rangeName} in ${fragment.sourceEntity}, but scans ${declaration.body.rangeName} in ${declaration.body.sourceEntity}`,
         );
       }
-      return fragment.where;
+      return remapFragmentRange(fragment.where, fragment.rangeName, declaration.body.rangeName);
     });
     const predicates = [...fragmentPredicates, declaration.body.where].filter((predicate): predicate is string => Boolean(predicate));
     const where = predicates.length === 1 ? predicates[0] : predicates.map((predicate) => `(${predicate})`).join(" and ");
@@ -918,6 +918,15 @@ function expandQueryFragments(declarations: Program["declarations"]): Program["d
       },
     };
   });
+}
+
+function remapFragmentRange(predicate: string, fromRange: string, toRange: string): string {
+  if (fromRange === toRange) return predicate;
+  return predicate.replace(new RegExp(`\\b${escapeRegExp(fromRange)}\\.`, "g"), `${toRange}.`);
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function normalizeLines(source: string): SourceLine[] {

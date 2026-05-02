@@ -5,41 +5,20 @@
   "items": [
     {
       "priority": "P1",
-      "ownerTrack": "Language Core",
-      "title": "Richer transaction control flow",
-      "why": "Move beyond prototype completion into deeper product and language capability.",
-      "source": "capability-research-track"
-    },
-    {
-      "priority": "P1",
-      "ownerTrack": "Language Core",
-      "title": "Deeper expression typing",
-      "why": "Move beyond prototype completion into deeper product and language capability.",
-      "source": "capability-research-track"
-    },
-    {
-      "priority": "P2",
-      "ownerTrack": "Language Core",
-      "title": "Reusable query and join patterns",
-      "why": "Move beyond prototype completion into deeper product and language capability.",
-      "source": "capability-research-track"
-    },
-    {
-      "priority": "P2",
       "ownerTrack": "Simulation Foundation",
       "title": "Richer simulation time-series and assumptions",
       "why": "Move beyond prototype completion into deeper product and language capability.",
       "source": "capability-research-track"
     },
     {
-      "priority": "P3",
+      "priority": "P1",
       "ownerTrack": "Simulation Foundation",
       "title": "Product-facing simulation execution APIs",
       "why": "Move beyond prototype completion into deeper product and language capability.",
       "source": "capability-research-track"
     },
     {
-      "priority": "P3",
+      "priority": "P2",
       "ownerTrack": "Developer Experience",
       "title": "Compiler-backed language-server features",
       "why": "Move beyond prototype completion into deeper product and language capability.",
@@ -148,41 +127,6 @@
       "ownerTrack": "Documentation Handoff",
       "title": "Keep docs/public/reux-demo-testing-guide.md aligned with the actual demo",
       "why": "Keep docs aligned with the actual demo.",
-      "source": "public-roadmap"
-    },
-    {
-      "priority": "P3",
-      "ownerTrack": "Reux Language Depth",
-      "title": "Broaden transaction control flow",
-      "why": "Turn the current useful subset into a stronger application language foundation.",
-      "source": "public-roadmap"
-    },
-    {
-      "priority": "P3",
-      "ownerTrack": "Reux Language Depth",
-      "title": "Deepen expression typing",
-      "why": "Turn the current useful subset into a stronger application language foundation.",
-      "source": "public-roadmap"
-    },
-    {
-      "priority": "P3",
-      "ownerTrack": "Reux Language Depth",
-      "title": "Improve generated worker contracts",
-      "why": "Turn the current useful subset into a stronger application language foundation.",
-      "source": "public-roadmap"
-    },
-    {
-      "priority": "P3",
-      "ownerTrack": "Reux Language Depth",
-      "title": "Expand reusable query patterns",
-      "why": "Turn the current useful subset into a stronger application language foundation.",
-      "source": "public-roadmap"
-    },
-    {
-      "priority": "P3",
-      "ownerTrack": "Reux Language Depth",
-      "title": "Continue tightening compiler diagnostics and safety checks",
-      "why": "Turn the current useful subset into a stronger application language foundation.",
       "source": "public-roadmap"
     },
     {

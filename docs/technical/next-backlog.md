@@ -6,22 +6,13 @@ Updated: 2026-05-01
 
 ## Items
 
-- P1 | Language Core | Richer transaction control flow
+- P1 | Simulation Foundation | Richer simulation time-series and assumptions
   Why: Move beyond prototype completion into deeper product and language capability.
   Source: capability-research-track
-- P1 | Language Core | Deeper expression typing
+- P1 | Simulation Foundation | Product-facing simulation execution APIs
   Why: Move beyond prototype completion into deeper product and language capability.
   Source: capability-research-track
-- P2 | Language Core | Reusable query and join patterns
-  Why: Move beyond prototype completion into deeper product and language capability.
-  Source: capability-research-track
-- P2 | Simulation Foundation | Richer simulation time-series and assumptions
-  Why: Move beyond prototype completion into deeper product and language capability.
-  Source: capability-research-track
-- P3 | Simulation Foundation | Product-facing simulation execution APIs
-  Why: Move beyond prototype completion into deeper product and language capability.
-  Source: capability-research-track
-- P3 | Developer Experience | Compiler-backed language-server features
+- P2 | Developer Experience | Compiler-backed language-server features
   Why: Move beyond prototype completion into deeper product and language capability.
   Source: capability-research-track
 - P1 | Frontend Completion | Add a polished public tester flow from landing/demo entry to successful transaction to outbox processing
@@ -68,21 +59,6 @@ Updated: 2026-05-01
   Source: public-roadmap
 - P2 | Documentation Handoff | Keep docs/public/reux-demo-testing-guide.md aligned with the actual demo
   Why: Keep docs aligned with the actual demo.
-  Source: public-roadmap
-- P3 | Reux Language Depth | Broaden transaction control flow
-  Why: Turn the current useful subset into a stronger application language foundation.
-  Source: public-roadmap
-- P3 | Reux Language Depth | Deepen expression typing
-  Why: Turn the current useful subset into a stronger application language foundation.
-  Source: public-roadmap
-- P3 | Reux Language Depth | Improve generated worker contracts
-  Why: Turn the current useful subset into a stronger application language foundation.
-  Source: public-roadmap
-- P3 | Reux Language Depth | Expand reusable query patterns
-  Why: Turn the current useful subset into a stronger application language foundation.
-  Source: public-roadmap
-- P3 | Reux Language Depth | Continue tightening compiler diagnostics and safety checks
-  Why: Turn the current useful subset into a stronger application language foundation.
   Source: public-roadmap
 - P3 | Simulation Foundation | Expand simulation domain packs for PLOS and business operations
   Why: Make Reux useful for structured forecasting and scenario comparison.

@@ -1,13 +1,13 @@
 # Reux Public Roadmap
 
-Reux is a data-native language for applications that need reliable workflows, auditable state changes, and simulation-driven decision logic. The current prototype already powers a hosted commerce and logistics demo while the deeper language, tooling, and simulation layers continue to mature.
+Reux is a data-native language for applications that need reliable workflows, auditable state changes, and simulation-driven decision logic. The current prototype already powers a hosted commerce and logistics demo while the simulation, tooling, and product layers continue to mature.
 
 Current status:
 
 - Demo readiness: roughly 99%.
 - Full platform completion: roughly 100%.
 - Public demo scope: commerce workflows, logistics workflows, isolated visitor sessions, transaction execution, PostgreSQL-backed state, queue/outbox processing, and health checks.
-- Core language scope: schema declarations, typed queries, transaction functions, durable events, conservative migrations, generated TypeScript integration, and early simulation declarations.
+- Core language scope: schema declarations, reusable typed queries, guarded transaction functions, durable events, conservative migrations, generated TypeScript integration, and early simulation declarations.
 
 ## What Is Live Now
 
@@ -35,32 +35,54 @@ Current status:
 - Executable PLOS habit-consistency example alongside the personal-finance example.
 - Executable business operations simulation example alongside the workforce example.
 - Generated simulation catalog helpers so product apps can discover available Reux simulation models.
+- Language-core completion pass for transaction control flow, expression typing, reusable filters, worker contracts, null-aware lowering, and diagnostics.
 
 ## Next Milestones
 
-### 1. Demo Hardening
+### 1. Frontend Completion
 
-Goal: make the public demo feel stable, explainable, and safe for repeat visitors.
-
-Planned work:
-
-- Keep improving public demo copy as new domains are added.
-- Keep monitor alert routing aligned with the final hosting and notification setup.
-- Document the public reset/session behavior for testers.
-
-### 2. Reux Language Depth
-
-Goal: turn the current useful subset into a stronger application language foundation.
+Goal: get the public frontend/demo surfaces close to completion.
 
 Planned work:
 
-- Broaden transaction control flow.
-- Deepen expression typing.
-- Improve generated worker contracts.
-- Expand reusable query patterns.
-- Continue tightening compiler diagnostics and safety checks.
+- Add a polished public tester flow from landing/demo entry to successful transaction to outbox processing.
+- Make "what just happened" summaries consistent across commerce and logistics.
+- Ensure the demo always shows the next best action after reset, transaction, and process-outbox.
 
-### 3. Simulation Foundation
+### 2. Website & Status Sync
+
+Goal: keep public project cards, roadmap badges, live/demo links, and completed/in-progress labels current.
+
+Planned work:
+
+- Never complete frontend work without updating the status surfaces that describe it.
+- Run a full responsive polish pass (Visual QA).
+- Fix all mobile layout issues.
+- Ensure no cards/buttons/tables overflow or overlap.
+
+### 3. Frontend Reliability & Ops Depth
+
+Goal: add graceful failure states and deepen ops observability.
+
+Planned work:
+
+- Add graceful API failure states.
+- Add retry affordances where useful.
+- Make session/setup/reset failures understandable to non-developers.
+- Improve queue/worker observability presentation.
+- Add clearer stale/dead-letter explanations.
+- Make the dashboard usable as a real operational page, not just a debug screen.
+
+### 4. Documentation Handoff
+
+Goal: keep docs aligned with the actual demo.
+
+Planned work:
+
+- Update public testing docs and screenshots/copy references if UI changes.
+- Keep docs/public/reux-demo-testing-guide.md aligned with the actual demo.
+
+### 5. Simulation Foundation
 
 Goal: make Reux useful for structured forecasting and scenario comparison.
 
@@ -72,7 +94,7 @@ Planned work:
 - Improve comparison reports and explanation output.
 - Expand simulation APIs from generated catalog discovery into full product-facing execution services.
 
-### 4. Product Ecosystem
+### 6. Product Ecosystem
 
 Goal: keep Reux grounded in real products instead of building language features in isolation.
 
@@ -84,7 +106,7 @@ Planned work:
 - Use clinic, logistics, and future product pilots to keep language features grounded in real workflows.
 - Add deeper product pilots for PLOS and enterprise operations once the core language/runtime path is stable.
 
-### 5. Developer Experience
+### 7. Developer Experience
 
 Goal: make Reux approachable for technical reviewers and early users.
 

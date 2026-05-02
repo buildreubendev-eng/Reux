@@ -9,7 +9,7 @@ Updated: 2026-05-01
 - Demo readiness: roughly 99%.
 - Full platform completion: roughly 100%.
 - Release track: prototype-complete.
-- Reux is demo-ready for public commerce and logistics testing, and prototype-complete for the current language/runtime foundation. The remaining work is product expansion and deeper language research rather than closing the original MVP bar.
+- Reux is demo-ready for public commerce and logistics testing, and prototype-complete for the current language/runtime foundation. The current language-core completion pass is closed; remaining work is product expansion, simulation depth, and developer tooling rather than closing the original MVP bar.
 
 ## Positioning
 
@@ -23,12 +23,12 @@ Updated: 2026-05-01
 
 Status: prototype-complete.
 
-The MVP language subset can model schemas, enums, queries, transaction functions, durable events, migrations, and simulations.
+The prototype language core can model schemas, enums, reusable typed queries, guarded transaction functions, durable events, migrations, and simulations.
 
 - Module, entity, enum, query, transaction, event, and simulate declarations.
 - Validated scalar, decimal, currency, enum, reference, generated ID, unique, index, check, and transition-rule metadata.
-- Explicit joins, left joins, reusable filters, cursor pagination, ordering, limits, record projections, and narrow aggregation support.
-- Transaction guards, row locking, inserts, mutations, retry metadata, idempotency keys, typed outbox events, and after-commit hooks.
+- Explicit joins, left joins, alias-remapped reusable filters, cursor pagination, ordering, limits, record projections, null predicate lowering, and narrow aggregation support.
+- Transaction guards, row locking, inserts, mutations, retry metadata, idempotency keys, typed outbox events, typed after-commit hook contracts, nullable expression checks, and null guard lowering.
 - Formula-based simulation forecasts with dimensions, units, scheduled changes, scenarios, objectives, rankings, and explanations.
 
 ### Runtime And Database
@@ -90,9 +90,6 @@ Commerce, logistics, clinic, PLOS, and business operations examples keep Reux gr
 
 ## Next Research Tracks
 
-- Richer transaction control flow.
-- Deeper expression typing.
-- Reusable query and join patterns.
 - Richer simulation time-series and assumptions.
 - Product-facing simulation execution APIs.
 - Compiler-backed language-server features.

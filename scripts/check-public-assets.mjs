@@ -36,8 +36,8 @@ if (roadmap.status?.fullCompletionPercent !== capabilities.status?.fullCompletio
 if (!snapshot.links.capabilitiesJson.endsWith("reux-capabilities.json")) {
   failures.push("public snapshot must link to capabilities JSON");
 }
-if (!backlog.items.some((item) => item.priority === "P1" && item.ownerTrack === "Language Core")) {
-  failures.push("next backlog must include a P1 Language Core item");
+if (!backlog.items.some((item) => item.priority === "P1")) {
+  failures.push("next backlog must include at least one P1 item");
 }
 
 if (failures.length > 0) {

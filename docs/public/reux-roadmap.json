@@ -4,7 +4,7 @@
   "status": {
     "demoReadinessPercent": 99,
     "fullCompletionPercent": 100,
-    "summary": "The prototype completion bar is closed. The public demo is live with commerce and logistics workflows, in-page tester guidance, clearer empty states, visible domain-scoped queue health, hosted smoke checks for reset, transaction, queue, and outbox behavior, CI smoke automation against PostgreSQL, a reusable monitor for uptime checks with optional webhook alerts, and an operations dashboard for queue and worker health. Simulation domain packs report coverage and suggested assumptions, metrics, scenarios, and objectives, with executable PLOS finance/habit and business workforce/operations examples, deterministic scheduled-change reporting, non-finite formula rejection, and generated catalog helpers for product apps. Release preflight checks package entrypoints, release docs, roadmap sync, and clean-tree readiness; migrations synthesize rollback SQL for safe reversible schema changes; VS Code diagnostics infer useful symbol and field ranges; and public release planning is documented."
+    "summary": "The prototype completion bar is closed. The public demo is live with commerce and logistics workflows, in-page tester guidance, clearer empty states, visible domain-scoped queue health, hosted smoke checks for reset, transaction, queue, and outbox behavior, CI smoke automation against PostgreSQL, a reusable monitor for uptime checks with optional webhook alerts, and an operations dashboard for queue and worker health. The current language core has broader transaction control flow, deeper expression typing, alias-remapped reusable filters, null-aware predicate/guard lowering, typed worker contracts, and tighter diagnostics. Simulation domain packs report coverage and suggested assumptions, metrics, scenarios, and objectives, with executable PLOS finance/habit and business workforce/operations examples, deterministic scheduled-change reporting, non-finite formula rejection, and generated catalog helpers for product apps. Release preflight checks package entrypoints, release docs, roadmap sync, and clean-tree readiness; migrations synthesize rollback SQL for safe reversible schema changes; VS Code diagnostics infer useful symbol and field ranges; and public release planning is documented."
   },
   "liveNow": [
     "Public commerce workflow demo",
@@ -31,6 +31,7 @@
     "Executable PLOS habit-consistency example alongside the personal-finance example",
     "Executable business operations simulation example alongside the workforce example",
     "Generated simulation catalog helpers for product apps",
+    "Language-core completion pass for transaction control flow, expression typing, reusable filters, worker contracts, null-aware lowering, and diagnostics",
     "Keep improving public demo copy as new domains are added",
     "Keep monitor alert routing aligned with the final hosting and notification setup",
     "Document public reset/session behavior for testers"
@@ -73,17 +74,6 @@
       "items": [
         "Update public testing docs and screenshots/copy references if UI changes",
         "Keep docs/public/reux-demo-testing-guide.md aligned with the actual demo"
-      ]
-    },
-    {
-      "title": "Reux Language Depth",
-      "goal": "Turn the current useful subset into a stronger application language foundation.",
-      "items": [
-        "Broaden transaction control flow",
-        "Deepen expression typing",
-        "Improve generated worker contracts",
-        "Expand reusable query patterns",
-        "Continue tightening compiler diagnostics and safety checks"
       ]
     },
     {

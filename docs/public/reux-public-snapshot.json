@@ -6,7 +6,7 @@
     "demoReadinessPercent": 99,
     "fullCompletionPercent": 100,
     "releaseTrack": "prototype-complete",
-    "summary": "Reux is demo-ready for public commerce and logistics testing, and prototype-complete for the current language/runtime foundation. The remaining work is product expansion and deeper language research rather than closing the original MVP bar."
+    "summary": "Reux is demo-ready for public commerce and logistics testing, and prototype-complete for the current language/runtime foundation. The current language-core completion pass is closed; remaining work is product expansion, simulation depth, and developer tooling rather than closing the original MVP bar."
   },
   "liveNow": [
     "Public commerce workflow demo",
@@ -33,6 +33,7 @@
     "Executable PLOS habit-consistency example alongside the personal-finance example",
     "Executable business operations simulation example alongside the workforce example",
     "Generated simulation catalog helpers for product apps",
+    "Language-core completion pass for transaction control flow, expression typing, reusable filters, worker contracts, null-aware lowering, and diagnostics",
     "Keep improving public demo copy as new domains are added",
     "Keep monitor alert routing aligned with the final hosting and notification setup",
     "Document public reset/session behavior for testers"
@@ -41,7 +42,7 @@
     {
       "name": "Language Core",
       "status": "prototype-complete",
-      "summary": "The MVP language subset can model schemas, enums, queries, transaction functions, durable events, migrations, and simulations.",
+      "summary": "The prototype language core can model schemas, enums, reusable typed queries, guarded transaction functions, durable events, migrations, and simulations.",
       "capabilityCount": 5
     },
     {
@@ -96,33 +97,24 @@
     },
     {
       "order": 5,
-      "title": "Reux Language Depth",
-      "goal": "Turn the current useful subset into a stronger application language foundation.",
-      "itemCount": 5
-    },
-    {
-      "order": 6,
       "title": "Simulation Foundation",
       "goal": "Make Reux useful for structured forecasting and scenario comparison.",
       "itemCount": 5
     },
     {
-      "order": 7,
+      "order": 6,
       "title": "Product Ecosystem",
       "goal": "Keep Reux grounded in real products instead of building language features in isolation.",
       "itemCount": 5
     },
     {
-      "order": 8,
+      "order": 7,
       "title": "Developer Experience",
       "goal": "Make Reux approachable for technical reviewers and early users.",
       "itemCount": 4
     }
   ],
   "nextResearchTracks": [
-    "Richer transaction control flow",
-    "Deeper expression typing",
-    "Reusable query and join patterns",
     "Richer simulation time-series and assumptions",
     "Product-facing simulation execution APIs",
     "Compiler-backed language-server features"
