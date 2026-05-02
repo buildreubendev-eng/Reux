@@ -29,17 +29,17 @@ function renderDomain(domain) {
     <div class="panel">
       <div class="panel-heading">
         <h2>${escapeHtml(domain.title)}</h2>
-        <span>${escapeHtml(titleCase(domain.queue.health))}</span>
+        <span>Queue Health: ${escapeHtml(titleCase(domain.queue.health))}</span>
       </div>
       <div class="table">
         <table>
           <tbody>
-            ${row("Pending", domain.queue.pending)}
-            ${row("Processing", domain.queue.processing)}
-            ${row("Processed", domain.queue.processed)}
-            ${row("Failed", domain.queue.failed)}
-            ${row("Dead", domain.queue.dead)}
-            ${row("Attempts", domain.queue.attempts)}
+            ${row("Pending Events", domain.queue.pending)}
+            ${row("Currently Processing", domain.queue.processing)}
+            ${row("Successfully Processed", domain.queue.processed)}
+            ${row("Failed Events", domain.queue.failed)}
+            ${row("Dead Letter Queue", domain.queue.dead)}
+            ${row("Total Attempts", domain.queue.attempts)}
           </tbody>
         </table>
       </div>

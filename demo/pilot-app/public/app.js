@@ -161,13 +161,13 @@ const displayLabels = {
   trackingnumber: "Tracking Number",
 };
 
-const emptyStates = {
-  summary: "No summary rows yet. Reset this session to load the seed data.",
-  dataOne: "No primary records yet. Reset this session, then run a transaction.",
-  dataTwo: "No related records yet. Capture a payment or process a logistics update to create rows.",
-  dataThree: "No balance rows yet. Reset this session to load accounts or drivers.",
-  outbox: "No queued events. Run a transaction that emits an event, then process the outbox.",
-};
+const getEmptyStates = (config) => ({
+  summary: `No summary rows yet. Reset your session to load fresh ${config.title.toLowerCase()} seed data.`,
+  dataOne: `No primary records yet. Reset your session, then run a ${config.title.toLowerCase()} transaction.`,
+  dataTwo: `No related records yet. Run a transaction to create rows.`,
+  dataThree: `No balance rows yet. Reset your session to load private seed data.`,
+  outbox: `No queued events in ${config.title}. Run a transaction that emits an event, then process the outbox.`,
+});
 
 const domainTabs = [...document.querySelectorAll("[data-domain]")];
 const demoActionButtons = [...document.querySelectorAll("[data-action]")];
@@ -191,7 +191,7 @@ elements.resetSessionButton.addEventListener("click", async () => {
     const config = activeDomain();
     const result = await postJson(config.resetUrl, {});
     elements.actionResult.textContent = JSON.stringify(result, null, 2);
-    elements.actionSummary.textContent = `Your isolated ${config.title.toLowerCase()} session was reset with fresh seed data.`;
+    elements.actionSummary.textContent = `Your isolated ${config.title.toLowerCase()} session was reset with fresh private seed data.`;
     notify("Session reset with fresh demo data");
     await refresh();
   });
@@ -260,6 +260,7 @@ function syncDomainChrome(config) {
 }
 
 function renderDomainTables(config, dashboard) {
+  const emptyStates = getEmptyStates(config);
   renderConfiguredTable(config.tables.summary, elements.summaryTitle, elements.summaryTable, dashboard, undefined, emptyStates.summary);
   renderConfiguredTable(config.tables.dataOne, elements.dataOneTitle, elements.dataOneTable, dashboard, elements.dataOnePanel, emptyStates.dataOne);
   renderConfiguredTable(config.tables.dataTwo, elements.dataTwoTitle, elements.dataTwoTable, dashboard, elements.dataTwoPanel, emptyStates.dataTwo);
@@ -402,11 +403,11 @@ function loadSessionId() {
 
 function summarizeAction(labelText, result) {
   if (labelText === "processOutbox") {
-    return `Processed ${result.processed} outbox event(s); ${result.failed} failed.`;
+    return `Processed ${result.processed} outbox event(s); ${result.failed} failed. Watch Queue Health to see durable events move.`;
   }
   const events = result.outboxEvents?.length ?? 0;
   const hooks = result.afterCommit?.length ?? 0;
-  return `${labelText} ran in ${result.attempts} attempt(s), wrote ${events} outbox event(s), and returned ${hooks} after-commit hook(s).`;
+  return `${labelText} ran in ${result.attempts} attempt(s), wrote ${events} outbox event(s), and returned ${hooks} after-commit hook(s). Process the outbox to clear them.`;
 }
 
 function friendlyError(message) {

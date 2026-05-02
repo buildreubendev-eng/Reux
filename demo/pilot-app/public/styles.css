@@ -461,9 +461,16 @@ td code {
   .data-grid,
   .status-grid,
   .tester-guide,
-  .queue-strip,
   .form-grid {
     grid-template-columns: 1fr;
+  }
+
+  .queue-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .queue-strip > div:first-child {
+    grid-column: 1 / -1;
   }
 
   .topbar {
@@ -477,9 +484,18 @@ td code {
 
   .domain-tabs {
     width: 100%;
+    display: flex;
   }
 
   .domain-tab {
     flex: 1;
+  }
+
+  .button-row {
+    flex-direction: column;
+  }
+
+  .button-row button {
+    width: 100%;
   }
 }
