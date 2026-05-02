@@ -52,6 +52,7 @@ npm run onboarding:smoke
 npm run verify
 npm run verify:cli
 npm run verify:package
+npm run release:beta-status
 npm run demo:pilot
 npm run demo:logistics
 npm run demo:clinic

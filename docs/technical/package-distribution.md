@@ -2,6 +2,8 @@
 
 Reux is still marked private while the public package name and publishing policy are being decided, but the package now has the shape needed for local and private distribution.
 
+For the current public-beta gate, see [Beta readiness](beta-readiness.md). The short version: `verify:package` proves the tarball works, while `release:beta-readiness` proves the package is safe to publish publicly.
+
 ## Entrypoints
 
 The package exposes:
@@ -26,6 +28,7 @@ Use this path for testing on another machine before public publishing:
 npm run verify
 npm run build
 npm run verify:package
+npm run release:beta-status
 node scripts/release-preflight.mjs --allow-dirty
 npm run release:pack-dry-run
 npm pack
@@ -33,7 +36,7 @@ npm install -g ./reux-prototype-0.1.0.tgz
 reux version
 ```
 
-`npm run verify:package` runs a package smoke check. It verifies that the exported JavaScript files, generated declaration files, docs, examples, and editor assets exist and are included in the npm tarball dry run. It then creates a real tarball in a temporary directory, installs that tarball into a temporary consumer project, runs the shipped `reux` binary, and imports the compiler, runtime, and business-simulator entrypoints from the installed package. `release-preflight.mjs` checks release documentation, package entrypoints, public roadmap status synchronization, and clean-tree readiness. `release:pack-dry-run` rebuilds and prints the npm tarball contents without publishing. The package includes `dist`, `docs`, `editors`, `examples`, `pilot`, migrations, root config, and the README.
+`npm run verify:package` runs a package smoke check. It verifies that the exported JavaScript files, generated declaration files, docs, examples, and editor assets exist and are included in the npm tarball dry run. It then creates a real tarball in a temporary directory, installs that tarball into a temporary consumer project, runs the shipped `reux` binary, and imports the compiler, runtime, and business-simulator entrypoints from the installed package. `release:beta-status` reports whether public npm blockers remain without failing on intentional blockers such as `private: true`. `release-preflight.mjs` checks release documentation, package entrypoints, public roadmap status synchronization, and clean-tree readiness. `release:pack-dry-run` rebuilds and prints the npm tarball contents without publishing. The package includes `dist`, `docs`, `editors`, `examples`, `pilot`, migrations, root config, and the README.
 
 ## Private Consumption
 

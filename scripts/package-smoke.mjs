@@ -18,6 +18,7 @@ const expectedPaths = [
   "docs/technical/demo-deployment.md",
   "docs/technical/examples.md",
   "docs/technical/package-distribution.md",
+  "docs/technical/beta-readiness.md",
   "docs/technical/public-release-plan.md",
   "docs/technical/developer-onboarding.md",
   "docs/technical/clinic-pilot.md",

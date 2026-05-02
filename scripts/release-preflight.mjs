@@ -9,6 +9,7 @@ const requiredDocs = [
   "docs/technical/demo-deployment.md",
   "docs/technical/release.md",
   "docs/technical/package-distribution.md",
+  "docs/technical/beta-readiness.md",
   "docs/technical/public-release-plan.md",
   "docs/technical/phase-status.md",
   "docs/technical/roadmap.md",
@@ -33,6 +34,8 @@ const requiredScripts = [
   "check:public",
   "public:write",
   "release:preflight",
+  "release:beta-readiness",
+  "release:beta-status",
   "release:pack-dry-run",
 ];
 

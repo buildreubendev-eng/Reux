@@ -18,10 +18,11 @@ Run the full local release gate:
 
 ```bash
 npm run release:preflight
+npm run release:beta-readiness
 npm run release:pack-dry-run
 ```
 
-`release:preflight` verifies the compiler, demo checks, editor syntax, tests, build, CLI smoke checks, package smoke check, release docs, roadmap synchronization, package entrypoints, and clean working tree. The package smoke check validates dry-run contents, installs a real tarball into a temporary consumer project, runs the shipped `reux` binary, and imports the compiler/runtime/business-simulator entrypoints. `release:pack-dry-run` rebuilds and prints the npm tarball contents without publishing.
+`release:preflight` verifies the compiler, demo checks, editor syntax, tests, build, CLI smoke checks, package smoke check, release docs, roadmap synchronization, package entrypoints, and clean working tree. The package smoke check validates dry-run contents, installs a real tarball into a temporary consumer project, runs the shipped `reux` binary, and imports the compiler/runtime/business-simulator entrypoints. `release:beta-readiness` checks the public npm blockers that should not be ignored accidentally: package name, `private`, license, and discoverability metadata. `release:pack-dry-run` rebuilds and prints the npm tarball contents without publishing.
 
 ## Publishing Steps
 
@@ -29,9 +30,10 @@ npm run release:pack-dry-run
 2. Set `private` to `false`.
 3. Confirm `README.md`, `docs/technical/package-distribution.md`, and this file still match the package name.
 4. Run `npm run release:preflight`.
-5. Run `npm run release:pack-dry-run`.
-6. Tag the commit after it is pushed.
-7. Publish with the intended npm account or organization.
+5. Run `npm run release:beta-readiness`.
+6. Run `npm run release:pack-dry-run`.
+7. Tag the commit after it is pushed.
+8. Publish with the intended npm account or organization using an explicit beta tag.
 
 ## Cross-Repo Upgrade Flow
 

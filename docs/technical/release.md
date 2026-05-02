@@ -26,6 +26,7 @@ Build and inspect the package contents before sharing a tarball or publishing:
 npm run build
 npm run verify
 npm run verify:package
+npm run release:beta-status
 npm run release:preflight
 npm run release:pack-dry-run
 ```
@@ -37,6 +38,8 @@ npm run release:pack-dry-run
 ```bash
 node scripts/release-preflight.mjs --allow-dirty
 ```
+
+`npm run release:beta-status` reports public npm readiness without failing on intentional blockers such as `private: true`, the placeholder package name, or an unchosen public license. When those blockers are removed for a real beta, `npm run release:beta-readiness` should pass before publishing.
 
 `npm run release:pack-dry-run` rebuilds the project and asks npm to show the tarball contents without publishing.
 
@@ -70,13 +73,15 @@ Before tagging a prototype release:
 1. Run `npm run verify`, including CLI smoke checks for the root commerce seed and pilot seed fixture.
 2. Run `npm run verify:postgres:full` against a live PostgreSQL database.
 3. Run `npm run verify:package` and confirm the installed CLI/import smoke passes.
-4. Run `npm run release:preflight`.
-5. Run `npm run release:pack-dry-run`.
-6. Check `docs/technical/package-distribution.md`.
-7. Check `docs/technical/public-release-plan.md`.
-8. Check `docs/technical/phase-status.md`.
-9. Check `docs/technical/cli.md` for new or changed commands.
-10. Update `README.md` if setup or demo commands changed.
-11. Tag the commit after the repository is pushed.
+4. Run `npm run release:beta-status` during private/tarball releases, or `npm run release:beta-readiness` before a public beta.
+5. Run `npm run release:preflight`.
+6. Run `npm run release:pack-dry-run`.
+7. Check `docs/technical/package-distribution.md`.
+8. Check `docs/technical/beta-readiness.md`.
+9. Check `docs/technical/public-release-plan.md`.
+10. Check `docs/technical/phase-status.md`.
+11. Check `docs/technical/cli.md` for new or changed commands.
+12. Update `README.md` if setup or demo commands changed.
+13. Tag the commit after the repository is pushed.
 
 The package remains marked `private` until the public package name and distribution policy are final.
