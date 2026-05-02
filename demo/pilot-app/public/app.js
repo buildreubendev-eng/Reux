@@ -43,6 +43,13 @@ const domains = {
       elements.accountId.value ||= dashboard.ids.account;
       elements.orderId.value ||= dashboard.ids.order;
     },
+    emptyStates: {
+      summary: "No commerce account summaries. Reset session to load private Commerce seed data.",
+      dataOne: "No open orders. Reset your session, then run a Capture Payment transaction.",
+      dataTwo: "No payments recorded. Run a transaction to capture a payment.",
+      dataThree: "No account balances. Reset session to load initial balances.",
+      outbox: "No queued events in Commerce. Capture a payment or credit an account to emit events.",
+    },
     tables: {
       summary: ["Account Summary", "summary", ["email", "ordercount", "totalspend"]],
       dataOne: ["Orders", "orders", ["email", "total", "status"]],
@@ -89,6 +96,13 @@ const domains = {
       elements.shipmentId.value ||= dashboard.ids.shipment;
       elements.driverId.value ||= dashboard.ids.driver;
     },
+    emptyStates: {
+      summary: "No shipment summaries. Reset session to load Logistics seed data.",
+      dataOne: "No active shipments. Reset your session, then Start Shipment.",
+      dataTwo: "No driver manifests. Run a transaction to assign drivers.",
+      dataThree: null,
+      outbox: "No queued events in Logistics. Move a shipment to emit events.",
+    },
     tables: {
       summary: ["Shipment Status", "statusSummary", ["status", "shipmentcount", "totalweight"]],
       dataOne: ["Active Shipments", "activeShipments", ["trackingnumber", "destination", "status"]],
@@ -131,6 +145,7 @@ const elements = {
     document.querySelector("#metricThreeCount"),
     document.querySelector("#metricFourCount"),
   ],
+  queueHealthCard: document.querySelector("#queueHealthCard"),
   queueHealth: document.querySelector("#queueHealth"),
   queuePending: document.querySelector("#queuePending"),
   queueProcessing: document.querySelector("#queueProcessing"),
@@ -161,14 +176,6 @@ const displayLabels = {
   trackingnumber: "Tracking Number",
 };
 
-const getEmptyStates = (config) => ({
-  summary: `No summary rows yet. Reset your session to load fresh ${config.title.toLowerCase()} seed data.`,
-  dataOne: `No primary records yet. Reset your session, then run a ${config.title.toLowerCase()} transaction.`,
-  dataTwo: `No related records yet. Run a transaction to create rows.`,
-  dataThree: `No balance rows yet. Reset your session to load private seed data.`,
-  outbox: `No queued events in ${config.title}. Run a transaction that emits an event, then process the outbox.`,
-});
-
 const domainTabs = [...document.querySelectorAll("[data-domain]")];
 const demoActionButtons = [...document.querySelectorAll("[data-action]")];
 
@@ -191,7 +198,7 @@ elements.resetSessionButton.addEventListener("click", async () => {
     const config = activeDomain();
     const result = await postJson(config.resetUrl, {});
     elements.actionResult.textContent = JSON.stringify(result, null, 2);
-    elements.actionSummary.textContent = `Your isolated ${config.title.toLowerCase()} session was reset with fresh private seed data.`;
+    elements.actionSummary.innerHTML = `Your isolated ${config.title.toLowerCase()} session was reset with fresh private seed data.`;
     notify("Session reset with fresh demo data");
     await refresh();
   });
@@ -202,7 +209,7 @@ domainTabs.forEach((tab) => {
     state.currentDomain = tab.dataset.domain;
     window.localStorage.setItem("reuxDemoDomain", state.currentDomain);
     elements.actionResult.textContent = "";
-    elements.actionSummary.textContent = "Run an action to see the generated transaction or outbox result.";
+    elements.actionSummary.innerHTML = "Run an action to see the generated transaction or outbox result.";
     elements.lastAction.textContent = "Idle";
     await refresh();
   });
@@ -225,7 +232,7 @@ async function runAction(action) {
   elements.lastAction.textContent = action.label;
   const result = await postJson(action.url, action.payload());
   elements.actionResult.textContent = JSON.stringify(result, null, 2);
-  elements.actionSummary.textContent = summarizeAction(action.label, result);
+  elements.actionSummary.innerHTML = summarizeAction(action.label, result);
   notify(`${action.label} complete`);
   await refresh();
 }
@@ -260,7 +267,7 @@ function syncDomainChrome(config) {
 }
 
 function renderDomainTables(config, dashboard) {
-  const emptyStates = getEmptyStates(config);
+  const emptyStates = config.emptyStates;
   renderConfiguredTable(config.tables.summary, elements.summaryTitle, elements.summaryTable, dashboard, undefined, emptyStates.summary);
   renderConfiguredTable(config.tables.dataOne, elements.dataOneTitle, elements.dataOneTable, dashboard, elements.dataOnePanel, emptyStates.dataOne);
   renderConfiguredTable(config.tables.dataTwo, elements.dataTwoTitle, elements.dataTwoTable, dashboard, elements.dataTwoPanel, emptyStates.dataTwo);
@@ -272,6 +279,7 @@ function renderQueueSummary(dashboard) {
   const queue = queueSummary(dashboard);
   elements.queueHealth.textContent = titleCase(queue.health);
   elements.queueHealth.dataset.health = queue.health;
+  if (elements.queueHealthCard) elements.queueHealthCard.dataset.health = queue.health;
   elements.queuePending.textContent = String(queue.pending);
   elements.queueProcessing.textContent = String(queue.processing);
   elements.queueFailed.textContent = String(queue.failed);
@@ -403,11 +411,10 @@ function loadSessionId() {
 
 function summarizeAction(labelText, result) {
   if (labelText === "processOutbox") {
-    return `Processed ${result.processed} outbox event(s); ${result.failed} failed. Watch Queue Health to see durable events move.`;
+    return `<strong>Processed Outbox:</strong> ${result.processed} event(s) succeeded, ${result.failed} failed. Watch Queue Health to see durable events move.`;
   }
   const events = result.outboxEvents?.length ?? 0;
-  const hooks = result.afterCommit?.length ?? 0;
-  return `${labelText} ran in ${result.attempts} attempt(s), wrote ${events} outbox event(s), and returned ${hooks} after-commit hook(s). Process the outbox to clear them.`;
+  return `<strong>Ran ${titleCase(labelText)}:</strong> Wrote ${events} outbox event(s). <strong>Next:</strong> Click "Process Outbox" to move them.`;
 }
 
 function friendlyError(message) {

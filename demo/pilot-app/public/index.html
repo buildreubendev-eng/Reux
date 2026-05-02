@@ -20,7 +20,10 @@
         </nav>
         <div class="actions">
           <button id="refreshButton" type="button">Refresh</button>
-          <button id="resetSessionButton" type="button">Reset My Session</button>
+          <div class="reset-group">
+            <button id="resetSessionButton" type="button">Reset My Session</button>
+            <span class="reset-hint">Creates isolated seed data. Does not affect other visitors.</span>
+          </div>
           <details id="adminTools" class="admin-tools">
             <summary>Maintainer Setup</summary>
             <div class="admin-menu">
@@ -76,24 +79,24 @@
       </section>
 
       <section class="queue-strip" aria-label="Queue health">
-        <div>
+        <div id="queueHealthCard">
           <span class="queue-label">Queue Health</span>
           <strong id="queueHealth">Starting</strong>
         </div>
         <div>
-          <span>Pending</span>
+          <span>Pending Events</span>
           <strong id="queuePending">-</strong>
         </div>
         <div>
-          <span>Processing</span>
+          <span>Processing Now</span>
           <strong id="queueProcessing">-</strong>
         </div>
         <div>
-          <span>Failed</span>
+          <span>Failed Jobs</span>
           <strong id="queueFailed">-</strong>
         </div>
         <div>
-          <span>Dead</span>
+          <span>Dead Letter</span>
           <strong id="queueDead">-</strong>
         </div>
       </section>

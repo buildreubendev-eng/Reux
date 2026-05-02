@@ -162,7 +162,22 @@ input {
 .button-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 12px;
+}
+
+.reset-group {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-end;
+}
+
+.reset-hint {
+  font-size: 11px;
+  color: var(--muted);
+  max-width: 180px;
+  line-height: 1.25;
+  text-align: right;
 }
 
 .header-tools {
@@ -173,6 +188,7 @@ input {
 
 .domain-tabs {
   display: inline-flex;
+  flex-wrap: wrap;
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -245,6 +261,39 @@ input {
 #queueHealth[data-health="blocked"] {
   color: var(--red);
 }
+
+#queueHealthCard {
+  border-left: 4px solid transparent;
+  transition: all 0.2s ease;
+}
+
+#queueHealthCard[data-health="clear"] {
+  border-left-color: var(--green);
+  background-color: #f0fdf4;
+}
+
+#queueHealthCard[data-health="working"] {
+  border-left-color: var(--blue);
+  background-color: #eff6ff;
+}
+
+#queueHealthCard[data-health="blocked"],
+#queueHealthCard[data-health="needs retry"] {
+  border-left-color: var(--red);
+  background-color: #fef2f2;
+}
+
+.queue-status {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.queue-status[data-health="clear"] { background: #f0fdf4; color: var(--green); border-color: #bbf7d0; }
+.queue-status[data-health="working"] { background: #eff6ff; color: var(--blue); border-color: #bfdbfe; }
+.queue-status[data-health="blocked"], .queue-status[data-health="needs retry"] { background: #fef2f2; color: var(--red); border-color: #fecaca; }
 
 .notice {
   border: 1px solid #f1c57c;
@@ -485,14 +534,18 @@ td code {
   .domain-tabs {
     width: 100%;
     display: flex;
+    flex-wrap: wrap;
   }
 
   .domain-tab {
     flex: 1;
+    min-width: 120px;
+    text-align: center;
   }
 
   .button-row {
     flex-direction: column;
+    padding-bottom: 24px;
   }
 
   .button-row button {
