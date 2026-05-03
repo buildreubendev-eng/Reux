@@ -94,6 +94,10 @@ function clearFieldErrors() {
   for (const el of $$(".sim-field-error")) el.remove();
   for (const el of $$(".sim-input-error")) el.classList.remove("sim-input-error");
 }
+function normalizePath(path) {
+  // Backend paths may include a leading "$." prefix, e.g. "$.baseline.grossMarginRate"
+  return (path || "").replace(/^\$\./, "");
+}
 function markFieldError(inputId, message) {
   const input = $("#" + inputId) || $(`[data-field="${inputId}"]`);
   if (!input) return false;
@@ -106,7 +110,7 @@ function mapIssuesToFields(issues) {
   if (!issues?.length) return false;
   let mapped = 0;
   for (const issue of issues) {
-    const path = issue.path || "";
+    const path = normalizePath(issue.path);
     // baseline.employees → bl_employees
     const baselineMatch = path.match(/^baseline\.(.+)$/);
     if (baselineMatch) {
@@ -122,6 +126,7 @@ function mapIssuesToFields(issues) {
     if (scenarioNameMatch) {
       if (markFieldError(`sc_${scenarioNameMatch[1]}_${scenarioNameMatch[2]}`, issue.message)) { mapped++; continue; }
     }
+    // Non-mappable paths (e.g. "scenarios[0].assumptions" with no trailing field) stay unmapped
   }
   return mapped > 0;
 }
@@ -266,12 +271,13 @@ async function runSim() {
 }
 
 function issuePath2FieldId(path) {
-  if (!path) return "";
-  const bl = path.match(/^baseline\.(.+)$/);
+  const p = normalizePath(path);
+  if (!p) return "";
+  const bl = p.match(/^baseline\.(.+)$/);
   if (bl) return `bl_${bl[1]}`;
-  const sc = path.match(/^scenarios\[(\d+)\]\.assumptions\.(.+)$/);
+  const sc = p.match(/^scenarios\[(\d+)\]\.assumptions\.(.+)$/);
   if (sc) return `sc_${sc[1]}_${sc[2]}`;
-  const scn = path.match(/^scenarios\[(\d+)\]\.(.+)$/);
+  const scn = p.match(/^scenarios\[(\d+)\]\.(.+)$/);
   if (scn) return `sc_${scn[1]}_${scn[2]}`;
   return "";
 }

@@ -10,9 +10,9 @@
   <body>
     <header class="topbar sim-topbar">
       <div>
-        <p class="eyebrow">Reux &middot; Business Simulator</p>
+        <p class="eyebrow">Business Simulator</p>
         <h1>Business Simulator</h1>
-        <p class="session-line">A Reux-powered planning tool for teams that compare operational decisions.</p>
+        <p class="session-line">Simulate business decisions before they become expensive mistakes.</p>
       </div>
       <div class="header-tools">
         <nav class="sim-nav" aria-label="Simulator navigation">
@@ -27,12 +27,36 @@
       <!-- Hero / Product Positioning -->
       <section id="simHero" class="sim-hero" aria-label="Product overview">
         <div class="sim-hero-content">
-          <h2>Compare decisions before they become commitments</h2>
-          <p>Business Simulator helps teams run operational what-if scenarios, save and share results, and explain which scenario performs best — before decisions become real-world commitments.</p>
+          <h2>Simulate business decisions before they become expensive mistakes</h2>
+          <p>Run operational what-if scenarios, compare outcomes across cost, margin, productivity, and risk, and share an explainable recommendation — before the decision is final.</p>
           <div class="sim-hero-actions">
             <button id="startSimulator" class="sim-primary-btn" type="button">Start a Simulation</button>
             <button id="viewSavedRuns" class="sim-secondary-btn" type="button">View Saved Results</button>
           </div>
+        </div>
+
+        <!-- Who This Is For -->
+        <div class="sim-who-for">
+          <h3>Who this is for</h3>
+          <div class="sim-who-tags">
+            <span>Manufacturing</span>
+            <span>Logistics</span>
+            <span>Warehouse Operations</span>
+            <span>Staffing-Heavy Teams</span>
+            <span>Small-to-Mid-Sized Businesses</span>
+          </div>
+        </div>
+
+        <!-- Example Use Cases -->
+        <div class="sim-use-cases">
+          <h3>Questions you can answer</h3>
+          <ul>
+            <li>Should we hire more employees?</li>
+            <li>What happens if demand spikes?</li>
+            <li>Can we reduce overtime without hurting output?</li>
+            <li>What if productivity improves 10–20%?</li>
+            <li>Which scenario protects margin best?</li>
+          </ul>
         </div>
       </section>
 
@@ -216,22 +240,23 @@
 
       <!-- Pilot CTA -->
       <section id="pilotCta" class="sim-pilot-cta" aria-label="Pilot program">
-        <h2>Bring a real decision</h2>
-        <p>Bring one real decision you are currently modeling in a spreadsheet. We will turn it into a reusable Business Simulator scenario so you can compare options, save results, and explain the recommendation.</p>
+        <h2>Request a Founder Pilot Simulation</h2>
+        <p class="sim-pilot-pitch">We’ll model one real operational decision, compare 3–5 scenarios, and deliver a decision report showing projected impact on cost, margin, productivity, and risk.</p>
+        <p class="sim-pilot-brief">Bring one real decision you are currently modeling in a spreadsheet. We will turn it into a reusable scenario model so you can compare options, save results, and explain the recommendation to your team.</p>
         <form id="pilotForm" class="sim-pilot-form">
           <label>
             <span>Name</span>
             <input id="pilotName" type="text" placeholder="Your name" autocomplete="name">
           </label>
           <label>
-            <span>Email</span>
+            <span>Work Email</span>
             <input id="pilotEmail" type="email" placeholder="you@company.com" autocomplete="email">
           </label>
           <label class="sim-pilot-wide">
             <span>What decision are you modeling?</span>
             <textarea id="pilotDecision" rows="3" placeholder="e.g. We need to decide between hiring 4 people or investing in process automation before Q3"></textarea>
           </label>
-          <button id="pilotSubmit" class="sim-primary-btn" type="submit">Request Pilot Access</button>
+          <button id="pilotSubmit" class="sim-primary-btn" type="submit">Request Founder Pilot</button>
         </form>
         <p id="pilotConfirmation" class="sim-pilot-confirm" hidden>Thanks! We will reach out to set up your pilot scenario.</p>
       </section>

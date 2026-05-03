@@ -596,6 +596,16 @@ td code {
 .sim-hero p { margin: 0 auto 24px; max-width: 560px; color: var(--muted); font-size: 15px; line-height: 1.5; }
 .sim-hero-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
 
+.sim-who-for { margin-top: 32px; padding-top: 24px; border-top: 1px solid rgba(0,0,0,0.06); }
+.sim-who-for h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin: 0 0 10px; font-weight: 700; }
+.sim-who-tags { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.sim-who-tags span { display: inline-block; padding: 4px 12px; border-radius: 20px; background: #e8f1fb; color: var(--blue); font-size: 13px; font-weight: 650; }
+
+.sim-use-cases { margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(0,0,0,0.06); text-align: left; max-width: 480px; margin-left: auto; margin-right: auto; }
+.sim-use-cases h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin: 0 0 10px; font-weight: 700; text-align: center; }
+.sim-use-cases ul { margin: 0; padding: 0; list-style: none; }
+.sim-use-cases li { position: relative; padding: 6px 0 6px 24px; font-size: 14px; color: var(--ink); line-height: 1.45; }
+.sim-use-cases li::before { content: "\2192"; position: absolute; left: 0; color: var(--blue); font-weight: 700; }
 .sim-primary-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; border: 1px solid #1c5590; border-radius: 8px; background: var(--blue); color: #fff; cursor: pointer; font-weight: 700; padding: 0 20px; font-size: 14px; }
 .sim-primary-btn:hover { background: #194f87; }
 .sim-secondary-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink); cursor: pointer; font-weight: 650; padding: 0 16px; font-size: 14px; }
@@ -741,6 +751,8 @@ td code {
 .sim-pilot-wide { grid-column: 1 / -1; }
 .sim-pilot-form .sim-primary-btn { grid-column: 1 / -1; justify-self: center; }
 .sim-pilot-confirm { color: var(--green); font-weight: 650; margin-top: 12px; }
+.sim-pilot-pitch { max-width: 600px; margin: 0 auto 12px; color: var(--ink); font-size: 16px; font-weight: 650; line-height: 1.5; }
+.sim-pilot-brief { max-width: 560px; margin: 0 auto 24px; color: var(--muted); font-size: 14px; line-height: 1.5; }
 
 /* Responsive */
 @media (max-width: 900px) {
