@@ -32,8 +32,23 @@ export function createSimulationRunStore(options = {}) {
   }
 
   function get(id) {
+    const result = getStatus(id);
+    return result.status === "found" ? result.record : null;
+  }
+
+  function getStatus(id) {
+    const record = records.get(id);
+    if (record) {
+      const expiresAt = Date.parse(record.expiresAt);
+      if (Number.isFinite(expiresAt) && expiresAt <= now().getTime()) {
+        records.delete(id);
+        return { status: "expired", expiresAt: record.expiresAt };
+      }
+      prune();
+      return { status: "found", record };
+    }
     prune();
-    return records.get(id) ?? null;
+    return { status: "missing" };
   }
 
   function list({ sessionId } = {}) {
@@ -75,6 +90,7 @@ export function createSimulationRunStore(options = {}) {
   return {
     save,
     get,
+    getStatus,
     list,
     stats,
   };

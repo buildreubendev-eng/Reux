@@ -10,12 +10,22 @@ export const businessSimulatorEndpoints = {
 export type BusinessSimulatorEndpointName = keyof typeof businessSimulatorEndpoints;
 export type BusinessSimulatorErrorCode =
   | "business_simulator_validation_failed"
+  | "simulation_execution_validation_failed"
+  | "invalid_json"
+  | "request_too_large"
+  | "rate_limited"
   | "not_found"
+  | "saved_run_expired"
   | "method_not_allowed"
   | "request_failed";
 export const businessSimulatorErrorCodes = [
   "business_simulator_validation_failed",
+  "simulation_execution_validation_failed",
+  "invalid_json",
+  "request_too_large",
+  "rate_limited",
   "not_found",
+  "saved_run_expired",
   "method_not_allowed",
   "request_failed",
 ] as const satisfies readonly BusinessSimulatorErrorCode[];
@@ -84,6 +94,11 @@ export interface BusinessSimulatorErrorResponse {
 export interface BusinessSimulatorValidationErrorResponse extends BusinessSimulatorErrorResponse {
   code: "business_simulator_validation_failed";
   issues: BusinessSimulatorValidationIssue[];
+}
+
+export interface BusinessSimulatorSavedRunExpiredErrorResponse extends BusinessSimulatorErrorResponse {
+  code: "saved_run_expired";
+  expiresAt?: string;
 }
 
 export interface BusinessSimulatorScenarioInput {

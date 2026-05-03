@@ -111,4 +111,23 @@ describe("demo simulation run store", () => {
     expect(store.list()).toEqual([]);
     expect(store.stats().records).toBe(0);
   });
+
+  it("distinguishes expired run IDs from missing run IDs", () => {
+    let current = new Date("2026-05-02T00:00:00.000Z");
+    const store = createSimulationRunStore({
+      maxRecords: 5,
+      ttlMs: 1_000,
+      now: () => current,
+      createId: () => "live_expired",
+    });
+
+    store.save({ request: {}, response: { simulation: { id: "operations-decision" }, scenarios: [] }, session: {} });
+    current = new Date("2026-05-02T00:00:02.000Z");
+
+    expect(store.getStatus("live_expired")).toEqual({
+      status: "expired",
+      expiresAt: "2026-05-02T00:00:01.000Z",
+    });
+    expect(store.getStatus("live_missing")).toEqual({ status: "missing" });
+  });
 });

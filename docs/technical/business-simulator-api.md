@@ -167,7 +167,18 @@ The hosted demo server serializes those failures as `400` responses:
 }
 ```
 
-Frontend clients should prefer `issues` for field-level UI and fall back to `message` or `error` for a page-level alert.
+Other public API failures use the same `ok: false`, `error`, `message`, and `code` envelope. Frontend clients should prefer `issues` for field-level UI and fall back to `message` or `error` for a page-level alert.
+
+Common Business Simulator failure examples:
+
+| Case | HTTP status | Code |
+| --- | ---: | --- |
+| Invalid field value or too many scenarios | `400` | `business_simulator_validation_failed` |
+| Missing simulation or saved-run ID | `404` | `not_found` |
+| Expired saved run | `410` | `saved_run_expired` |
+| Malformed JSON body | `400` | `invalid_json` |
+| Oversized JSON body | `413` | `request_too_large` |
+| Public demo rate limit exceeded | `429` | `rate_limited` |
 
 ## Saved Run Records
 
@@ -205,7 +216,7 @@ The hosted demo stores recent Business Simulator runs in PostgreSQL with a bound
 }
 ```
 
-`GET /api/simulation-runs` returns session-scoped summaries with display title, subtitle, share label, result summary, scenario count, key metric, best margin, best-margin scenario, risk range, recommendation metadata, expiry note, and expiry time so a visitor can revisit recent work without seeing another visitor's run list. `GET /api/simulation-runs/:id` loads the full request and response for a known run ID, which is the shareable result-page path the frontend can use.
+`GET /api/simulation-runs` returns session-scoped summaries with display title, subtitle, share label, result summary, scenario count, key metric, best margin, best-margin scenario, risk range, recommendation metadata, expiry note, and expiry time so a visitor can revisit recent work without seeing another visitor's run list. `GET /api/simulation-runs/:id` loads the full request and response for a known run ID, which is the shareable result-page path the frontend can use. Expired saved runs return `410` with `code: "saved_run_expired"` and `expiresAt` when the backend can still identify the expired record; fully pruned or unknown IDs return `404` with `code: "not_found"`.
 
 The persisted demo store is configured with:
 
@@ -290,5 +301,6 @@ The output includes a recommended scenario, reasons, and tradeoffs so the fronte
 - `GET /api/simulation-runs/:id` returns a saved run record with the original request and normalized response.
 - `POST /api/scenarios/compare` accepts `BusinessSimulatorCompareRequest`.
 - Unknown simulation IDs return `404`.
+- Expired saved run IDs return `410` with `code: "saved_run_expired"` when still distinguishable from pruned records.
 - Malformed run/compare requests return `400`.
 - Malformed Business Simulator requests include `code: "business_simulator_validation_failed"` and stable `issues[].path` entries for field-level display.

@@ -649,14 +649,26 @@ async function businessSimulationRuns(request) {
 }
 
 async function businessSimulationRunRecord(id) {
-  const record = simulationRunStore.get(id) ?? (await getPersistedSimulationRun(id));
-  if (!record) {
-    const error = new Error(`simulation run '${id}' was not found`);
-    error.statusCode = 404;
-    error.code = "not_found";
-    throw error;
+  const memoryResult = simulationRunStore.getStatus(id);
+  if (memoryResult.status === "found") {
+    return { run: memoryResult.record };
   }
-  return { run: record };
+  if (memoryResult.status === "expired") {
+    throw savedSimulationRunExpiredError(id, memoryResult.expiresAt);
+  }
+
+  const persistedResult = await getPersistedSimulationRunStatus(id);
+  if (persistedResult.status === "found") {
+    return { run: persistedResult.record };
+  }
+  if (persistedResult.status === "expired") {
+    throw savedSimulationRunExpiredError(id, persistedResult.expiresAt);
+  }
+
+  const error = new Error(`simulation run '${id}' was not found`);
+  error.statusCode = 404;
+  error.code = "not_found";
+  throw error;
 }
 
 async function businessSimulationRun(request, body) {
@@ -767,6 +779,7 @@ function errorResponseBody(error, statusCode) {
     error: message,
     message,
     code: error?.code ?? (statusCode === 404 ? "not_found" : statusCode === 405 ? "method_not_allowed" : "request_failed"),
+    ...(error?.expiresAt ? { expiresAt: error.expiresAt } : {}),
   };
 }
 
@@ -951,22 +964,36 @@ ON CONFLICT (id) DO UPDATE SET
   await prunePersistedSimulationRuns(context);
 }
 
-async function getPersistedSimulationRun(id) {
+async function getPersistedSimulationRunStatus(id) {
   try {
     const context = await simulationRunContext();
     const result = await context.db.query(
       `
 SELECT id, simulation_id, session_id, session_isolated, session_schema, request, response, created_at, expires_at
 FROM ${simulationRunTable(context)}
-WHERE id = $1 AND expires_at > now();
+WHERE id = $1;
 `,
       [id],
     );
-    return result.rows[0] ? simulationRunRecordFromRow(result.rows[0]) : null;
+    const row = result.rows[0];
+    if (!row) return { status: "missing" };
+    const expiresAt = timestampValue(row.expires_at);
+    if (expiresAt && Date.parse(expiresAt) <= Date.now()) {
+      return { status: "expired", expiresAt };
+    }
+    return { status: "found", record: simulationRunRecordFromRow(row) };
   } catch (error) {
     console.warn(`failed to load persisted simulation run ${id}: ${error.message}`);
-    return null;
+    return { status: "missing" };
   }
+}
+
+function savedSimulationRunExpiredError(id, expiresAt) {
+  const error = new Error(`simulation run '${id}' expired at ${expiresAt}`);
+  error.statusCode = 410;
+  error.code = "saved_run_expired";
+  error.expiresAt = expiresAt;
+  return error;
 }
 
 async function listPersistedSimulationRuns(sessionId) {

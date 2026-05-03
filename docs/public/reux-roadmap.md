@@ -6,7 +6,7 @@ Current status:
 
 - Demo readiness: roughly 100%.
 - Full platform completion: roughly 100%.
-- Public demo scope: commerce workflows, logistics workflows, Business Simulator workflows, isolated visitor sessions, PostgreSQL-backed saved simulation runs, saved-run health checks, public API rate limiting, request counters, maintenance cleanup tooling, transaction execution, PostgreSQL-backed state, queue/outbox processing, and health checks.
+- Public demo scope: commerce workflows, logistics workflows, Business Simulator workflows, isolated visitor sessions, PostgreSQL-backed saved simulation runs, saved-run health checks, stable public error envelopes, public API rate limiting, request counters, maintenance cleanup tooling, transaction execution, PostgreSQL-backed state, queue/outbox processing, and health checks.
 - Core language scope: schema declarations, reusable typed queries, guarded transaction functions, durable events, conservative migrations, generated TypeScript integration, and early simulation declarations.
 
 ## What Is Live Now
@@ -14,6 +14,7 @@ Current status:
 - Public browser demo for commerce workflows.
 - Public browser demo for logistics workflows.
 - Public Business Simulator demo with PostgreSQL-backed saved run records for result pages and sharing.
+- Business Simulator error envelopes for validation, expired saved runs, missing records, oversized requests, malformed JSON, and rate limits.
 - Business Simulator first-wedge product brief for buyer, offer, and pilot positioning.
 - Separate Business Simulator frontend and backend roadmaps for sellable-product execution.
 - Public API rate limiting and request counters for hosted demo protection.

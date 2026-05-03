@@ -36,7 +36,17 @@ describe("business simulator API contract", () => {
     });
     expect(businessSimulatorForecastUnits).toEqual(["week", "month", "quarter"]);
     expect(businessSimulatorMetricNames).toContain("marginDelta");
-    expect(businessSimulatorErrorCodes).toContain("business_simulator_validation_failed");
+    expect(businessSimulatorErrorCodes).toEqual([
+      "business_simulator_validation_failed",
+      "simulation_execution_validation_failed",
+      "invalid_json",
+      "request_too_large",
+      "rate_limited",
+      "not_found",
+      "saved_run_expired",
+      "method_not_allowed",
+      "request_failed",
+    ]);
     expect(businessSimulatorLimits.maxRunScenarios).toBe(8);
     expect(businessSimulatorLimits.maxForecastPeriods).toBe(52);
   });

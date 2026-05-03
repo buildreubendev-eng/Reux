@@ -63,8 +63,52 @@
     "request_too_large",
     "rate_limited",
     "not_found",
+    "saved_run_expired",
     "method_not_allowed",
     "request_failed"
+  ],
+  "errorExamples": [
+    {
+      "name": "invalidBusinessSimulatorField",
+      "status": 400,
+      "code": "business_simulator_validation_failed",
+      "body": {
+        "ok": false,
+        "error": "$.baseline.grossMarginRate: must be between 0 and 1",
+        "message": "$.baseline.grossMarginRate: must be between 0 and 1",
+        "code": "business_simulator_validation_failed",
+        "issues": [
+          {
+            "path": "$.baseline.grossMarginRate",
+            "message": "must be between 0 and 1"
+          }
+        ]
+      }
+    },
+    {
+      "name": "expiredBusinessSimulatorRun",
+      "status": 410,
+      "code": "saved_run_expired",
+      "body": {
+        "ok": false,
+        "error": "simulation run 'live_4f6c9f1a20b3448d' expired at 2026-05-03T00:00:00.000Z",
+        "message": "simulation run 'live_4f6c9f1a20b3448d' expired at 2026-05-03T00:00:00.000Z",
+        "code": "saved_run_expired",
+        "expiresAt": "2026-05-03T00:00:00.000Z"
+      }
+    },
+    {
+      "name": "rateLimited",
+      "status": 429,
+      "code": "rate_limited",
+      "body": {
+        "ok": false,
+        "error": "too many requests; please wait before trying again",
+        "message": "too many requests; please wait before trying again",
+        "code": "rate_limited",
+        "retryAfterSeconds": 30
+      }
+    }
   ],
   "routes": [
     {

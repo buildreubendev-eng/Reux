@@ -63,7 +63,7 @@ Public API responses also include:
 
 These routes are public and do not require an admin token or visitor session. They are the contract the Reuben website Business Simulator should use.
 
-`POST /api/simulations/run` saves the hosted-demo result in PostgreSQL with a bounded in-memory fallback and includes a `run` summary with a `live_...` ID. The recommendation payload includes direct `whyThisWon`, `whatChangedFromBaseline`, `keyMetricDeltas`, `riskSummary`, and `tradeoffSummary` fields so result pages can render the sellable-product explanation without deriving copy from raw deltas. Saved-run summaries include `displayTitle`, `displaySubtitle`, `shareLabel`, `resultSummary`, `keyMetric`, and `expiryNote` so list cards and shared result pages do not have to synthesize product copy. The run-list route is session-scoped; direct lookup by ID is public so result pages can be shared. Saved runs are intentionally temporary in the public demo and can expire.
+`POST /api/simulations/run` saves the hosted-demo result in PostgreSQL with a bounded in-memory fallback and includes a `run` summary with a `live_...` ID. The recommendation payload includes direct `whyThisWon`, `whatChangedFromBaseline`, `keyMetricDeltas`, `riskSummary`, and `tradeoffSummary` fields so result pages can render the sellable-product explanation without deriving copy from raw deltas. Saved-run summaries include `displayTitle`, `displaySubtitle`, `shareLabel`, `resultSummary`, `keyMetric`, and `expiryNote` so list cards and shared result pages do not have to synthesize product copy. The run-list route is session-scoped; direct lookup by ID is public so result pages can be shared. Saved runs are intentionally temporary in the public demo and can expire; expired run lookups return `410` with `code: "saved_run_expired"` and `expiresAt` when the backend can still identify the expired record.
 
 ## Generic Reux Simulation Routes
 
@@ -158,6 +158,7 @@ Known public error codes:
 | `request_too_large` | `413` | JSON body exceeded `REUX_DEMO_JSON_BODY_LIMIT_BYTES`. |
 | `rate_limited` | `429` | Visitor exceeded the public demo request limit. |
 | `not_found` | `404` | Route or simulation id was not found. |
+| `saved_run_expired` | `410` | Saved Business Simulator run expired before it was loaded. |
 | `method_not_allowed` | `405` | Route exists but does not support the method. |
 | `request_failed` | varies | General fallback for unexpected failures. |
 
@@ -175,6 +176,18 @@ Business Simulator validation errors also include:
 ```
 
 Frontend clients should prefer `issues` for field-level UI and fall back to `message` for page-level alerts.
+
+Saved-run expiration errors include the expiry timestamp when it is still available:
+
+```json
+{
+  "ok": false,
+  "error": "simulation run 'live_4f6c9f1a20b3448d' expired at 2026-05-03T00:00:00.000Z",
+  "message": "simulation run 'live_4f6c9f1a20b3448d' expired at 2026-05-03T00:00:00.000Z",
+  "code": "saved_run_expired",
+  "expiresAt": "2026-05-03T00:00:00.000Z"
+}
+```
 
 ## Operational Limits
 
