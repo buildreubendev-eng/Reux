@@ -310,6 +310,9 @@ async function runBusinessSimulatorApiCheck(baseUrl) {
       recentRunListed: Boolean(savedRunList?.body?.runs?.some((candidate) => candidate.id === runId)),
       missingRunHandled: missingSavedRun?.response?.status === 404 && missingSavedRun?.body?.code === "not_found",
       recommendedScenarioId: run.body?.comparison?.recommendedScenarioId ?? null,
+      rankingCount: run.body?.comparison?.scenarioRanking?.length ?? 0,
+      scoreBreakdownFactors: run.body?.comparison?.recommendation?.scoreBreakdown?.map((factor) => factor.factor) ?? [],
+      scoreGap: run.body?.comparison?.recommendation?.scoreGap ?? null,
       reuxSource: typeof run.body?.reuxSource === "string" && run.body.reuxSource.includes("simulate operations_decision"),
       validationIssues: invalidRun.body?.issues?.length ?? 0,
     },
@@ -564,7 +567,9 @@ function validateSimulationRun(response, body, expectedId) {
   if (!body?.comparison?.recommendedScenarioId) {
     diagnostics.push("business simulator run did not include a recommended scenario");
   }
-  diagnostics.push(...validateRecommendationGuidance(body?.comparison?.recommendation));
+  const scenarioIds = body?.scenarios?.map((scenario) => scenario.id) ?? [];
+  diagnostics.push(...validateScenarioRanking(body?.comparison?.scenarioRanking, scenarioIds, "business simulator run"));
+  diagnostics.push(...validateRecommendationGuidance(body?.comparison?.recommendation, scenarioIds.length > 1));
   if (typeof body?.reuxSource !== "string" || !body.reuxSource.includes("simulate operations_decision")) {
     diagnostics.push("business simulator run did not include Reux source transparency output");
   }
@@ -579,7 +584,7 @@ function validateSimulationRun(response, body, expectedId) {
   return diagnostics;
 }
 
-function validateRecommendationGuidance(recommendation) {
+function validateRecommendationGuidance(recommendation, expectRunnerUp = false) {
   const diagnostics = [];
   if (!recommendation) {
     diagnostics.push("business simulator run did not include recommendation guidance");
@@ -595,6 +600,27 @@ function validateRecommendationGuidance(recommendation) {
   }
   if (!Array.isArray(recommendation.watchouts) || recommendation.watchouts.length === 0) {
     diagnostics.push("business simulator recommendation did not include watchouts");
+  }
+  if (typeof recommendation.score !== "number") {
+    diagnostics.push("business simulator recommendation did not include a numeric score");
+  }
+  diagnostics.push(...validateRecommendationScoreBreakdown(recommendation.scoreBreakdown));
+  if (expectRunnerUp && recommendation.runnerUpScenarioName === undefined) {
+    diagnostics.push("business simulator recommendation did not include runner-up scenario context");
+  }
+  if (recommendation.runnerUpScenarioName !== undefined) {
+    if (typeof recommendation.runnerUpScenarioName !== "string" || recommendation.runnerUpScenarioName.length === 0) {
+      diagnostics.push("business simulator recommendation included an invalid runnerUpScenarioName");
+    }
+    if (typeof recommendation.runnerUpScenarioId !== "string" || recommendation.runnerUpScenarioId.length === 0) {
+      diagnostics.push("business simulator recommendation included an invalid runnerUpScenarioId");
+    }
+    if (typeof recommendation.runnerUpScore !== "number") {
+      diagnostics.push("business simulator recommendation included an invalid runnerUpScore");
+    }
+    if (typeof recommendation.scoreGap !== "number") {
+      diagnostics.push("business simulator recommendation included an invalid scoreGap");
+    }
   }
   return diagnostics;
 }
@@ -616,6 +642,9 @@ function validateSavedSimulationRun(response, body, expectedId) {
   if (!body?.run?.response?.comparison?.recommendedScenarioId) {
     diagnostics.push("saved simulation run did not include response recommendation");
   }
+  const scenarioIds = body?.run?.response?.scenarios?.map((scenario) => scenario.id) ?? [];
+  diagnostics.push(...validateScenarioRanking(body?.run?.response?.comparison?.scenarioRanking, scenarioIds, "saved simulation run response"));
+  diagnostics.push(...validateRecommendationGuidance(body?.run?.response?.comparison?.recommendation, scenarioIds.length > 1));
   return diagnostics;
 }
 
@@ -703,7 +732,61 @@ function validateScenarioCompare(response, body, scenarios) {
       diagnostics.push(`business simulator compare did not include deltas for ${scenario.id}`);
     }
   }
+  const scenarioIds = scenarios?.map((scenario) => scenario.id) ?? [];
+  diagnostics.push(...validateScenarioRanking(body?.comparison?.scenarioRanking, scenarioIds, "business simulator compare"));
+  diagnostics.push(...validateRecommendationGuidance(body?.comparison?.recommendation, scenarioIds.length > 1));
   if (!body?.generatedAt) diagnostics.push("business simulator compare did not include generatedAt");
+  return diagnostics;
+}
+
+function validateScenarioRanking(ranking, scenarioIds, label) {
+  const diagnostics = [];
+  if (!Array.isArray(ranking) || ranking.length === 0) {
+    diagnostics.push(`${label} did not include scenarioRanking`);
+    return diagnostics;
+  }
+  const first = ranking[0];
+  if (scenarioIds.length > 0 && ranking.length !== scenarioIds.length) {
+    diagnostics.push(`${label} scenarioRanking length did not match scenario count`);
+  }
+  if (first?.rank !== 1) diagnostics.push(`${label} scenarioRanking did not start at rank 1`);
+  if (first?.recommended !== true) diagnostics.push(`${label} scenarioRanking did not mark the top scenario as recommended`);
+  if (typeof first?.score !== "number") diagnostics.push(`${label} scenarioRanking top scenario did not include a numeric score`);
+  if (first?.scoreGapFromBest !== 0) diagnostics.push(`${label} scenarioRanking top scenario did not include scoreGapFromBest=0`);
+  if (typeof first?.summary !== "string" || first.summary.length === 0) {
+    diagnostics.push(`${label} scenarioRanking top scenario did not include summary text`);
+  }
+  for (const scenarioId of scenarioIds) {
+    if (!ranking.some((candidate) => candidate.scenarioId === scenarioId)) {
+      diagnostics.push(`${label} scenarioRanking did not include ${scenarioId}`);
+    }
+  }
+  return diagnostics;
+}
+
+function validateRecommendationScoreBreakdown(scoreBreakdown) {
+  const diagnostics = [];
+  const expectedFactors = ["margin", "productivity", "operatingCost", "risk"];
+  if (!Array.isArray(scoreBreakdown) || scoreBreakdown.length === 0) {
+    diagnostics.push("business simulator recommendation did not include scoreBreakdown");
+    return diagnostics;
+  }
+  for (const factor of expectedFactors) {
+    const entry = scoreBreakdown.find((candidate) => candidate.factor === factor);
+    if (!entry) {
+      diagnostics.push(`business simulator recommendation scoreBreakdown did not include ${factor}`);
+      continue;
+    }
+    if (typeof entry.weight !== "number") {
+      diagnostics.push(`business simulator recommendation scoreBreakdown ${factor} did not include numeric weight`);
+    }
+    if (typeof entry.contribution !== "number") {
+      diagnostics.push(`business simulator recommendation scoreBreakdown ${factor} did not include numeric contribution`);
+    }
+    if (typeof entry.summary !== "string" || entry.summary.length === 0) {
+      diagnostics.push(`business simulator recommendation scoreBreakdown ${factor} did not include summary text`);
+    }
+  }
   return diagnostics;
 }
 
