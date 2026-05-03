@@ -47,6 +47,11 @@ The demo should feel complete when a visitor can:
 
 Frontend work should prioritize this path before adding more visual polish elsewhere.
 
+Detailed execution roadmaps:
+
+- Frontend: `docs/public/business-simulator-frontend-roadmap.md`
+- Backend: `docs/public/business-simulator-backend-roadmap.md`
+
 ## Simple Offer
 
 Working offer:

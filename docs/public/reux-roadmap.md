@@ -15,6 +15,7 @@ Current status:
 - Public browser demo for logistics workflows.
 - Public Business Simulator demo with PostgreSQL-backed saved run records for result pages and sharing.
 - Business Simulator first-wedge product brief for buyer, offer, and pilot positioning.
+- Separate Business Simulator frontend and backend roadmaps for sellable-product execution.
 - Public API rate limiting and request counters for hosted demo protection.
 - Dry-run/apply maintenance cleanup for visitor schemas and saved simulation runs.
 - Hosted deep health checks for saved-run creation, reload, and listing.

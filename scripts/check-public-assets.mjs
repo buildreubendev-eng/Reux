@@ -83,6 +83,8 @@ function buildSnapshot(roadmap, capabilities) {
       developerAccess: "docs/public/reux-developer-access.md",
       positioningGuide: "docs/public/reux-positioning.md",
       businessSimulatorProductBrief: "docs/public/business-simulator-product-brief.md",
+      businessSimulatorFrontendRoadmap: "docs/public/business-simulator-frontend-roadmap.md",
+      businessSimulatorBackendRoadmap: "docs/public/business-simulator-backend-roadmap.md",
     },
   };
 }

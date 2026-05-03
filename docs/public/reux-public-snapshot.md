@@ -13,7 +13,7 @@ Updated: 2026-05-02
 
 ## Capability Groups
 
-- Commercial Productization: active. The first sellable wedge is Business Simulator, aimed at teams that need operational scenario planning, saved results, and explainable recommendations. (4 capabilities)
+- Commercial Productization: active. The first sellable wedge is Business Simulator, aimed at teams that need operational scenario planning, saved results, and explainable recommendations. (5 capabilities)
 - Language Core: prototype-complete. The prototype language core can model schemas, enums, reusable typed queries, guarded transaction functions, durable events, migrations, and simulations. (5 capabilities)
 - Runtime And Database: prototype-complete. The runtime path uses PostgreSQL today and supports compiled query execution, transaction execution, migrations, seeds, and outbox processing. (5 capabilities)
 - Developer Experience: prototype-complete. The CLI, docs, package smoke checks, and editor tooling are ready for technical review and local experimentation. (5 capabilities)
@@ -42,3 +42,5 @@ Updated: 2026-05-02
 - developerAccess: `docs/public/reux-developer-access.md`
 - positioningGuide: `docs/public/reux-positioning.md`
 - businessSimulatorProductBrief: `docs/public/business-simulator-product-brief.md`
+- businessSimulatorFrontendRoadmap: `docs/public/business-simulator-frontend-roadmap.md`
+- businessSimulatorBackendRoadmap: `docs/public/business-simulator-backend-roadmap.md`

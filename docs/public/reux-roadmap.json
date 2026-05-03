@@ -11,6 +11,7 @@
     "Public logistics workflow demo",
     "Public Business Simulator powered by generic Reux simulation execution",
     "Business Simulator first-wedge product brief for buyer, offer, and pilot positioning",
+    "Separate Business Simulator frontend and backend roadmaps for sellable-product execution",
     "PostgreSQL-backed Business Simulator run records for result pages and sharing",
     "Public API rate limiting and request counters for hosted demo protection",
     "Dry-run/apply maintenance cleanup for visitor schemas and saved simulation runs",

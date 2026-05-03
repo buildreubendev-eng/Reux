@@ -21,6 +21,7 @@
       "summary": "The first sellable wedge is Business Simulator, aimed at teams that need operational scenario planning, saved results, and explainable recommendations.",
       "capabilities": [
         "Business Simulator product brief with first-wedge positioning, buyer/user definition, pilot signal, and offer copy",
+        "Separate frontend and backend roadmaps for finished, sellable-product execution",
         "Guided pilot offer for turning one real spreadsheet-modeled decision into a reusable scenario model",
         "Buyer-facing framing around operational decisions before committing money, staff, time, or risk",
         "Demo completion bar focused on result creation, saved runs, shareable summaries, and recommendations"
