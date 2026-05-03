@@ -42,7 +42,7 @@ const rateFields = new Set<keyof BusinessSimulatorAssumptions>([
   "supplierDelayRiskRate",
   "defectRate",
 ]);
-const supportedSimulationIds = new Set(["operations-decision"]);
+const supportedSimulationIds = new Set(["operations-decision", "capacity-planning"]);
 const scenarioIdPattern = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
 
 export function assertBusinessSimulatorRunRequest(value: unknown): asserts value is BusinessSimulatorRunRequest {

@@ -21,53 +21,129 @@ import {
 } from "./business-simulator-contract.js";
 import { assertBusinessSimulatorCompareRequest, assertBusinessSimulatorRunRequest } from "./business-simulator-validation.js";
 
-const businessSimulatorSummary: BusinessSimulatorSummary = {
-  id: "operations-decision",
-  name: "Operations Decision Simulator",
-  description: "Compare cost, margin, productivity, workforce load, and risk scenarios before an operational change.",
-  domain: "operations",
-  status: "ready",
-  updatedAt: "2026-05-01T00:00:00.000Z",
-};
+interface BusinessSimulatorTemplate {
+  summary: BusinessSimulatorSummary;
+  defaultAssumptions: BusinessSimulatorAssumptions;
+  exampleScenarios: BusinessSimulatorScenarioInput[];
+}
 
-const exampleScenarios: BusinessSimulatorScenarioInput[] = [
+const businessSimulatorTemplates: BusinessSimulatorTemplate[] = [
   {
-    id: "process-improvement",
-    name: "Process Improvement",
-    description: "Higher productivity and lower overtime after workflow cleanup.",
-    assumptions: {
-      productivityGainRate: 0.12,
-      overtimeReductionRate: 0.18,
+    summary: {
+      id: "operations-decision",
+      name: "Operations Decision Simulator",
+      description: "Compare cost, margin, productivity, workforce load, and risk scenarios before an operational change.",
+      domain: "operations",
+      status: "ready",
+      updatedAt: "2026-05-01T00:00:00.000Z",
     },
+    defaultAssumptions: businessSimulatorDefaultAssumptions,
+    exampleScenarios: [
+      {
+        id: "process-improvement",
+        name: "Process Improvement",
+        description: "Higher productivity and lower overtime after workflow cleanup.",
+        assumptions: {
+          productivityGainRate: 0.12,
+          overtimeReductionRate: 0.18,
+        },
+      },
+      {
+        id: "demand-increase",
+        name: "Demand Increase",
+        description: "Higher demand with slightly higher supplier delay risk.",
+        assumptions: {
+          weeklyDemand: 1450,
+          supplierDelayRiskRate: 0.15,
+        },
+      },
+      {
+        id: "quality-issue",
+        name: "Quality Issue",
+        description: "Higher defect and supplier delay rates.",
+        assumptions: {
+          defectRate: 0.06,
+          supplierDelayRiskRate: 0.18,
+        },
+      },
+      {
+        id: "staffing-increase",
+        name: "Staffing Increase",
+        description: "More staff with lower overtime pressure.",
+        assumptions: {
+          employees: 56,
+          overtimeReductionRate: 0.2,
+        },
+      },
+    ],
   },
   {
-    id: "demand-increase",
-    name: "Demand Increase",
-    description: "Higher demand with slightly higher supplier delay risk.",
-    assumptions: {
-      weeklyDemand: 1450,
-      supplierDelayRiskRate: 0.15,
+    summary: {
+      id: "capacity-planning",
+      name: "Capacity Planning Simulator",
+      description: "Compare staffing, demand, productivity, and quality tradeoffs before scaling an operation.",
+      domain: "operations",
+      status: "ready",
+      updatedAt: "2026-05-02T00:00:00.000Z",
     },
-  },
-  {
-    id: "quality-issue",
-    name: "Quality Issue",
-    description: "Higher defect and supplier delay rates.",
-    assumptions: {
-      defectRate: 0.06,
-      supplierDelayRiskRate: 0.18,
+    defaultAssumptions: {
+      ...businessSimulatorDefaultAssumptions,
+      employees: 42,
+      averageHourlyCost: 36,
+      weeklyDemand: 980,
+      averageOrderValue: 110,
+      grossMarginRate: 0.48,
+      productivityGainRate: 0.05,
+      overtimeReductionRate: 0.06,
+      supplierDelayRiskRate: 0.1,
+      defectRate: 0.018,
+      forecastPeriods: 16,
+      forecastUnit: "week",
     },
-  },
-  {
-    id: "staffing-increase",
-    name: "Staffing Increase",
-    description: "More staff with lower overtime pressure.",
-    assumptions: {
-      employees: 56,
-      overtimeReductionRate: 0.2,
-    },
+    exampleScenarios: [
+      {
+        id: "add-shift",
+        name: "Add Shift",
+        description: "Add capacity with more staff while reducing overtime pressure.",
+        assumptions: {
+          employees: 50,
+          weeklyDemand: 1120,
+          overtimeReductionRate: 0.16,
+        },
+      },
+      {
+        id: "automation-assist",
+        name: "Automation Assist",
+        description: "Improve productivity without adding headcount.",
+        assumptions: {
+          productivityGainRate: 0.14,
+          overtimeReductionRate: 0.12,
+        },
+      },
+      {
+        id: "quality-investment",
+        name: "Quality Investment",
+        description: "Reduce defects while protecting margin.",
+        assumptions: {
+          defectRate: 0.01,
+          supplierDelayRiskRate: 0.08,
+          averageHourlyCost: 38,
+        },
+      },
+      {
+        id: "demand-spike",
+        name: "Demand Spike",
+        description: "Model demand growth with added supplier-delay exposure.",
+        assumptions: {
+          weeklyDemand: 1250,
+          supplierDelayRiskRate: 0.16,
+        },
+      },
+    ],
   },
 ];
+
+const defaultBusinessSimulatorTemplate = businessSimulatorTemplates[0];
 
 const metricUnits: Partial<Record<BusinessSimulatorMetricName, BusinessSimulatorMetricDelta["unit"]>> = {
   revenue: "USD",
@@ -82,22 +158,24 @@ const metricUnits: Partial<Record<BusinessSimulatorMetricName, BusinessSimulator
 };
 
 export function listBusinessSimulations(): ListBusinessSimulationsResponse {
-  return { simulations: [businessSimulatorSummary] };
+  return { simulations: businessSimulatorTemplates.map((template) => template.summary) };
 }
 
-export function getBusinessSimulation(id = businessSimulatorSummary.id): GetBusinessSimulationResponse {
-  if (id !== businessSimulatorSummary.id) {
+export function getBusinessSimulation(id = defaultBusinessSimulatorTemplate.summary.id): GetBusinessSimulationResponse {
+  const template = findBusinessSimulatorTemplate(id);
+  if (!template) {
     throw new Error(`business simulation '${id}' was not found`);
   }
   return {
-    simulation: businessSimulatorSummary,
-    defaultAssumptions: businessSimulatorDefaultAssumptions,
-    exampleScenarios,
+    simulation: template.summary,
+    defaultAssumptions: template.defaultAssumptions,
+    exampleScenarios: template.exampleScenarios,
   };
 }
 
 export function runBusinessSimulator(request: BusinessSimulatorRunRequest, now: Date = new Date()): BusinessSimulatorRunResponse {
   assertBusinessSimulatorRunRequest(request);
+  const template = findBusinessSimulatorTemplate(request.simulationId ?? defaultBusinessSimulatorTemplate.summary.id) ?? defaultBusinessSimulatorTemplate;
   const normalized = normalizeRunRequest(request);
   const reuxScenarioNames = scenarioNamesFor(normalized.scenarios);
   const scenarioNames = new Map(normalized.scenarios.map((scenario, index) => [reuxScenarioNames[index], scenario]));
@@ -114,7 +192,7 @@ export function runBusinessSimulator(request: BusinessSimulatorRunRequest, now: 
 
   return {
     simulation: {
-      ...businessSimulatorSummary,
+      ...template.summary,
       updatedAt: now.toISOString(),
     },
     baseline,
@@ -152,11 +230,12 @@ export function compareBusinessSimulatorScenarioResults(
 export function buildBusinessSimulatorSource(request: BusinessSimulatorRunRequest): string {
   const normalized = normalizeRunRequest(request);
   const scenarioNames = scenarioNamesFor(normalized.scenarios);
+  const simulationName = toIdentifier(normalized.simulationId ?? defaultBusinessSimulatorTemplate.summary.id);
 
   return [
     "module business_simulator",
     "",
-    "simulate operations_decision {",
+    `simulate ${simulationName} {`,
     "  dimension product = business_simulation",
     "  dimension domain = operations",
     "  dimension audience = enterprise",
@@ -507,4 +586,8 @@ function changeVerb(delta: number): "increased" | "decreased" {
 
 function pluralizeForecastUnit(unit: BusinessSimulatorAssumptions["forecastUnit"], count: number): string {
   return count === 1 ? unit : `${unit}s`;
+}
+
+function findBusinessSimulatorTemplate(id: string): BusinessSimulatorTemplate | undefined {
+  return businessSimulatorTemplates.find((template) => template.summary.id === id);
 }

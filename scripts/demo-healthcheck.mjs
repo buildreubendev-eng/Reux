@@ -192,6 +192,10 @@ async function runBusinessSimulatorApiCheck(baseUrl) {
   checks.push(template);
   diagnostics.push(...validateSimulationTemplate(template.response, template.body, templateId));
 
+  const capacityTemplate = await fetchJson(baseUrl, "/api/simulations/capacity-planning");
+  checks.push(capacityTemplate);
+  diagnostics.push(...validateSimulationTemplate(capacityTemplate.response, capacityTemplate.body, "capacity-planning"));
+
   const runRequest = {
     name: "Healthcheck Business Simulation",
     simulationId: templateId,
@@ -288,6 +292,8 @@ async function runBusinessSimulatorApiCheck(baseUrl) {
     checks,
     summary: {
       templateId,
+      templateCount: list.body?.simulations?.length ?? 0,
+      capacityTemplateReady: capacityTemplate?.body?.simulation?.id === "capacity-planning",
       scenarioCount: run.body?.scenarios?.length ?? 0,
       savedRunId: runId ?? null,
       savedRunReloaded: savedRun?.body?.run?.id === runId,
@@ -436,6 +442,9 @@ function validateSimulationList(response, body) {
   }
   if (!body?.simulations?.some((simulation) => simulation.id === "operations-decision")) {
     diagnostics.push("business simulator list did not include operations-decision");
+  }
+  if (!body?.simulations?.some((simulation) => simulation.id === "capacity-planning")) {
+    diagnostics.push("business simulator list did not include capacity-planning");
   }
   return diagnostics;
 }

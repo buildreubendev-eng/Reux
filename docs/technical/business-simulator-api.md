@@ -21,7 +21,16 @@ The hosted demo server exposes these routes from `demo/pilot-app/server.mjs`. Th
 
 ## Core Assumptions
 
-The first Business Simulator model should cover the controls the frontend is building:
+The Business Simulator templates currently include:
+
+| Template ID | Purpose |
+| --- | --- |
+| `operations-decision` | Compare cost, margin, productivity, workforce load, and risk scenarios before an operational change. |
+| `capacity-planning` | Compare staffing, demand, productivity, and quality tradeoffs before scaling an operation. |
+
+Both templates use the same stable public request/response contract so frontend clients can switch templates without branching on response shape.
+
+The Business Simulator model should cover the controls the frontend is building:
 
 - `employees`
 - `averageHourlyCost`
@@ -295,7 +304,8 @@ The output includes a recommended scenario, reasons, and tradeoffs so the fronte
 ## Demo Server Behavior
 
 - `GET /api/simulations` returns `ListBusinessSimulationsResponse`.
-- `GET /api/simulations/operations-decision` returns the default assumptions and starter scenarios.
+- `GET /api/simulations/operations-decision` returns the operations-decision defaults and starter scenarios.
+- `GET /api/simulations/capacity-planning` returns the capacity-planning defaults and starter scenarios.
 - `POST /api/simulations/run` accepts `BusinessSimulatorRunRequest`.
 - `GET /api/simulation-runs` returns recent run summaries for the current visitor session.
 - `GET /api/simulation-runs/:id` returns a saved run record with the original request and normalized response.

@@ -144,6 +144,14 @@
       "purpose": "Load the current operations-decision template, defaults, and starter scenarios."
     },
     {
+      "name": "getCapacityPlanningSimulation",
+      "method": "GET",
+      "path": "/api/simulations/capacity-planning",
+      "auth": "public",
+      "session": "none",
+      "purpose": "Load the capacity-planning template, defaults, and starter scenarios."
+    },
+    {
       "name": "runBusinessSimulation",
       "method": "POST",
       "path": "/api/simulations/run",

@@ -56,12 +56,13 @@ Public API responses also include:
 | --- | --- |
 | `GET /api/simulations` | List available Business Simulator templates. |
 | `GET /api/simulations/operations-decision` | Load the current operations-decision template. |
+| `GET /api/simulations/capacity-planning` | Load the capacity-planning template. |
 | `POST /api/simulations/run` | Run a baseline plus scenarios and return metrics, timeline, frontend-ready recommendation summaries, and optional Reux source. |
 | `GET /api/simulation-runs` | List recent saved run summaries for the current visitor session. |
 | `GET /api/simulation-runs/:id` | Load one saved Business Simulator run by ID for result pages or sharing. |
 | `POST /api/scenarios/compare` | Compare already-run scenario results. |
 
-These routes are public and do not require an admin token or visitor session. They are the contract the Reuben website Business Simulator should use.
+These routes are public and do not require an admin token or visitor session. They are the contract the Reuben website Business Simulator should use. The two ready templates share the same response shape, so the frontend can present `operations-decision` and `capacity-planning` as product choices without a separate adapter.
 
 `POST /api/simulations/run` saves the hosted-demo result in PostgreSQL with a bounded in-memory fallback and includes a `run` summary with a `live_...` ID. The recommendation payload includes direct `whyThisWon`, `whatChangedFromBaseline`, `keyMetricDeltas`, `riskSummary`, and `tradeoffSummary` fields so result pages can render the sellable-product explanation without deriving copy from raw deltas. Saved-run summaries include `displayTitle`, `displaySubtitle`, `shareLabel`, `resultSummary`, `keyMetric`, and `expiryNote` so list cards and shared result pages do not have to synthesize product copy. The run-list route is session-scoped; direct lookup by ID is public so result pages can be shared. Saved runs are intentionally temporary in the public demo and can expire; expired run lookups return `410` with `code: "saved_run_expired"` and `expiresAt` when the backend can still identify the expired record.
 

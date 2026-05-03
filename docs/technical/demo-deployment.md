@@ -33,6 +33,7 @@ Deep mode also checks `/api/outbox/stats`, `/api/logistics/outbox/stats`, the Bu
 ```text
 GET /api/simulations
 GET /api/simulations/operations-decision
+GET /api/simulations/capacity-planning
 POST /api/simulations/run
 GET /api/simulation-runs/:id
 GET /api/simulation-runs

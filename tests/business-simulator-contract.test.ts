@@ -220,7 +220,7 @@ describe("business simulator API contract", () => {
   });
 
   it("lists templates, loads a template, and compares already-run scenarios", () => {
-    expect(listBusinessSimulations().simulations.map((simulation) => simulation.id)).toEqual(["operations-decision"]);
+    expect(listBusinessSimulations().simulations.map((simulation) => simulation.id)).toEqual(["operations-decision", "capacity-planning"]);
     const template = getBusinessSimulation("operations-decision");
     expect(template.defaultAssumptions).toEqual(businessSimulatorDefaultAssumptions);
     expect(template.exampleScenarios.length).toBeGreaterThan(0);
@@ -245,6 +245,43 @@ describe("business simulator API contract", () => {
     expect(comparison.comparison.recommendation?.summary).toContain("strongest blended score");
     expect(comparison.comparison.metricDeltasByScenario["process-improvement"]).toHaveLength(businessSimulatorMetricNames.length);
     expect(comparison.generatedAt).toBe("2026-05-01T00:00:00.000Z");
+  });
+
+  it("includes a capacity-planning decision template for sellable product pilots", () => {
+    const template = getBusinessSimulation("capacity-planning");
+
+    expect(template.simulation).toMatchObject({
+      id: "capacity-planning",
+      name: "Capacity Planning Simulator",
+      domain: "operations",
+      status: "ready",
+    });
+    expect(template.defaultAssumptions.weeklyDemand).toBe(980);
+    expect(template.defaultAssumptions.forecastPeriods).toBe(16);
+    expect(template.exampleScenarios.map((scenario) => scenario.id)).toEqual([
+      "add-shift",
+      "automation-assist",
+      "quality-investment",
+      "demand-spike",
+    ]);
+
+    const response = runBusinessSimulator(
+      {
+        name: "Capacity Pilot",
+        simulationId: "capacity-planning",
+        baseline: template.defaultAssumptions,
+        scenarios: template.exampleScenarios.slice(0, 2),
+        options: {
+          includeReuxSource: true,
+        },
+      },
+      new Date("2026-05-01T00:00:00.000Z"),
+    );
+
+    expect(response.simulation.id).toBe("capacity-planning");
+    expect(response.scenarios.map((scenario) => scenario.id)).toEqual(["add-shift", "automation-assist"]);
+    expect(response.comparison.recommendation?.whyThisWon).toContain("is recommended because");
+    expect(response.reuxSource).toContain("simulate capacity_planning");
   });
 
   it("emits a deterministic frontend handoff fixture", () => {
@@ -353,7 +390,7 @@ describe("business simulator API contract", () => {
     } catch (error) {
       expect(error).toBeInstanceOf(BusinessSimulatorValidationError);
       const issueMap = new Map((error as BusinessSimulatorValidationError).issues.map((issue) => [issue.path, issue.message]));
-      expect(issueMap.get("$.simulationId")).toBe("must be one of operations-decision");
+      expect(issueMap.get("$.simulationId")).toBe("must be one of operations-decision, capacity-planning");
       expect(issueMap.get("$.scenarios[1].id")).toBe("must be unique");
     }
   });
