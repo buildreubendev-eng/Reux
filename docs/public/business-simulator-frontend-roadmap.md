@@ -12,7 +12,7 @@ The active frontend priority is the sellable Business Simulator product surface,
 
 - Treat the public Commerce/Logistics/Ops demo frontend as complete unless QA finds a concrete regression.
 - Build the Business Simulator experience around the live backend contract: template selection, guided assumptions, scenario comparison, saved runs, shareable results, and buyer-facing recommendation guidance.
-- Render the current backend fields directly where useful: `capacity-planning`, `decisionSummary`, `recommendedAction`, `confidence`, `confidenceSummary`, `watchouts`, `resultSummary`, `keyMetric`, and `expiryNote`.
+- Render the current backend fields directly where useful: `capacity-planning`, `staffing-plan`, `decisionSummary`, `recommendedAction`, `confidence`, `confidenceSummary`, `watchouts`, `resultSummary`, `keyMetric`, and `expiryNote`.
 - Keep status surfaces current when Business Simulator product UI moves from planned to in progress to complete.
 
 ## Definition Of Sellable
@@ -31,7 +31,7 @@ The active frontend priority is the sellable Business Simulator product surface,
    - Add a visible pilot CTA using the brief's "Bring one real decision..." language.
 
 2. Template selection and guided run flow
-   - Let users choose between `operations-decision` and `capacity-planning`.
+   - Let users choose between `operations-decision`, `capacity-planning`, and `staffing-plan`.
    - Make baseline assumptions and scenario assumptions easy to scan and edit.
    - Keep labels business-readable; avoid compiler/source terminology in the main path.
    - Show validation errors next to the affected field when the API returns `issues[].path`.
@@ -85,7 +85,7 @@ Work only in the Reux repo. Use docs/public/business-simulator-product-brief.md 
 The Commerce/Logistics/Ops demo frontend is considered functionally complete. Do not spend this pass polishing the demo console unless you find a concrete regression. The active frontend focus is the sellable Business Simulator product.
 
 Implement the next highest-priority frontend item toward a sellable Business Simulator:
-- template selection for operations-decision and capacity-planning,
+- template selection for operations-decision, capacity-planning, and staffing-plan,
 - guided scenario run flow,
 - clear recommendation/result summary using decisionSummary, recommendedAction, confidenceSummary, and watchouts,
 - saved/shareable result page and reload states,

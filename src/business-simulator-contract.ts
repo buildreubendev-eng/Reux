@@ -8,6 +8,8 @@ export const businessSimulatorEndpoints = {
 } as const;
 
 export type BusinessSimulatorEndpointName = keyof typeof businessSimulatorEndpoints;
+export const businessSimulatorSimulationIds = ["operations-decision", "capacity-planning", "staffing-plan"] as const;
+export type BusinessSimulatorSimulationId = (typeof businessSimulatorSimulationIds)[number];
 export type BusinessSimulatorErrorCode =
   | "business_simulator_validation_failed"
   | "simulation_execution_validation_failed"

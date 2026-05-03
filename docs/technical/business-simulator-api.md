@@ -27,6 +27,7 @@ The Business Simulator templates currently include:
 | --- | --- |
 | `operations-decision` | Compare cost, margin, productivity, workforce load, and risk scenarios before an operational change. |
 | `capacity-planning` | Compare staffing, demand, productivity, and quality tradeoffs before scaling an operation. |
+| `staffing-plan` | Compare hiring, overtime, automation, and demand-coverage choices before changing the workforce plan. |
 
 Both templates use the same stable public request/response contract so frontend clients can switch templates without branching on response shape.
 
@@ -338,6 +339,7 @@ The output includes a recommended scenario, reasons, and tradeoffs so the fronte
 - `GET /api/simulations` returns `ListBusinessSimulationsResponse`.
 - `GET /api/simulations/operations-decision` returns the operations-decision defaults and starter scenarios.
 - `GET /api/simulations/capacity-planning` returns the capacity-planning defaults and starter scenarios.
+- `GET /api/simulations/staffing-plan` returns the staffing-plan defaults and starter scenarios.
 - `POST /api/simulations/run` accepts `BusinessSimulatorRunRequest`.
 - `GET /api/simulation-runs` returns recent run summaries for the current visitor session.
 - `GET /api/simulation-runs/:id` returns a saved run record with the original request and normalized response.

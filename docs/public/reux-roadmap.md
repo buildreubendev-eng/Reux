@@ -14,7 +14,7 @@ Current status:
 - Public browser demo for commerce workflows.
 - Public browser demo for logistics workflows.
 - Public Business Simulator demo with PostgreSQL-backed saved run records for result pages and sharing.
-- Business Simulator operations-decision and capacity-planning templates for product pilots.
+- Business Simulator operations-decision, capacity-planning, and staffing-plan templates for product pilots.
 - Business Simulator buyer-facing recommendation guidance with action, confidence, and watchout fields.
 - Business Simulator error envelopes for validation, expired saved runs, missing records, oversized requests, malformed JSON, and rate limits.
 - Business Simulator first-wedge product brief for buyer, offer, and pilot positioning.
@@ -55,7 +55,7 @@ Goal: finish the buyer-facing Business Simulator product UI now that the demo co
 
 Planned work:
 
-- Expose template selection for operations-decision and capacity-planning.
+- Expose template selection for operations-decision, capacity-planning, and staffing-plan.
 - Build the guided assumption and scenario run flow for non-developer buyers.
 - Render decisionSummary, recommendedAction, confidenceSummary, watchouts, and keyMetric as first-class result content.
 - Add saved-result list, shareable result loading, expired-result, and not-found states.

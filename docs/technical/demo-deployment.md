@@ -34,6 +34,7 @@ Deep mode also checks `/api/outbox/stats`, `/api/logistics/outbox/stats`, the Bu
 GET /api/simulations
 GET /api/simulations/operations-decision
 GET /api/simulations/capacity-planning
+GET /api/simulations/staffing-plan
 POST /api/simulations/run
 GET /api/simulation-runs/:id
 GET /api/simulation-runs
@@ -219,6 +220,7 @@ The website can call the Business Simulator API routes directly from the browser
 ```text
 GET /api/simulations
 GET /api/simulations/operations-decision
+GET /api/simulations/staffing-plan
 POST /api/simulations/run
 POST /api/scenarios/compare
 ```

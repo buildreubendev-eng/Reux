@@ -78,7 +78,7 @@ The hosted demo lets public users test commerce, logistics, and Business Simulat
 - Commerce workflow demo with reset, transaction, queue, and outbox behavior.
 - Logistics workflow demo validating non-commerce dispatch workflows.
 - Business Simulator demo with result metadata and PostgreSQL-backed saved run records.
-- Business Simulator operations-decision and capacity-planning templates for product pilots.
+- Business Simulator operations-decision, capacity-planning, and staffing-plan templates for product pilots.
 - Business Simulator buyer-facing recommendation guidance with action, confidence, and watchout fields.
 - Business Simulator error envelopes for validation, expired saved runs, missing records, oversized requests, malformed JSON, and rate limits.
 - Public API rate limiting and request counters for hosted demo protection.

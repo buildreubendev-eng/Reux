@@ -142,6 +142,71 @@ const businessSimulatorTemplates: BusinessSimulatorTemplate[] = [
       },
     ],
   },
+  {
+    summary: {
+      id: "staffing-plan",
+      name: "Staffing Plan Simulator",
+      description: "Compare hiring, overtime, automation, and demand-coverage choices before changing the workforce plan.",
+      domain: "workforce",
+      status: "ready",
+      updatedAt: "2026-05-03T00:00:00.000Z",
+    },
+    defaultAssumptions: {
+      ...businessSimulatorDefaultAssumptions,
+      employees: 34,
+      averageHourlyCost: 41,
+      weeklyDemand: 760,
+      averageOrderValue: 135,
+      grossMarginRate: 0.46,
+      productivityGainRate: 0.04,
+      overtimeReductionRate: 0.05,
+      supplierDelayRiskRate: 0.08,
+      defectRate: 0.016,
+      forecastPeriods: 12,
+      forecastUnit: "week",
+    },
+    exampleScenarios: [
+      {
+        id: "hire-team",
+        name: "Hire Team",
+        description: "Add staff to cover demand while reducing overtime pressure.",
+        assumptions: {
+          employees: 40,
+          overtimeReductionRate: 0.18,
+          weeklyDemand: 820,
+        },
+      },
+      {
+        id: "cross-train",
+        name: "Cross Train",
+        description: "Improve productivity with the existing team before adding headcount.",
+        assumptions: {
+          productivityGainRate: 0.13,
+          overtimeReductionRate: 0.11,
+        },
+      },
+      {
+        id: "automation-buffer",
+        name: "Automation Buffer",
+        description: "Use process automation to handle more demand without the full hiring plan.",
+        assumptions: {
+          productivityGainRate: 0.18,
+          weeklyDemand: 860,
+          averageHourlyCost: 43,
+        },
+      },
+      {
+        id: "lean-coverage",
+        name: "Lean Coverage",
+        description: "Hold headcount flat and test the risk of tighter labor coverage.",
+        assumptions: {
+          weeklyDemand: 840,
+          supplierDelayRiskRate: 0.13,
+          defectRate: 0.024,
+        },
+      },
+    ],
+  },
 ];
 
 const defaultBusinessSimulatorTemplate = businessSimulatorTemplates[0];

@@ -197,6 +197,14 @@
       "purpose": "Load the capacity-planning template, defaults, and starter scenarios."
     },
     {
+      "name": "getStaffingPlanSimulation",
+      "method": "GET",
+      "path": "/api/simulations/staffing-plan",
+      "auth": "public",
+      "session": "none",
+      "purpose": "Load the staffing-plan template, defaults, and starter scenarios."
+    },
+    {
       "name": "runBusinessSimulation",
       "method": "POST",
       "path": "/api/simulations/run",

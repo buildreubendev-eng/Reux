@@ -27,7 +27,7 @@
     {
       "priority": "P1",
       "ownerTrack": "Sellable Business Simulator Frontend",
-      "title": "Expose template selection for operations-decision and capacity-planning",
+      "title": "Expose template selection for operations-decision, capacity-planning, and staffing-plan",
       "why": "Finish the buyer-facing Business Simulator product UI now that the demo console is functionally complete.",
       "source": "public-roadmap"
     },

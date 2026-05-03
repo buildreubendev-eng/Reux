@@ -8,6 +8,7 @@ import {
   businessSimulatorForecastUnits,
   businessSimulatorLimits,
   businessSimulatorMetricNames,
+  businessSimulatorSimulationIds,
   type BusinessSimulatorRunRequest,
 } from "../src/business-simulator-contract.js";
 import {
@@ -36,6 +37,7 @@ describe("business simulator API contract", () => {
     });
     expect(businessSimulatorForecastUnits).toEqual(["week", "month", "quarter"]);
     expect(businessSimulatorMetricNames).toContain("marginDelta");
+    expect(businessSimulatorSimulationIds).toEqual(["operations-decision", "capacity-planning", "staffing-plan"]);
     expect(businessSimulatorErrorCodes).toEqual([
       "business_simulator_validation_failed",
       "simulation_execution_validation_failed",
@@ -227,7 +229,7 @@ describe("business simulator API contract", () => {
   });
 
   it("lists templates, loads a template, and compares already-run scenarios", () => {
-    expect(listBusinessSimulations().simulations.map((simulation) => simulation.id)).toEqual(["operations-decision", "capacity-planning"]);
+    expect(listBusinessSimulations().simulations.map((simulation) => simulation.id)).toEqual(["operations-decision", "capacity-planning", "staffing-plan"]);
     const template = getBusinessSimulation("operations-decision");
     expect(template.defaultAssumptions).toEqual(businessSimulatorDefaultAssumptions);
     expect(template.exampleScenarios.length).toBeGreaterThan(0);
@@ -291,6 +293,44 @@ describe("business simulator API contract", () => {
     expect(response.comparison.recommendation?.decisionSummary).toContain("recommendation because");
     expect(response.comparison.recommendation?.confidenceSummary).toContain("confidence");
     expect(response.reuxSource).toContain("simulate capacity_planning");
+  });
+
+  it("includes a staffing-plan decision template for workforce pilots", () => {
+    const template = getBusinessSimulation("staffing-plan");
+
+    expect(template.simulation).toMatchObject({
+      id: "staffing-plan",
+      name: "Staffing Plan Simulator",
+      domain: "workforce",
+      status: "ready",
+    });
+    expect(template.defaultAssumptions.employees).toBe(34);
+    expect(template.defaultAssumptions.averageHourlyCost).toBe(41);
+    expect(template.exampleScenarios.map((scenario) => scenario.id)).toEqual([
+      "hire-team",
+      "cross-train",
+      "automation-buffer",
+      "lean-coverage",
+    ]);
+
+    const response = runBusinessSimulator(
+      {
+        name: "Staffing Pilot",
+        simulationId: "staffing-plan",
+        baseline: template.defaultAssumptions,
+        scenarios: template.exampleScenarios.slice(0, 3),
+        options: {
+          includeReuxSource: true,
+        },
+      },
+      new Date("2026-05-03T00:00:00.000Z"),
+    );
+
+    expect(response.simulation.id).toBe("staffing-plan");
+    expect(response.scenarios.map((scenario) => scenario.id)).toEqual(["hire-team", "cross-train", "automation-buffer"]);
+    expect(response.comparison.recommendation?.recommendedAction).toContain(response.comparison.recommendation?.scenarioName);
+    expect(response.comparison.recommendation?.whatChangedFromBaseline.length).toBeGreaterThan(0);
+    expect(response.reuxSource).toContain("simulate staffing_plan");
   });
 
   it("emits a deterministic frontend handoff fixture", () => {
@@ -401,7 +441,7 @@ describe("business simulator API contract", () => {
     } catch (error) {
       expect(error).toBeInstanceOf(BusinessSimulatorValidationError);
       const issueMap = new Map((error as BusinessSimulatorValidationError).issues.map((issue) => [issue.path, issue.message]));
-      expect(issueMap.get("$.simulationId")).toBe("must be one of operations-decision, capacity-planning");
+      expect(issueMap.get("$.simulationId")).toBe("must be one of operations-decision, capacity-planning, staffing-plan");
       expect(issueMap.get("$.scenarios[1].id")).toBe("must be unique");
     }
   });
