@@ -6,12 +6,13 @@
     "demoReadinessPercent": 100,
     "fullCompletionPercent": 100,
     "releaseTrack": "prototype-complete",
-    "summary": "Reux is demo-ready for public commerce, logistics, and Business Simulator testing, and prototype-complete for the current language/runtime foundation. The current language-core completion pass is closed; remaining work is product expansion, simulation depth, package distribution, and developer onboarding polish rather than closing the original MVP bar."
+    "summary": "Reux is demo-ready for public commerce, logistics, and Business Simulator testing, and prototype-complete for the current language/runtime foundation. The first sellable wedge is the Business Simulator: a guided operational scenario-planning product powered by Reux. The current language-core completion pass is closed; remaining work is product expansion, simulation depth, package distribution, and developer onboarding polish rather than closing the original MVP bar."
   },
   "liveNow": [
     "Public commerce workflow demo",
     "Public logistics workflow demo",
     "Public Business Simulator powered by generic Reux simulation execution",
+    "Business Simulator first-wedge product brief for buyer, offer, and pilot positioning",
     "PostgreSQL-backed Business Simulator run records for result pages and sharing",
     "Public API rate limiting and request counters for hosted demo protection",
     "Dry-run/apply maintenance cleanup for visitor schemas and saved simulation runs",
@@ -46,6 +47,12 @@
   ],
   "capabilityGroups": [
     {
+      "name": "Commercial Productization",
+      "status": "active",
+      "summary": "The first sellable wedge is Business Simulator, aimed at teams that need operational scenario planning, saved results, and explainable recommendations.",
+      "capabilityCount": 4
+    },
+    {
       "name": "Language Core",
       "status": "prototype-complete",
       "summary": "The prototype language core can model schemas, enums, reusable typed queries, guarded transaction functions, durable events, migrations, and simulations.",
@@ -79,42 +86,48 @@
   "nextMilestones": [
     {
       "order": 1,
+      "title": "Commercialization Wedge",
+      "goal": "Turn Business Simulator into the first sellable Reux-powered product.",
+      "itemCount": 4
+    },
+    {
+      "order": 2,
       "title": "Frontend Completion",
       "goal": "Get the public frontend/demo surfaces close to completion.",
       "itemCount": 3
     },
     {
-      "order": 2,
+      "order": 3,
       "title": "Website & Status Sync",
       "goal": "Keep public project cards, roadmap badges, live/demo links, and completed/in-progress labels current.",
       "itemCount": 4
     },
     {
-      "order": 3,
+      "order": 4,
       "title": "Frontend Reliability & Ops Depth",
       "goal": "Add graceful failure states and deepen ops observability.",
       "itemCount": 6
     },
     {
-      "order": 4,
+      "order": 5,
       "title": "Documentation Handoff",
       "goal": "Keep docs aligned with the actual demo.",
       "itemCount": 2
     },
     {
-      "order": 5,
+      "order": 6,
       "title": "Simulation Foundation",
       "goal": "Make Reux useful for structured forecasting and scenario comparison.",
       "itemCount": 5
     },
     {
-      "order": 6,
+      "order": 7,
       "title": "Product Ecosystem",
       "goal": "Keep Reux grounded in real products instead of building language features in isolation.",
       "itemCount": 5
     },
     {
-      "order": 7,
+      "order": 8,
       "title": "Developer Experience",
       "goal": "Make Reux approachable for technical reviewers and early users.",
       "itemCount": 4
@@ -141,6 +154,7 @@
     "demoApiContract": "docs/public/reux-demo-api-contract.json",
     "demoTestingGuide": "docs/public/reux-demo-testing-guide.md",
     "developerAccess": "docs/public/reux-developer-access.md",
-    "positioningGuide": "docs/public/reux-positioning.md"
+    "positioningGuide": "docs/public/reux-positioning.md",
+    "businessSimulatorProductBrief": "docs/public/business-simulator-product-brief.md"
   }
 }

@@ -9,15 +9,27 @@ Updated: 2026-05-02
 - Demo readiness: roughly 100%.
 - Full platform completion: roughly 100%.
 - Release track: prototype-complete.
-- Reux is demo-ready for public commerce, logistics, and Business Simulator testing, and prototype-complete for the current language/runtime foundation. The current language-core completion pass is closed; remaining work is product expansion, simulation depth, package distribution, and developer onboarding polish rather than closing the original MVP bar.
+- Reux is demo-ready for public commerce, logistics, and Business Simulator testing, and prototype-complete for the current language/runtime foundation. The first sellable wedge is the Business Simulator: a guided operational scenario-planning product powered by Reux. The current language-core completion pass is closed; remaining work is product expansion, simulation depth, package distribution, and developer onboarding polish rather than closing the original MVP bar.
 
 ## Positioning
 
 - Use normal web frameworks for the product shell.
 - Use Reux for data models, typed queries, transactions, events, migrations, and simulation declarations.
 - Use real product pilots to validate language features instead of building abstract syntax in isolation.
+- Sell Business Simulator first, and let Reux be the engine underneath the buyer-facing product.
 
 ## Capability Groups
+
+### Commercial Productization
+
+Status: active.
+
+The first sellable wedge is Business Simulator, aimed at teams that need operational scenario planning, saved results, and explainable recommendations.
+
+- Business Simulator product brief with first-wedge positioning, buyer/user definition, pilot signal, and offer copy.
+- Guided pilot offer for turning one real spreadsheet-modeled decision into a reusable scenario model.
+- Buyer-facing framing around operational decisions before committing money, staff, time, or risk.
+- Demo completion bar focused on result creation, saved runs, shareable summaries, and recommendations.
 
 ### Language Core
 

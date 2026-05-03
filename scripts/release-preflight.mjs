@@ -22,6 +22,7 @@ const requiredDocs = [
   "docs/public/reux-public-snapshot.json",
   "docs/public/reux-demo-testing-guide.md",
   "docs/public/reux-demo-api-contract.json",
+  "docs/public/business-simulator-product-brief.md",
   "docs/technical/next-backlog.md",
   "docs/technical/next-backlog.json",
 ];

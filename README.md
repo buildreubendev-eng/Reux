@@ -177,6 +177,7 @@ Technical documentation:
 - [Public Reux snapshot](docs/public/reux-public-snapshot.md)
 - [Public Reux snapshot data](docs/public/reux-public-snapshot.json)
 - [Public Reux positioning guide](docs/public/reux-positioning.md)
+- [Business Simulator product brief](docs/public/business-simulator-product-brief.md)
 - [Public Reux developer access](docs/public/reux-developer-access.md)
 - [Next backlog](docs/technical/next-backlog.md)
 

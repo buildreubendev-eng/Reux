@@ -26,6 +26,34 @@
     },
     {
       "priority": "P1",
+      "ownerTrack": "Commercialization Wedge",
+      "title": "Package Business Simulator as the first sellable wedge around operational scenario planning",
+      "why": "Turn Business Simulator into the first sellable Reux-powered product.",
+      "source": "public-roadmap"
+    },
+    {
+      "priority": "P1",
+      "ownerTrack": "Commercialization Wedge",
+      "title": "Keep demo completion focused on result creation, saved runs, shareable summaries, and clear recommendations",
+      "why": "Turn Business Simulator into the first sellable Reux-powered product.",
+      "source": "public-roadmap"
+    },
+    {
+      "priority": "P2",
+      "ownerTrack": "Commercialization Wedge",
+      "title": "Define buyer, user, early-adopter signal, and pilot qualification notes",
+      "why": "Turn Business Simulator into the first sellable Reux-powered product.",
+      "source": "public-roadmap"
+    },
+    {
+      "priority": "P2",
+      "ownerTrack": "Commercialization Wedge",
+      "title": "Add simple pilot offer and CTA copy for website and sales handoff",
+      "why": "Turn Business Simulator into the first sellable Reux-powered product.",
+      "source": "public-roadmap"
+    },
+    {
+      "priority": "P1",
       "ownerTrack": "Frontend Completion",
       "title": "Add a polished public tester flow from landing/demo entry to successful transaction to outbox processing",
       "why": "Get the public frontend/demo surfaces close to completion.",
@@ -46,14 +74,14 @@
       "source": "public-roadmap"
     },
     {
-      "priority": "P1",
+      "priority": "P2",
       "ownerTrack": "Website & Status Sync",
       "title": "Never complete frontend work without updating the status surfaces that describe it",
       "why": "Keep public project cards, roadmap badges, live/demo links, and completed/in-progress labels current.",
       "source": "public-roadmap"
     },
     {
-      "priority": "P1",
+      "priority": "P2",
       "ownerTrack": "Website & Status Sync",
       "title": "Run a full responsive polish pass (Visual QA)",
       "why": "Keep public project cards, roadmap badges, live/demo links, and completed/in-progress labels current.",
@@ -116,14 +144,14 @@
       "source": "public-roadmap"
     },
     {
-      "priority": "P2",
+      "priority": "P3",
       "ownerTrack": "Documentation Handoff",
       "title": "Update public testing docs and screenshots/copy references if UI changes",
       "why": "Keep docs aligned with the actual demo.",
       "source": "public-roadmap"
     },
     {
-      "priority": "P2",
+      "priority": "P3",
       "ownerTrack": "Documentation Handoff",
       "title": "Keep docs/public/reux-demo-testing-guide.md aligned with the actual demo",
       "why": "Keep docs aligned with the actual demo.",

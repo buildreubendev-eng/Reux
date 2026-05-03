@@ -15,6 +15,18 @@ Updated: 2026-05-02
 - P2 | Developer Experience | Compiler-backed language-server features
   Why: Move beyond prototype completion into deeper product and language capability.
   Source: capability-research-track
+- P1 | Commercialization Wedge | Package Business Simulator as the first sellable wedge around operational scenario planning
+  Why: Turn Business Simulator into the first sellable Reux-powered product.
+  Source: public-roadmap
+- P1 | Commercialization Wedge | Keep demo completion focused on result creation, saved runs, shareable summaries, and clear recommendations
+  Why: Turn Business Simulator into the first sellable Reux-powered product.
+  Source: public-roadmap
+- P2 | Commercialization Wedge | Define buyer, user, early-adopter signal, and pilot qualification notes
+  Why: Turn Business Simulator into the first sellable Reux-powered product.
+  Source: public-roadmap
+- P2 | Commercialization Wedge | Add simple pilot offer and CTA copy for website and sales handoff
+  Why: Turn Business Simulator into the first sellable Reux-powered product.
+  Source: public-roadmap
 - P1 | Frontend Completion | Add a polished public tester flow from landing/demo entry to successful transaction to outbox processing
   Why: Get the public frontend/demo surfaces close to completion.
   Source: public-roadmap
@@ -24,10 +36,10 @@ Updated: 2026-05-02
 - P2 | Frontend Completion | Ensure the demo always shows the next best action after reset, transaction, and process-outbox
   Why: Get the public frontend/demo surfaces close to completion.
   Source: public-roadmap
-- P1 | Website & Status Sync | Never complete frontend work without updating the status surfaces that describe it
+- P2 | Website & Status Sync | Never complete frontend work without updating the status surfaces that describe it
   Why: Keep public project cards, roadmap badges, live/demo links, and completed/in-progress labels current.
   Source: public-roadmap
-- P1 | Website & Status Sync | Run a full responsive polish pass (Visual QA)
+- P2 | Website & Status Sync | Run a full responsive polish pass (Visual QA)
   Why: Keep public project cards, roadmap badges, live/demo links, and completed/in-progress labels current.
   Source: public-roadmap
 - P2 | Website & Status Sync | Fix all mobile layout issues
@@ -54,10 +66,10 @@ Updated: 2026-05-02
 - P2 | Frontend Reliability & Ops Depth | Make the dashboard usable as a real operational page, not just a debug screen
   Why: Add graceful failure states and deepen ops observability.
   Source: public-roadmap
-- P2 | Documentation Handoff | Update public testing docs and screenshots/copy references if UI changes
+- P3 | Documentation Handoff | Update public testing docs and screenshots/copy references if UI changes
   Why: Keep docs aligned with the actual demo.
   Source: public-roadmap
-- P2 | Documentation Handoff | Keep docs/public/reux-demo-testing-guide.md aligned with the actual demo
+- P3 | Documentation Handoff | Keep docs/public/reux-demo-testing-guide.md aligned with the actual demo
   Why: Keep docs aligned with the actual demo.
   Source: public-roadmap
 - P3 | Simulation Foundation | Expand simulation domain packs for PLOS and business operations

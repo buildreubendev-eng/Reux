@@ -22,6 +22,14 @@ That category keeps the message specific enough to be credible while still leavi
 
 Reux lets teams define data models, workflows, events, and simulations in one auditable backend language, then use normal web technology to build the product interface around it.
 
+## First Sellable Product
+
+The first sellable product direction is the Business Simulator.
+
+For early buyers, lead with operational scenario planning rather than language infrastructure. The buyer-facing promise is: compare operational decisions, save/share results, and explain the recommendation before committing money, staff, time, or risk.
+
+Reux should still be visible as the engine underneath the product, but the sale should start with a concrete Business Simulator pilot.
+
 ## What To Say
 
 Use this language publicly:
@@ -32,6 +40,7 @@ Use this language publicly:
 - Reux is being validated through real products: the Reuben website, the public Reux demo, PLOS, and the business simulation engine.
 - The goal is explainable software for systems where data state and future outcomes matter.
 - The Business Simulator is the current proof point: a real interface using Reux-backed simulation logic to compare operational decisions.
+- The Business Simulator is the first sellable wedge; Reux is the language/runtime layer that makes it explainable and extensible.
 
 ## What To Avoid Saying For Now
 

@@ -9,10 +9,11 @@ Updated: 2026-05-02
 - Demo readiness: roughly 100%.
 - Full platform completion: roughly 100%.
 - Release track: prototype-complete.
-- Reux is demo-ready for public commerce, logistics, and Business Simulator testing, and prototype-complete for the current language/runtime foundation. The current language-core completion pass is closed; remaining work is product expansion, simulation depth, package distribution, and developer onboarding polish rather than closing the original MVP bar.
+- Reux is demo-ready for public commerce, logistics, and Business Simulator testing, and prototype-complete for the current language/runtime foundation. The first sellable wedge is the Business Simulator: a guided operational scenario-planning product powered by Reux. The current language-core completion pass is closed; remaining work is product expansion, simulation depth, package distribution, and developer onboarding polish rather than closing the original MVP bar.
 
 ## Capability Groups
 
+- Commercial Productization: active. The first sellable wedge is Business Simulator, aimed at teams that need operational scenario planning, saved results, and explainable recommendations. (4 capabilities)
 - Language Core: prototype-complete. The prototype language core can model schemas, enums, reusable typed queries, guarded transaction functions, durable events, migrations, and simulations. (5 capabilities)
 - Runtime And Database: prototype-complete. The runtime path uses PostgreSQL today and supports compiled query execution, transaction execution, migrations, seeds, and outbox processing. (5 capabilities)
 - Developer Experience: prototype-complete. The CLI, docs, package smoke checks, and editor tooling are ready for technical review and local experimentation. (5 capabilities)
@@ -21,13 +22,14 @@ Updated: 2026-05-02
 
 ## Next Milestones
 
-1. Frontend Completion: Get the public frontend/demo surfaces close to completion. (3 items)
-2. Website & Status Sync: Keep public project cards, roadmap badges, live/demo links, and completed/in-progress labels current. (4 items)
-3. Frontend Reliability & Ops Depth: Add graceful failure states and deepen ops observability. (6 items)
-4. Documentation Handoff: Keep docs aligned with the actual demo. (2 items)
-5. Simulation Foundation: Make Reux useful for structured forecasting and scenario comparison. (5 items)
-6. Product Ecosystem: Keep Reux grounded in real products instead of building language features in isolation. (5 items)
-7. Developer Experience: Make Reux approachable for technical reviewers and early users. (4 items)
+1. Commercialization Wedge: Turn Business Simulator into the first sellable Reux-powered product. (4 items)
+2. Frontend Completion: Get the public frontend/demo surfaces close to completion. (3 items)
+3. Website & Status Sync: Keep public project cards, roadmap badges, live/demo links, and completed/in-progress labels current. (4 items)
+4. Frontend Reliability & Ops Depth: Add graceful failure states and deepen ops observability. (6 items)
+5. Documentation Handoff: Keep docs aligned with the actual demo. (2 items)
+6. Simulation Foundation: Make Reux useful for structured forecasting and scenario comparison. (5 items)
+7. Product Ecosystem: Keep Reux grounded in real products instead of building language features in isolation. (5 items)
+8. Developer Experience: Make Reux approachable for technical reviewers and early users. (4 items)
 
 ## Website Data Links
 
@@ -39,3 +41,4 @@ Updated: 2026-05-02
 - demoTestingGuide: `docs/public/reux-demo-testing-guide.md`
 - developerAccess: `docs/public/reux-developer-access.md`
 - positioningGuide: `docs/public/reux-positioning.md`
+- businessSimulatorProductBrief: `docs/public/business-simulator-product-brief.md`

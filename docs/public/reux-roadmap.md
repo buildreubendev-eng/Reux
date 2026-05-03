@@ -1,6 +1,6 @@
 # Reux Public Roadmap
 
-Reux is a data-native language for applications that need reliable workflows, auditable state changes, and simulation-driven decision logic. The current prototype already powers a hosted commerce and logistics demo while the simulation, tooling, and product layers continue to mature.
+Reux is a data-native language for applications that need reliable workflows, auditable state changes, and simulation-driven decision logic. The current prototype already powers a hosted commerce and logistics demo while the simulation, tooling, and product layers continue to mature. The first sellable wedge is the Business Simulator: a guided operational scenario-planning product powered by Reux.
 
 Current status:
 
@@ -14,6 +14,7 @@ Current status:
 - Public browser demo for commerce workflows.
 - Public browser demo for logistics workflows.
 - Public Business Simulator demo with PostgreSQL-backed saved run records for result pages and sharing.
+- Business Simulator first-wedge product brief for buyer, offer, and pilot positioning.
 - Public API rate limiting and request counters for hosted demo protection.
 - Dry-run/apply maintenance cleanup for visitor schemas and saved simulation runs.
 - Hosted deep health checks for saved-run creation, reload, and listing.
@@ -43,7 +44,18 @@ Current status:
 
 ## Next Milestones
 
-### 1. Frontend Completion
+### 1. Commercialization Wedge
+
+Goal: turn Business Simulator into the first sellable Reux-powered product.
+
+Planned work:
+
+- Package Business Simulator as the first sellable wedge around operational scenario planning.
+- Keep demo completion focused on result creation, saved runs, shareable summaries, and clear recommendations.
+- Define buyer, user, early-adopter signal, and pilot qualification notes.
+- Add simple pilot offer and CTA copy for website and sales handoff.
+
+### 2. Frontend Completion
 
 Goal: get the public frontend/demo surfaces close to completion.
 
@@ -53,7 +65,7 @@ Planned work:
 - Make "what just happened" summaries consistent across commerce and logistics.
 - Ensure the demo always shows the next best action after reset, transaction, and process-outbox.
 
-### 2. Website & Status Sync
+### 3. Website & Status Sync
 
 Goal: keep public project cards, roadmap badges, live/demo links, and completed/in-progress labels current.
 
@@ -64,7 +76,7 @@ Planned work:
 - Fix all mobile layout issues.
 - Ensure no cards/buttons/tables overflow or overlap.
 
-### 3. Frontend Reliability & Ops Depth
+### 4. Frontend Reliability & Ops Depth
 
 Goal: add graceful failure states and deepen ops observability.
 
@@ -77,7 +89,7 @@ Planned work:
 - Add clearer stale/dead-letter explanations.
 - Make the dashboard usable as a real operational page, not just a debug screen.
 
-### 4. Documentation Handoff
+### 5. Documentation Handoff
 
 Goal: keep docs aligned with the actual demo.
 
@@ -86,7 +98,7 @@ Planned work:
 - Update public testing docs and screenshots/copy references if UI changes.
 - Keep docs/public/reux-demo-testing-guide.md aligned with the actual demo.
 
-### 5. Simulation Foundation
+### 6. Simulation Foundation
 
 Goal: make Reux useful for structured forecasting and scenario comparison.
 
@@ -98,7 +110,7 @@ Planned work:
 - Improve comparison reports and explanation output.
 - Expand simulation APIs from generated catalog discovery into full product-facing execution services.
 
-### 6. Product Ecosystem
+### 7. Product Ecosystem
 
 Goal: keep Reux grounded in real products instead of building language features in isolation.
 
@@ -110,7 +122,7 @@ Planned work:
 - Use clinic, logistics, and future product pilots to keep language features grounded in real workflows.
 - Add deeper product pilots for PLOS and enterprise operations once the core language/runtime path is stable.
 
-### 7. Developer Experience
+### 8. Developer Experience
 
 Goal: make Reux approachable for technical reviewers and early users.
 
