@@ -89,6 +89,43 @@ function notify(msg, error = false) {
   setTimeout(() => t.classList.remove("visible"), 2800);
 }
 
+// ─── Field-level validation ───
+function clearFieldErrors() {
+  for (const el of $$(".sim-field-error")) el.remove();
+  for (const el of $$(".sim-input-error")) el.classList.remove("sim-input-error");
+}
+function markFieldError(inputId, message) {
+  const input = $("#" + inputId) || $(`[data-field="${inputId}"]`);
+  if (!input) return false;
+  input.classList.add("sim-input-error");
+  const errEl = el("span", { className: "sim-field-error" }, message);
+  input.parentElement.append(errEl);
+  return true;
+}
+function mapIssuesToFields(issues) {
+  if (!issues?.length) return false;
+  let mapped = 0;
+  for (const issue of issues) {
+    const path = issue.path || "";
+    // baseline.employees → bl_employees
+    const baselineMatch = path.match(/^baseline\.(.+)$/);
+    if (baselineMatch) {
+      if (markFieldError(`bl_${baselineMatch[1]}`, issue.message)) { mapped++; continue; }
+    }
+    // scenarios[0].assumptions.employees → sc_0_employees
+    const scenarioMatch = path.match(/^scenarios\[(\d+)\]\.assumptions\.(.+)$/);
+    if (scenarioMatch) {
+      if (markFieldError(`sc_${scenarioMatch[1]}_${scenarioMatch[2]}`, issue.message)) { mapped++; continue; }
+    }
+    // scenarios[0].name → sc_0_name
+    const scenarioNameMatch = path.match(/^scenarios\[(\d+)\]\.(.+)$/);
+    if (scenarioNameMatch) {
+      if (markFieldError(`sc_${scenarioNameMatch[1]}_${scenarioNameMatch[2]}`, issue.message)) { mapped++; continue; }
+    }
+  }
+  return mapped > 0;
+}
+
 // ─── View Router ───
 function navigate(view) {
   state.view = view;
@@ -151,8 +188,8 @@ function renderBaselineForm() {
     const label = el("label", {},
       el("span", {}, meta.label),
       meta.type === "select"
-        ? (() => { const sel = el("select", { id: `bl_${key}` }); meta.options.forEach(o => { const opt = el("option", { value: o }, o); if (o === val) opt.selected = true; sel.append(opt); }); sel.addEventListener("change", () => { state.baseline[key] = sel.value; }); return sel; })()
-        : (() => { const inp = el("input", { id: `bl_${key}`, type: "number", value: String(display), step: meta.type === "rate" ? "0.1" : "1", inputmode: "decimal" }); inp.addEventListener("change", () => { state.baseline[key] = meta.type === "rate" ? Number(inp.value) / 100 : Number(inp.value); }); return inp; })()
+        ? (() => { const sel = el("select", { id: `bl_${key}`, "data-field": `bl_${key}` }); meta.options.forEach(o => { const opt = el("option", { value: o }, o); if (o === val) opt.selected = true; sel.append(opt); }); sel.addEventListener("change", () => { state.baseline[key] = sel.value; }); return sel; })()
+        : (() => { const inp = el("input", { id: `bl_${key}`, "data-field": `bl_${key}`, type: "number", value: String(display), step: meta.type === "rate" ? "0.1" : "1", inputmode: "decimal" }); inp.addEventListener("change", () => { state.baseline[key] = meta.type === "rate" ? Number(inp.value) / 100 : Number(inp.value); }); return inp; })()
     );
     form.append(label);
   }
@@ -178,7 +215,8 @@ function renderScenarios() {
       const meta = assumptionLabels[key];
       const hasOverride = sc.assumptions[key] !== undefined;
       const val = hasOverride ? (meta.type === "rate" ? (sc.assumptions[key] * 100).toFixed(1) : sc.assumptions[key]) : "";
-      const inp = el("input", { type: "number", placeholder: meta.label, value: String(val), step: meta.type === "rate" ? "0.1" : "1", inputmode: "decimal", title: `${meta.label} override (leave empty to use baseline)` });
+      const fieldId = `sc_${idx}_${key}`;
+      const inp = el("input", { id: fieldId, "data-field": fieldId, type: "number", placeholder: meta.label, value: String(val), step: meta.type === "rate" ? "0.1" : "1", inputmode: "decimal", title: `${meta.label} override (leave empty to use baseline)` });
       inp.addEventListener("change", () => {
         if (inp.value === "") { delete sc.assumptions[key]; }
         else { sc.assumptions[key] = meta.type === "rate" ? Number(inp.value) / 100 : Number(inp.value); }
@@ -194,7 +232,7 @@ function renderScenarios() {
 
 // ─── Run Simulation ───
 async function runSim() {
-  hide("#runError"); show("#runLoading");
+  hide("#runError"); show("#runLoading"); clearFieldErrors();
   try {
     const body = {
       simulationId: state.templateId,
@@ -209,14 +247,33 @@ async function runSim() {
     notify("Simulation complete");
   } catch (err) {
     hide("#runLoading");
+    // Map field-level validation errors to inputs
+    const hasMappedFields = mapIssuesToFields(err.issues);
     setText("#runErrorTitle", err.category === "validation" ? "Validation Error" : "Simulation Failed");
     let msg = err.message;
-    if (err.issues?.length) msg += "\n" + err.issues.map(i => `• ${i.path}: ${i.message}`).join("\n");
+    // Only show unmapped issues in the page-level block
+    if (err.issues?.length && !hasMappedFields) {
+      msg += "\n" + err.issues.map(i => `• ${i.path}: ${i.message}`).join("\n");
+    } else if (err.issues?.length && hasMappedFields) {
+      const unmapped = err.issues.filter(i => !$("#" + issuePath2FieldId(i.path)));
+      if (unmapped.length) msg += "\n" + unmapped.map(i => `• ${i.path}: ${i.message}`).join("\n");
+    }
     setText("#runErrorMessage", msg);
     setText("#runErrorAction", err.userAction || "");
     if (err.retryable) show("#runRetry"); else hide("#runRetry");
     show("#runError");
   }
+}
+
+function issuePath2FieldId(path) {
+  if (!path) return "";
+  const bl = path.match(/^baseline\.(.+)$/);
+  if (bl) return `bl_${bl[1]}`;
+  const sc = path.match(/^scenarios\[(\d+)\]\.assumptions\.(.+)$/);
+  if (sc) return `sc_${sc[1]}_${sc[2]}`;
+  const scn = path.match(/^scenarios\[(\d+)\]\.(.+)$/);
+  if (scn) return `sc_${scn[1]}_${scn[2]}`;
+  return "";
 }
 
 function slugify(s) { return (s || "scenario").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) || "scenario"; }
@@ -347,6 +404,22 @@ async function loadSavedRun(id) {
     const data = await apiGet(`/simulation-runs/${encodeURIComponent(id)}`);
     state.result = data.run.response;
     state.savedRunId = id;
+    // Hydrate form state from saved run request so "Revise Assumptions" works
+    const req = data.run.request;
+    if (req) {
+      state.templateId = req.simulationId || state.templateId;
+      if (req.baseline) state.baseline = { ...req.baseline };
+      if (req.scenarios?.length) state.scenarios = req.scenarios.map(s => ({ ...s, assumptions: { ...s.assumptions } }));
+      // Try to load the template metadata for header text
+      try {
+        const tmpl = await apiGet(`/simulations/${encodeURIComponent(state.templateId)}`);
+        state.template = tmpl;
+        setText("#selectedTemplateName", tmpl.simulation.name);
+        setText("#selectedTemplateDescription", tmpl.simulation.description);
+      } catch (_) { /* template metadata is optional for result viewing */ }
+      renderBaselineForm();
+      renderScenarios();
+    }
     renderResults(data.run.response);
     navigate("results");
   } catch (err) {
@@ -363,10 +436,27 @@ async function loadSavedRun(id) {
 // ─── Pilot CTA ───
 function handlePilotSubmit(e) {
   e.preventDefault();
-  const name = $("#pilotName").value.trim();
-  const email = $("#pilotEmail").value.trim();
-  const decision = $("#pilotDecision").value.trim();
-  if (!name || !email || !decision) { notify("Please fill in all fields", true); return; }
+  // Clear previous pilot field errors
+  for (const inp of $$("#pilotForm .sim-input-error")) inp.classList.remove("sim-input-error");
+  for (const err of $$("#pilotForm .sim-field-error")) err.remove();
+
+  const nameInput = $("#pilotName");
+  const emailInput = $("#pilotEmail");
+  const decisionInput = $("#pilotDecision");
+  const name = nameInput.value.trim();
+  const email = emailInput.value.trim();
+  const decision = decisionInput.value.trim();
+  let valid = true;
+
+  if (!name) { nameInput.classList.add("sim-input-error"); nameInput.parentElement.append(el("span", { className: "sim-field-error" }, "Name is required")); valid = false; }
+  if (!email) { emailInput.classList.add("sim-input-error"); emailInput.parentElement.append(el("span", { className: "sim-field-error" }, "Email is required")); valid = false; }
+  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { emailInput.classList.add("sim-input-error"); emailInput.parentElement.append(el("span", { className: "sim-field-error" }, "Enter a valid email address")); valid = false; }
+  if (!decision) { decisionInput.classList.add("sim-input-error"); decisionInput.parentElement.append(el("span", { className: "sim-field-error" }, "Describe the decision you are modeling")); valid = false; }
+
+  if (!valid) { notify("Please fix the highlighted fields", true); return; }
+
+  // Build mailto — easy to replace with a POST endpoint later:
+  // Replace this block with: await apiPost("/api/pilot-request", { name, email, decision });
   const subject = encodeURIComponent("Business Simulator Pilot Request");
   const body = encodeURIComponent(`Name: ${name}\nEmail: ${email}\nDecision: ${decision}`);
   window.open(`mailto:pilot@reuben.dev?subject=${subject}&body=${body}`, "_self");

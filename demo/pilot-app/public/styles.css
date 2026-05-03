@@ -652,6 +652,8 @@ td code {
 .sim-inline-error p { margin: 0; font-size: 13px; line-height: 1.4; white-space: pre-wrap; }
 .sim-error-action { color: var(--muted); font-style: italic; }
 .sim-field-errors { padding: 8px 16px; color: var(--red); font-size: 13px; }
+.sim-input-error { border-color: var(--red) !important; background: #fef2f2 !important; }
+.sim-field-error { display: block; font-size: 11px; color: var(--red); margin-top: 2px; font-weight: 600; animation: simFadeIn 0.2s ease; }
 
 .sim-state-loading { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 40px 16px; color: var(--muted); }
 .sim-state-loading.sim-inline { flex-direction: row; padding: 8px 0; }
