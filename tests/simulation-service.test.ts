@@ -48,19 +48,19 @@ describe("product-facing simulation service", () => {
       {
         simulationName: "personal_finance",
         assumptions: {
-          income: 6200,
+          income: { value: 6200, unit: "USD" },
         },
         scenarios: [
           {
             name: "lower_rent_runtime",
             overrides: {
-              rent: 1100,
+              rent: { value: 1100, unit: "USD" },
             },
             changes: [
               {
                 period: 6,
                 overrides: {
-                  debt_payment: 0,
+                  debt_payment: { value: 0, unit: "USD" },
                 },
               },
             ],
@@ -73,6 +73,8 @@ describe("product-facing simulation service", () => {
     expect(response.generatedAt).toBe("2026-05-02T00:00:00.000Z");
     expect(response.simulation.scenarios).toEqual(["baseline", "lower_rent_runtime"]);
     expect(response.run.scenarios?.map((scenario) => scenario.name)).toEqual(["baseline", "lower_rent_runtime"]);
+    expect(response.baseline.name).toBe("baseline");
+    expect(response.scenarios.map((scenario) => scenario.name)).toEqual(["lower_rent_runtime"]);
     expect(response.run.scenarios?.[0]?.periods[0]?.assumptions.income).toBe(6200);
     expect(response.run.scenarios?.[1]?.periods[0]?.assumptions.rent).toBe(1100);
     expect(response.run.scenarios?.[1]?.periods[5]?.assumptions.debt_payment).toBe(0);
@@ -91,6 +93,35 @@ describe("product-facing simulation service", () => {
       ]),
     });
     expect(response.run.comparison?.metricRankings.some((ranking) => ranking.metric === "annual_surplus")).toBe(true);
+  });
+
+  it("rejects runtime override unit mismatches with field-level issue paths", () => {
+    try {
+      runReuxSimulation(financeSource(), {
+        assumptions: {
+          income: { value: 6200, unit: "EUR" },
+        },
+        scenarios: [
+          {
+            name: "bad_unit",
+            overrides: {
+              rent: { value: 1000, unit: "EUR" },
+            },
+          },
+        ],
+      });
+    } catch (error) {
+      expect(error).toBeInstanceOf(ReuxSimulationExecutionError);
+      expect((error as ReuxSimulationExecutionError).issues).toEqual(
+        expect.arrayContaining([
+          { path: "$.assumptions.income.unit", message: "must match declared unit USD for assumption 'income'" },
+          { path: "$.scenarios[0].overrides.rent.unit", message: "must match declared unit USD for assumption 'rent'" },
+        ]),
+      );
+      return;
+    }
+
+    throw new Error("expected unit mismatch request to fail");
   });
 
   it("rejects invalid runtime overrides with stable issue paths", () => {

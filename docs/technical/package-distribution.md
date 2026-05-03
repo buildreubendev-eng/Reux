@@ -23,7 +23,7 @@ import { createPostgresDatabase, runSqlQuery } from "reux-prototype/runtime";
 import { runReuxSimulation } from "reux-prototype/simulation";
 ```
 
-`runReuxSimulation(source, request)` is the generic backend path for PLOS and business-product prototypes. It accepts runtime baseline/scenario overrides, preserves declared Reux units and objectives, and returns a typed run/comparison result without requiring a custom adapter for every product.
+`runReuxSimulation(source, request)` is the generic backend path for PLOS and business-product prototypes. It accepts runtime baseline/scenario overrides as primitives or `{ value, unit }` inputs, preserves declared Reux units and objectives, and returns a typed run/comparison result plus direct baseline/scenario shortcuts without requiring a custom adapter for every product.
 
 ## Local Tarball
 

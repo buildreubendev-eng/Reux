@@ -5,9 +5,11 @@ import {
   SimulationChangeIr,
   SimulationIr,
   SimulationRunResult,
+  SimulationScenarioRunResult,
 } from "./simulation-ir.js";
 
 export type ReuxSimulationExecutionValue = boolean | number | string;
+export type ReuxSimulationExecutionInput = ReuxSimulationExecutionValue | { value: ReuxSimulationExecutionValue; unit?: string };
 
 export const reuxSimulationExecutionLimits = {
   maxScenarios: 12,
@@ -19,18 +21,18 @@ export const reuxSimulationExecutionLimits = {
 export interface ReuxSimulationExecutionChangeInput {
   period: number;
   unit?: SimulationIr["forecast"]["unit"];
-  overrides: Record<string, ReuxSimulationExecutionValue>;
+  overrides: Record<string, ReuxSimulationExecutionInput>;
 }
 
 export interface ReuxSimulationExecutionScenarioInput {
   name: string;
-  overrides?: Record<string, ReuxSimulationExecutionValue>;
+  overrides?: Record<string, ReuxSimulationExecutionInput>;
   changes?: ReuxSimulationExecutionChangeInput[];
 }
 
 export interface ReuxSimulationExecutionRequest {
   simulationName?: string;
-  assumptions?: Record<string, ReuxSimulationExecutionValue>;
+  assumptions?: Record<string, ReuxSimulationExecutionInput>;
   scenarios?: ReuxSimulationExecutionScenarioInput[];
 }
 
@@ -55,6 +57,8 @@ export interface ReuxSimulationGetResponse {
 export interface ReuxSimulationExecutionResponse {
   simulation: ReuxSimulationMetadata;
   run: SimulationRunResult;
+  baseline: SimulationScenarioRunResult;
+  scenarios: SimulationScenarioRunResult[];
   generatedAt: string;
 }
 
@@ -111,10 +115,17 @@ export function runReuxSimulation(source: string, request: ReuxSimulationExecuti
   const simulation = selectSimulation(compileSimulations(source), request.simulationName);
   const executable = applyExecutionRequest(simulation, request);
   const run = runSimulationIr(executable);
+  const baseline = run.scenarios?.find((scenario) => scenario.name === "baseline") ?? {
+    name: "baseline",
+    periods: run.periods,
+    timeSeries: run.timeSeries,
+  };
 
   return {
     simulation: simulationMetadata(executable, run),
     run,
+    baseline,
+    scenarios: (run.scenarios ?? []).filter((scenario) => scenario.name !== "baseline"),
     generatedAt: now.toISOString(),
   };
 }
@@ -200,7 +211,7 @@ function assertExecutionRequest(value: unknown): asserts value is ReuxSimulation
   if (value.simulationName !== undefined && !isNonEmptyString(value.simulationName)) {
     issues.push({ path: "$.simulationName", message: "must be a non-empty string when provided" });
   }
-  if (value.assumptions !== undefined && !isPlainRecord(value.assumptions)) {
+  if (value.assumptions !== undefined && !isObject(value.assumptions)) {
     issues.push({ path: "$.assumptions", message: "must be an object when provided" });
   } else if (value.assumptions !== undefined && Object.keys(value.assumptions).length > reuxSimulationExecutionLimits.maxOverrideEntries) {
     issues.push({ path: "$.assumptions", message: `must include at most ${reuxSimulationExecutionLimits.maxOverrideEntries} entries` });
@@ -228,7 +239,7 @@ function validateScenarioInput(value: unknown, index: number, issues: ReuxSimula
   } else if (value.name.length > reuxSimulationExecutionLimits.maxScenarioNameLength) {
     issues.push({ path: `${path}.name`, message: `must be at most ${reuxSimulationExecutionLimits.maxScenarioNameLength} characters` });
   }
-  if (value.overrides !== undefined && !isPlainRecord(value.overrides)) {
+  if (value.overrides !== undefined && !isObject(value.overrides)) {
     issues.push({ path: `${path}.overrides`, message: "must be an object when provided" });
   } else if (value.overrides !== undefined && Object.keys(value.overrides).length > reuxSimulationExecutionLimits.maxOverrideEntries) {
     issues.push({ path: `${path}.overrides`, message: `must include at most ${reuxSimulationExecutionLimits.maxOverrideEntries} entries` });
@@ -255,7 +266,7 @@ function validateChangeInput(value: unknown, path: string, issues: ReuxSimulatio
   if (value.unit !== undefined && !["day", "week", "month", "quarter", "year"].includes(String(value.unit))) {
     issues.push({ path: `${path}.unit`, message: "must be one of day, week, month, quarter, year" });
   }
-  if (!isPlainRecord(value.overrides)) {
+  if (!isObject(value.overrides)) {
     issues.push({ path: `${path}.overrides`, message: "must be an object" });
   } else if (Object.keys(value.overrides).length > reuxSimulationExecutionLimits.maxOverrideEntries) {
     issues.push({ path: `${path}.overrides`, message: `must include at most ${reuxSimulationExecutionLimits.maxOverrideEntries} entries` });
@@ -264,7 +275,7 @@ function validateChangeInput(value: unknown, path: string, issues: ReuxSimulatio
 
 function applyAssumptionOverrides(
   simulation: SimulationIr,
-  overrides: Record<string, ReuxSimulationExecutionValue>,
+  overrides: Record<string, ReuxSimulationExecutionInput>,
   path: string,
   issues: ReuxSimulationExecutionIssue[],
 ): SimulationIr["assumptions"] {
@@ -284,7 +295,7 @@ function applyAssumptionOverrides(
 
 function buildOverride(
   name: string,
-  value: ReuxSimulationExecutionValue,
+  value: ReuxSimulationExecutionInput,
   assumptionsByName: Map<string, SimulationIr["assumptions"][number]>,
   path: string,
   issues: ReuxSimulationExecutionIssue[],
@@ -325,13 +336,20 @@ function buildChange(
 
 function checkedValue(
   name: string,
-  value: ReuxSimulationExecutionValue,
+  input: ReuxSimulationExecutionInput,
   assumption: SimulationIr["assumptions"][number],
   path: string,
   issues: ReuxSimulationExecutionIssue[],
 ): ReuxSimulationExecutionValue {
+  const parsed = parseExecutionInput(input, path, issues);
+  if (!parsed) return assumption.value;
+  const { value, unit } = parsed;
   if (typeof value !== assumption.type) {
     issues.push({ path, message: `must be ${article(assumption.type)} ${assumption.type} for assumption '${name}'` });
+    return assumption.value;
+  }
+  if (unit !== undefined && unit !== assumption.unit) {
+    issues.push({ path: `${path}.unit`, message: `must match declared unit ${assumption.unit ?? "unitless"} for assumption '${name}'` });
     return assumption.value;
   }
   if (typeof value === "number" && !Number.isFinite(value)) {
@@ -339,6 +357,34 @@ function checkedValue(
     return assumption.value;
   }
   return value;
+}
+
+function parseExecutionInput(
+  input: ReuxSimulationExecutionInput,
+  path: string,
+  issues: ReuxSimulationExecutionIssue[],
+): { value: ReuxSimulationExecutionValue; unit?: string } | undefined {
+  if (isExecutionValue(input)) return { value: input };
+  if (!isObject(input) || !("value" in input)) {
+    issues.push({ path, message: "must be a primitive value or an object with a value field" });
+    return undefined;
+  }
+  if (!isExecutionValue(input.value)) {
+    issues.push({ path: `${path}.value`, message: "must be a boolean, number, or string" });
+    return undefined;
+  }
+  if (input.unit !== undefined && typeof input.unit !== "string") {
+    issues.push({ path: `${path}.unit`, message: "must be a string when provided" });
+    return undefined;
+  }
+  if (typeof input.unit === "string" && input.unit.trim().length === 0) {
+    issues.push({ path: `${path}.unit`, message: "must be a non-empty string when provided" });
+    return undefined;
+  }
+  return {
+    value: input.value,
+    ...(input.unit !== undefined ? { unit: input.unit } : {}),
+  };
 }
 
 function simulationMetadata(simulation: SimulationIr, run = runSimulationIr(simulation)): ReuxSimulationMetadata {
@@ -380,11 +426,11 @@ function sampleInvalidRunRequest(simulation: ReuxSimulationMetadata): ReuxSimula
   };
 }
 
-function sampleOverride(simulation: ReuxSimulationMetadata): { name: string; value: ReuxSimulationExecutionValue } | undefined {
+function sampleOverride(simulation: ReuxSimulationMetadata): { name: string; value: ReuxSimulationExecutionInput } | undefined {
   const numeric = simulation.assumptions.find((assumption) => assumption.type === "number");
   if (numeric && typeof numeric.value === "number") {
     const nextValue = numeric.value === 0 ? 1 : Number((numeric.value * 1.1).toFixed(6));
-    return { name: numeric.name, value: nextValue };
+    return { name: numeric.name, value: { value: nextValue, ...(numeric.unit ? { unit: numeric.unit } : {}) } };
   }
   const first = simulation.assumptions[0];
   if (!first) return undefined;
@@ -432,8 +478,8 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function isPlainRecord(value: unknown): value is Record<string, ReuxSimulationExecutionValue> {
-  return isObject(value) && Object.values(value).every((entry) => ["boolean", "number", "string"].includes(typeof entry));
+function isExecutionValue(value: unknown): value is ReuxSimulationExecutionValue {
+  return ["boolean", "number", "string"].includes(typeof value);
 }
 
 function isNonEmptyString(value: unknown): value is string {
