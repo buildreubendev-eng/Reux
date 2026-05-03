@@ -52,8 +52,8 @@ import {
   defaultRateLimitMaxRequests,
   defaultRateLimitWindowMs,
   defaultWriteRateLimitMaxRequests,
-  rateLimitErrorBody,
 } from "./rate-limit.mjs";
+import { demoErrorHeaders, demoErrorResponseBody } from "./error-response.mjs";
 import { createRequestStats } from "./request-stats.mjs";
 import {
   createSimulationRunStore,
@@ -170,7 +170,15 @@ const server = createServer(async (request, response) => {
       : error instanceof BusinessSimulatorValidationError || error instanceof ReuxSimulationExecutionError
         ? 400
         : 500;
-    sendJson(response, statusCode, errorResponseBody(error, statusCode), errorHeaders(error));
+    sendJson(
+      response,
+      statusCode,
+      demoErrorResponseBody(error, statusCode, {
+        BusinessSimulatorValidationError,
+        ReuxSimulationExecutionError,
+      }),
+      demoErrorHeaders(error),
+    );
   }
 });
 
@@ -749,50 +757,6 @@ function sendJson(response, statusCode, body, headers = {}) {
     ...headers,
   });
   response.end(`${JSON.stringify(body, null, 2)}\n`);
-}
-
-function errorResponseBody(error, statusCode) {
-  const message = error instanceof Error ? error.message : String(error);
-  if (error instanceof RateLimitExceededError) {
-    return rateLimitErrorBody(error);
-  }
-  if (error instanceof BusinessSimulatorValidationError) {
-    return {
-      ok: false,
-      error: message,
-      message,
-      code: "business_simulator_validation_failed",
-      issues: error.issues,
-    };
-  }
-  if (error instanceof ReuxSimulationExecutionError) {
-    return {
-      ok: false,
-      error: message,
-      message,
-      code: error.code,
-      issues: error.issues,
-    };
-  }
-  return {
-    ok: false,
-    error: message,
-    message,
-    code: error?.code ?? (statusCode === 404 ? "not_found" : statusCode === 405 ? "method_not_allowed" : "request_failed"),
-    ...(error?.expiresAt ? { expiresAt: error.expiresAt } : {}),
-  };
-}
-
-function errorHeaders(error) {
-  if (error instanceof RateLimitExceededError) {
-    return {
-      "retry-after": String(error.retryAfterSeconds),
-      "x-ratelimit-limit": String(error.limit),
-      "x-ratelimit-remaining": String(error.remaining),
-      "x-ratelimit-reset": error.resetAt,
-    };
-  }
-  return {};
 }
 
 function sendNoContent(response) {

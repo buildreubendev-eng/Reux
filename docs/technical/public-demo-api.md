@@ -163,6 +163,8 @@ Known public error codes:
 | `method_not_allowed` | `405` | Route exists but does not support the method. |
 | `request_failed` | varies | General fallback for unexpected failures. |
 
+Unexpected server failures with HTTP `500` intentionally return the generic message `request failed`. Do not rely on internal exception text reaching browser clients. Public-safe, user-actionable failures such as validation errors, missing saved runs, expired saved runs, and rate limits keep their specific codes and fields.
+
 Business Simulator validation errors also include:
 
 ```json
