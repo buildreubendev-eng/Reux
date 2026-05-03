@@ -50,12 +50,36 @@ Status: complete. All P0 items have been implemented in `simulator.html` + `simu
 
 ## P1 Product Polish
 
-- Keep commerce/logistics demo summaries stable; do not spend new frontend passes there unless a regression appears.
-- Add empty, loading, error, retry, and expired-result states for every public simulator route.
-- Add saved-result list and shared-result loading states for the Business Simulator product path.
-- Run responsive visual QA at mobile, tablet, 1366x768, 1440x900, and wide desktop.
-- Fix overflow, cramped nav, nested cards, disproportionate hierarchy visuals, and text clipping.
-- Keep the Reuben > Reux > PLOS/Business Simulator hierarchy compact and balanced.
+Status: next active frontend pass. P0 is landed, but the pilot should not be called finished until these items are reviewed and fixed.
+
+1. Responsive and visual QA
+   - Run the Business Simulator path at mobile, tablet, 1366x768, 1440x900, and wide desktop.
+   - Fix overflow, cramped nav, nested cards, disproportionate sections, text clipping, and awkward spacing.
+   - Confirm `simulator.html` feels like a product surface, not a debug/demo console.
+
+2. Field-level validation mapping
+   - The API returns stable `issues[].path` values.
+   - Map validation errors next to the affected baseline or scenario field where possible.
+   - Keep the page-level error block for non-field failures, expired runs, rate limits, and unknown errors.
+
+3. Shared-result and edit flow QA
+   - Test direct links like `/simulator.html?run=<id>`.
+   - Confirm saved result loading handles loading, missing, expired, and retryable errors cleanly.
+   - Review the "Edit Assumptions" / "Revise Assumptions" behavior after opening a shared result. If the form cannot be hydrated safely from a saved result, change the action text to "Run Another Simulation" or load the matching template and assumptions before navigating to edit mode.
+
+4. End-to-end browser smoke
+   - Start the local demo server.
+   - From `/simulator.html`, choose each template, adjust at least one baseline and scenario value, run the simulation, inspect result content, copy/open a share link, and open the saved-results list.
+   - Confirm the UI renders `scenarioRanking`, `scoreBreakdown`, `scoreGap`, `decisionSummary`, `recommendedAction`, `confidenceSummary`, `watchouts`, `resultSummary`, `keyMetric`, and `expiryNote`.
+
+5. Pilot CTA polish
+   - Keep the current mailto handoff for this pass.
+   - Validate the form fields before opening mailto.
+   - Make the CTA easy to replace later with a server endpoint or Resend integration.
+
+6. Demo-console restraint
+   - Keep commerce/logistics demo summaries stable.
+   - Do not spend new frontend passes on the Commerce/Logistics/Ops demo console unless a concrete regression appears.
 
 ## P2 Trust And Conversion
 
@@ -84,16 +108,33 @@ Work only in the Reux repo. Use docs/public/business-simulator-product-brief.md 
 
 The Commerce/Logistics/Ops demo frontend is considered functionally complete. Do not spend this pass polishing the demo console unless you find a concrete regression. The active frontend focus is the sellable Business Simulator product.
 
-Implement the next highest-priority frontend item toward a sellable Business Simulator:
-- template selection for operations-decision, capacity-planning, staffing-plan, and pricing-strategy,
-- guided scenario run flow,
-- clear recommendation/result summary using decisionSummary, recommendedAction, confidenceSummary, and watchouts,
-- saved/shareable result page and reload states,
-- pilot CTA and product positioning,
-- responsive visual QA,
-- status surface updates.
+P0 is already landed in simulator.html/simulator.js. Implement the remaining P1 pilot-finish pass:
+- responsive visual QA at mobile, tablet, 1366x768, 1440x900, and wide desktop,
+- field-level validation mapping from API issues[].path to baseline/scenario inputs,
+- direct shared-result QA for /simulator.html?run=<id>, including missing/expired/retryable states,
+- review and fix the "Revise Assumptions" behavior after opening a shared result,
+- end-to-end browser smoke for all four templates,
+- pilot CTA mailto polish without adding a server endpoint yet.
+
+Use the current backend fields directly where useful:
+- comparison.scenarioRanking,
+- comparison.recommendation.scoreBreakdown,
+- comparison.recommendation.scoreGap,
+- comparison.recommendation.runnerUpScenarioName,
+- decisionSummary,
+- recommendedAction,
+- confidenceSummary,
+- watchouts,
+- resultSummary,
+- keyMetric,
+- expiryNote,
+- API error category/retryable/userAction.
 
 Do not change backend language/runtime code unless absolutely necessary. If an API gap blocks you, document the exact backend need and keep moving on frontend-safe work.
 
-Before finishing, run relevant checks, run npm run public:write if status assets changed, and summarize which roadmap/status labels were updated.
+Before finishing, run relevant checks, run npm run public:write if status assets changed, and summarize:
+- what responsive sizes were checked,
+- which shared-result states were tested,
+- which field-level validation paths now map to inputs,
+- any remaining frontend gaps.
 ```
