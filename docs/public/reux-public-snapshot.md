@@ -17,19 +17,17 @@ Updated: 2026-05-02
 - Language Core: prototype-complete. The prototype language core can model schemas, enums, reusable typed queries, guarded transaction functions, durable events, migrations, and simulations. (5 capabilities)
 - Runtime And Database: prototype-complete. The runtime path uses PostgreSQL today and supports compiled query execution, transaction execution, migrations, seeds, and outbox processing. (5 capabilities)
 - Developer Experience: prototype-complete. The CLI, docs, package smoke checks, and editor tooling are ready for technical review and local experimentation. (5 capabilities)
-- Public Demo: live. The hosted demo lets public users test commerce, logistics, and Business Simulator workflows with isolated visitor sessions, stable public error envelopes, public API rate limiting, request counters, generic Reux simulation execution, PostgreSQL-backed saved simulation runs, saved-run health checks, and maintenance cleanup tooling. (14 capabilities)
+- Public Demo: live. The hosted demo lets public users test commerce, logistics, and Business Simulator workflows with isolated visitor sessions, stable public error envelopes, public API rate limiting, request counters, generic Reux simulation execution, PostgreSQL-backed saved simulation runs, saved-run health checks, and maintenance cleanup tooling. (15 capabilities)
 - Pilots And Validation: active. Commerce, logistics, clinic, PLOS, and business operations examples keep Reux grounded in real product needs. (5 capabilities)
 
 ## Next Milestones
 
-1. Commercialization Wedge: Turn Business Simulator into the first sellable Reux-powered product. (4 items)
-2. Frontend Completion: Get the public frontend/demo surfaces close to completion. (3 items)
-3. Website & Status Sync: Keep public project cards, roadmap badges, live/demo links, and completed/in-progress labels current. (4 items)
-4. Frontend Reliability & Ops Depth: Add graceful failure states and deepen ops observability. (6 items)
-5. Documentation Handoff: Keep docs aligned with the actual demo. (2 items)
-6. Simulation Foundation: Make Reux useful for structured forecasting and scenario comparison. (5 items)
-7. Product Ecosystem: Keep Reux grounded in real products instead of building language features in isolation. (5 items)
-8. Developer Experience: Make Reux approachable for technical reviewers and early users. (4 items)
+1. Website & Status Sync: Keep public project cards, roadmap badges, live/demo links, and completed/in-progress labels current. (4 items)
+2. Frontend Reliability & Ops Depth: Add graceful failure states and deepen ops observability. (6 items)
+3. Documentation Handoff: Keep docs aligned with the actual demo. (2 items)
+4. Simulation Foundation: Make Reux useful for structured forecasting and scenario comparison. (5 items)
+5. Product Ecosystem: Keep Reux grounded in real products instead of building language features in isolation. (5 items)
+6. Developer Experience: Make Reux approachable for technical reviewers and early users. (4 items)
 
 ## Website Data Links
 

@@ -198,7 +198,7 @@ elements.resetSessionButton.addEventListener("click", async () => {
     const config = activeDomain();
     const result = await postJson(config.resetUrl, {});
     elements.actionResult.textContent = JSON.stringify(result, null, 2);
-    elements.actionSummary.innerHTML = `<strong>Session Reset:</strong> Fresh private seed data loaded for ${config.title.toLowerCase()}. <strong>Next:</strong> Run a transaction.`;
+    elements.actionSummary.innerHTML = `<strong>Session Reset:</strong> Fresh ${escapeHtml(config.title.toLowerCase())} seed data loaded. <strong>Next:</strong> Run a transaction like Capture Payment or Start Shipment.`;
     notify("Session reset with fresh demo data");
     await refresh();
   });
@@ -209,8 +209,8 @@ domainTabs.forEach((tab) => {
     state.currentDomain = tab.dataset.domain;
     window.localStorage.setItem("reuxDemoDomain", state.currentDomain);
     elements.actionResult.textContent = "";
-    elements.actionSummary.innerHTML = "Run an action to see the generated transaction or outbox result.";
-    elements.lastAction.textContent = "Idle";
+    elements.actionSummary.innerHTML = `Switched to <strong>${escapeHtml(activeDomain().title)}</strong>. Run an action or reset your session to load seed data.`;
+    elements.lastAction.textContent = "Idle — reset your session to begin";
     await refresh();
   });
 });
@@ -411,10 +411,17 @@ function loadSessionId() {
 
 function summarizeAction(labelText, result) {
   if (labelText === "processOutbox") {
-    return `<strong>Processed Outbox:</strong> ${escapeHtml(String(result.processed))} event(s) succeeded, ${escapeHtml(String(result.failed))} failed. <strong>Next:</strong> Check Queue Health or the Ops dashboard.`;
+    const processed = escapeHtml(String(result.processed));
+    const failed = escapeHtml(String(result.failed));
+    return `<strong>Processed Outbox:</strong> ${processed} event(s) succeeded, ${failed} failed. <strong>Next:</strong> Check Queue Health above or visit the <a href="/ops.html">Ops Dashboard</a>.`;
   }
   const events = result.outboxEvents?.length ?? 0;
-  return `<strong>Ran ${escapeHtml(titleCase(labelText))}:</strong> Wrote ${escapeHtml(String(events))} outbox event(s). <strong>Next:</strong> Click "Process Outbox" to move them.`;
+  const label = escapeHtml(titleCase(labelText));
+  const count = escapeHtml(String(events));
+  if (events === 0) {
+    return `<strong>Ran ${label}:</strong> No new outbox events. State was updated in-place. <strong>Next:</strong> Refresh to see the data change, or try another action.`;
+  }
+  return `<strong>Ran ${label}:</strong> Wrote ${count} outbox event(s). <strong>Next:</strong> Click "Process Outbox" to move them through the queue.`;
 }
 
 function friendlyError(message) {

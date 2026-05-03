@@ -314,7 +314,7 @@ input {
 
 .tester-guide {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -337,6 +337,11 @@ input {
   color: var(--muted);
   font-size: 13px;
   line-height: 1.45;
+}
+
+.tester-guide a {
+  color: var(--blue);
+  text-decoration: underline;
 }
 
 .guide-step {
@@ -561,5 +566,19 @@ td code {
 
   .button-row button {
     width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .status-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .queue-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .queue-strip > div:first-child {
+    grid-column: auto;
   }
 }

@@ -81,7 +81,8 @@
         "Dry-run/apply maintenance cleanup for visitor schemas and saved simulation runs",
         "Hosted deep health checks for saved-run creation, reload, and listing",
         "Health checks, deep smoke checks, CI smoke automation, monitor wrapper, webhook alerts, and operations dashboard",
-        "Responsive, accessible UI with mobile layout polish"
+        "Responsive, accessible UI with mobile layout polish",
+        "Polished tester flow with consistent action summaries and next-best-action guidance across all demo domains"
       ]
     },
     {

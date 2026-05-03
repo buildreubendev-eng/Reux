@@ -44,18 +44,23 @@
       <section class="tester-guide" aria-label="Demo testing guide">
         <div>
           <span class="guide-step">1</span>
-          <strong>Private Session</strong>
-          <p>"Reset My Session" creates fresh private seed data. Your actions only affect your isolated session.</p>
+          <strong>Reset Session</strong>
+          <p>Click "Reset My Session" to create fresh private seed data. Your actions only affect your isolated session.</p>
         </div>
         <div>
           <span class="guide-step">2</span>
-          <strong>Domain Actions</strong>
-          <p>Commerce and Logistics are separate domains. Running actions creates transactions and outbox effects.</p>
+          <strong>Run a Transaction</strong>
+          <p>Pick Commerce or Logistics. Run a transaction to change state and emit outbox events.</p>
         </div>
         <div>
           <span class="guide-step">3</span>
           <strong>Process Outbox</strong>
-          <p>Watch durable events move through Queue Health as you process the outbox.</p>
+          <p>Click "Process Outbox" and watch durable events move through Queue Health.</p>
+        </div>
+        <div>
+          <span class="guide-step">4</span>
+          <strong>Check Results</strong>
+          <p>Tables update after each action. Visit the <a href="/ops.html">Ops Dashboard</a> for cross-domain queue health.</p>
         </div>
       </section>
 
@@ -105,7 +110,7 @@
         <div class="panel">
           <div class="panel-heading">
             <h2>Transactions</h2>
-            <span id="lastAction">Idle</span>
+            <span id="lastAction">Idle — reset your session to begin</span>
           </div>
           <div id="actionSummary" class="action-summary">
             Run an action to see the generated transaction or outbox result.

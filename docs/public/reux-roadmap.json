@@ -4,18 +4,13 @@
   "status": {
     "demoReadinessPercent": 100,
     "fullCompletionPercent": 100,
-    "summary": "The prototype completion bar is closed. The public demo is live with commerce, logistics, and Business Simulator workflows, in-page tester guidance, clearer empty states, visible domain-scoped queue health, hosted smoke checks for reset, transaction, queue, outbox behavior, generic Reux simulation execution, PostgreSQL-backed saved simulation runs, saved-run health checks, stable public error envelopes, public API rate limiting, request counters, and maintenance cleanup tooling. CI smoke automation against PostgreSQL, a reusable monitor for uptime checks with optional webhook alerts, and an operations dashboard support queue and worker health. The current language core has broader transaction control flow, deeper expression typing, alias-remapped reusable filters, null-aware predicate/guard lowering, typed worker contracts, and tighter diagnostics. Simulation domain packs report coverage and suggested assumptions, metrics, scenarios, and objectives, with executable PLOS finance/habit and business workforce/operations examples, deterministic scheduled-change reporting, non-finite formula rejection, generated catalog helpers, and product-facing simulation APIs. The first sellable wedge is now the Business Simulator: a guided operational scenario-planning product powered by Reux. Release preflight checks package entrypoints, release docs, roadmap sync, and clean-tree readiness; migrations synthesize rollback SQL for safe reversible schema changes; VS Code diagnostics infer useful symbol and field ranges; and public release planning is documented."
+    "summary": "The prototype completion bar is closed. The public demo is live with commerce, logistics, and Business Simulator workflows, in-page tester guidance, clearer empty states, visible domain-scoped queue health, hosted smoke checks for reset, transaction, queue, outbox behavior, generic Reux simulation execution, PostgreSQL-backed saved simulation runs, saved-run health checks, public API rate limiting, request counters, and maintenance cleanup tooling. CI smoke automation against PostgreSQL, a reusable monitor for uptime checks with optional webhook alerts, and an operations dashboard support queue and worker health. The current language core has broader transaction control flow, deeper expression typing, alias-remapped reusable filters, null-aware predicate/guard lowering, typed worker contracts, and tighter diagnostics. Simulation domain packs report coverage and suggested assumptions, metrics, scenarios, and objectives, with executable PLOS finance/habit and business workforce/operations examples, deterministic scheduled-change reporting, non-finite formula rejection, generated catalog helpers, and product-facing simulation APIs. Release preflight checks package entrypoints, release docs, roadmap sync, and clean-tree readiness; migrations synthesize rollback SQL for safe reversible schema changes; VS Code diagnostics infer useful symbol and field ranges; and public release planning is documented."
   },
   "liveNow": [
     "Public commerce workflow demo",
     "Public logistics workflow demo",
     "Public Business Simulator powered by generic Reux simulation execution",
-    "Business Simulator recommendation payloads with winner rationale, key deltas, baseline-change summaries, risk summary, and tradeoff summary",
-    "Business Simulator first-wedge product brief for buyer, offer, and pilot positioning",
-    "Separate Business Simulator frontend and backend roadmaps for sellable-product execution",
     "PostgreSQL-backed Business Simulator run records for result pages and sharing",
-    "Saved Business Simulator run summaries with display title, share label, key metric, result summary, and expiry note",
-    "Business Simulator error envelopes for validation, expired saved runs, missing records, oversized requests, malformed JSON, and rate limits",
     "Public API rate limiting and request counters for hosted demo protection",
     "Dry-run/apply maintenance cleanup for visitor schemas and saved simulation runs",
     "Hosted deep health checks for saved-run creation, reload, and listing",
@@ -45,28 +40,12 @@
     "Language-core completion pass for transaction control flow, expression typing, reusable filters, worker contracts, null-aware lowering, and diagnostics",
     "Keep improving public demo copy as new domains are added",
     "Keep monitor alert routing aligned with the final hosting and notification setup",
-    "Document public reset/session behavior for testers"
+    "Document public reset/session behavior for testers",
+    "Polished public tester flow from landing through reset, transaction, outbox processing, and result viewing",
+    "Consistent 'what just happened' summaries across commerce, logistics, and simulation flows",
+    "Next-best-action guidance after reset, transaction, simulation run, and process-outbox"
   ],
   "milestones": [
-    {
-      "title": "Commercialization Wedge",
-      "goal": "Turn Business Simulator into the first sellable Reux-powered product.",
-      "items": [
-        "Package Business Simulator as the first sellable wedge around operational scenario planning",
-        "Keep demo completion focused on result creation, saved runs, shareable summaries, and clear recommendations",
-        "Define buyer, user, early-adopter signal, and pilot qualification notes",
-        "Add simple pilot offer and CTA copy for website and sales handoff"
-      ]
-    },
-    {
-      "title": "Frontend Completion",
-      "goal": "Get the public frontend/demo surfaces close to completion.",
-      "items": [
-        "Add a polished public tester flow from landing/demo entry to successful transaction to outbox processing",
-        "Make 'what just happened' summaries consistent across commerce and logistics",
-        "Ensure the demo always shows the next best action after reset, transaction, and process-outbox"
-      ]
-    },
     {
       "title": "Website & Status Sync",
       "goal": "Keep public project cards, roadmap badges, live/demo links, and completed/in-progress labels current.",
