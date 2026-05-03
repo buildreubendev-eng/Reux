@@ -76,6 +76,20 @@ describe("product-facing simulation service", () => {
     expect(response.run.scenarios?.[0]?.periods[0]?.assumptions.income).toBe(6200);
     expect(response.run.scenarios?.[1]?.periods[0]?.assumptions.rent).toBe(1100);
     expect(response.run.scenarios?.[1]?.periods[5]?.assumptions.debt_payment).toBe(0);
+    expect(response.run.timeSeries.assumptions.find((series) => series.name === "income")).toMatchObject({
+      name: "income",
+      unit: "USD",
+      points: expect.arrayContaining([
+        expect.objectContaining({ period: 1, value: 6200, changedFromPrevious: false, changedFromBaseline: false }),
+      ]),
+    });
+    expect(response.run.scenarios?.[1]?.timeSeries.assumptions.find((series) => series.name === "debt_payment")).toMatchObject({
+      name: "debt_payment",
+      unit: "USD",
+      points: expect.arrayContaining([
+        expect.objectContaining({ period: 6, value: 0, changedFromPrevious: true, changedFromBaseline: true, deltaFromPrevious: -500 }),
+      ]),
+    });
     expect(response.run.comparison?.metricRankings.some((ranking) => ranking.metric === "annual_surplus")).toBe(true);
   });
 

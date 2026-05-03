@@ -58,6 +58,7 @@ export interface SimulationRunResult {
   forecast: SimulationIr["forecast"];
   objectives: SimulationObjectiveIr[];
   periods: SimulationPeriodResult[];
+  timeSeries: SimulationRunTimeSeries;
   scenarios?: SimulationScenarioRunResult[];
   comparison?: SimulationComparisonResult;
 }
@@ -88,6 +89,40 @@ export interface SimulationAssumptionDelta {
 export interface SimulationScenarioRunResult {
   name: string;
   periods: SimulationPeriodResult[];
+  timeSeries: SimulationRunTimeSeries;
+}
+
+export interface SimulationRunTimeSeries {
+  assumptions: SimulationAssumptionSeries[];
+  metrics: SimulationMetricSeries[];
+}
+
+export interface SimulationAssumptionSeries {
+  name: string;
+  unit?: string;
+  points: SimulationValueSeriesPoint[];
+}
+
+export interface SimulationMetricSeries {
+  name: string;
+  unit?: string;
+  points: SimulationNumberSeriesPoint[];
+}
+
+export interface SimulationValueSeriesPoint {
+  period: number;
+  label: string;
+  value: boolean | number | string;
+  changedFromPrevious: boolean;
+  changedFromBaseline: boolean;
+  deltaFromPrevious?: number;
+  deltaFromBaseline?: number;
+}
+
+export interface SimulationNumberSeriesPoint {
+  period: number;
+  label: string;
+  value: number;
 }
 
 export interface SimulationComparisonResult {
@@ -158,7 +193,7 @@ export function runSimulationIr(simulation: SimulationIr): SimulationRunResult {
   const periods = runScenarioPeriods(simulation, assumptions, assumptionUnits);
   const scenarios = simulation.scenarios.length > 0
     ? [
-        { name: "baseline", periods },
+        { name: "baseline", periods, timeSeries: buildRunTimeSeries(periods) },
         ...simulation.scenarios.map((scenario) => ({
           name: scenario.name,
           periods: runScenarioPeriods(
@@ -167,7 +202,7 @@ export function runSimulationIr(simulation: SimulationIr): SimulationRunResult {
             mergeAssumptionUnits(assumptionUnits, scenario.overrides),
             scenario.changes,
           ),
-        })),
+        })).map((scenario) => ({ ...scenario, timeSeries: buildRunTimeSeries(scenario.periods) })),
       ]
     : undefined;
 
@@ -178,6 +213,7 @@ export function runSimulationIr(simulation: SimulationIr): SimulationRunResult {
     forecast: simulation.forecast,
     objectives: simulation.objectives,
     periods,
+    timeSeries: buildRunTimeSeries(periods),
     ...(scenarios ? { scenarios, comparison: compareScenarios(scenarios, simulation.objectives) } : {}),
   };
 }
@@ -535,6 +571,53 @@ function uniqueAppliedChanges(changes: SimulationChangeIr[]): Array<{ period: nu
       seen.add(key);
       return true;
     });
+}
+
+function buildRunTimeSeries(periods: SimulationPeriodResult[]): SimulationRunTimeSeries {
+  const assumptionNames = new Set<string>();
+  const metricNames = new Set<string>();
+  for (const period of periods) {
+    for (const name of Object.keys(period.assumptions)) assumptionNames.add(name);
+    for (const name of Object.keys(period.metrics)) metricNames.add(name);
+  }
+
+  return {
+    assumptions: [...assumptionNames].sort().map((name) => {
+      const unit = periods.find((period) => period.assumptionUnits[name])?.assumptionUnits[name];
+      return {
+        name,
+        ...(unit ? { unit } : {}),
+        points: periods.flatMap((period): SimulationValueSeriesPoint[] => {
+          const value = period.assumptions[name];
+          const delta = period.assumptionDeltas[name];
+          if (value === undefined || !delta) return [];
+          return [
+            {
+              period: period.period,
+              label: period.label,
+              value,
+              changedFromPrevious: delta.changedFromPrevious,
+              changedFromBaseline: delta.changedFromBaseline,
+              ...(delta.deltaFromPrevious !== undefined ? { deltaFromPrevious: delta.deltaFromPrevious } : {}),
+              ...(delta.deltaFromBaseline !== undefined ? { deltaFromBaseline: delta.deltaFromBaseline } : {}),
+            },
+          ];
+        }),
+      };
+    }),
+    metrics: [...metricNames].sort().map((name) => {
+      const unit = periods.find((period) => period.metricUnits[name])?.metricUnits[name];
+      return {
+        name,
+        ...(unit ? { unit } : {}),
+        points: periods.flatMap((period): SimulationNumberSeriesPoint[] => {
+          const value = period.metrics[name];
+          if (value === undefined) return [];
+          return [{ period: period.period, label: period.label, value }];
+        }),
+      };
+    }),
+  };
 }
 
 function mergeAssumptions(

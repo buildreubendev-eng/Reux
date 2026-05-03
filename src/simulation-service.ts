@@ -421,13 +421,9 @@ function simulationErrorResponse(error: ReuxSimulationExecutionError): ReuxSimul
 
 function metricNames(run: SimulationRunResult): string[] {
   const names = new Set<string>();
-  for (const period of run.periods) {
-    for (const metric of Object.keys(period.metrics)) names.add(metric);
-  }
+  for (const series of run.timeSeries.metrics) names.add(series.name);
   for (const scenario of run.scenarios ?? []) {
-    for (const period of scenario.periods) {
-      for (const metric of Object.keys(period.metrics)) names.add(metric);
-    }
+    for (const series of scenario.timeSeries.metrics) names.add(series.name);
   }
   return [...names].sort();
 }

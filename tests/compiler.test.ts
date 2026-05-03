@@ -570,6 +570,29 @@ simulate personal_finance {
     expect(run.periods[0].metrics.productivity_index).toBe(108);
     expect(run.periods[0].metrics.operating_relief).toBe(0.18);
     expect(run.periods[0].metricUnits).toEqual({ operating_relief: "percent" });
+    expect(run.timeSeries.metrics.find((series: { name: string }) => series.name === "productivity_index")).toMatchObject({
+      name: "productivity_index",
+      points: [
+        { period: 1, label: "1 month", value: 108 },
+        { period: 2, label: "2 months", value: 108 },
+        { period: 3, label: "3 months", value: 108 },
+        { period: 4, label: "4 months", value: 110 },
+        { period: 5, label: "5 months", value: 110 },
+        { period: 6, label: "6 months", value: 110 },
+      ],
+    });
+    expect(run.timeSeries.assumptions.find((series: { name: string }) => series.name === "productivity_gain")).toMatchObject({
+      name: "productivity_gain",
+      unit: "percent",
+      points: [
+        { period: 1, value: 0.08, changedFromPrevious: false, changedFromBaseline: false, deltaFromPrevious: 0, deltaFromBaseline: 0 },
+        { period: 2, value: 0.08, changedFromPrevious: false, changedFromBaseline: false, deltaFromPrevious: 0, deltaFromBaseline: 0 },
+        { period: 3, value: 0.08, changedFromPrevious: false, changedFromBaseline: false, deltaFromPrevious: 0, deltaFromBaseline: 0 },
+        { period: 4, value: 0.1, changedFromPrevious: true, changedFromBaseline: true, deltaFromPrevious: 0.02, deltaFromBaseline: 0.02 },
+        { period: 5, value: 0.1, changedFromPrevious: false, changedFromBaseline: true, deltaFromPrevious: 0, deltaFromBaseline: 0.02 },
+        { period: 6, value: 0.1, changedFromPrevious: false, changedFromBaseline: true, deltaFromPrevious: 0, deltaFromBaseline: 0.02 },
+      ],
+    });
     expect(run.periods[3].assumptionDeltas.productivity_gain).toMatchObject({
       name: "productivity_gain",
       baseline: 0.08,
@@ -671,8 +694,10 @@ simulate support_cost {
     expect(types).toContain("export interface WorkforceChangeAssumptions");
     expect(types).toContain("export interface ReuxSimulationExplanation<ScenarioName extends string, MetricName extends string>");
     expect(types).toContain("export interface ReuxSimulationAssumptionDelta<Value = ReuxSimulationValue>");
+    expect(types).toContain("export interface ReuxSimulationTimeSeries<Assumptions extends object, Metrics extends object>");
     expect(types).toContain("export interface ReuxSimulationMetricSummary<ScenarioName extends string, MetricName extends string>");
     expect(types).toContain("assumptionDeltas: Partial<{ [Name in keyof Assumptions]: ReuxSimulationAssumptionDelta<Assumptions[Name]> }>;");
+    expect(types).toContain("timeSeries: ReuxSimulationTimeSeries<Assumptions, Metrics>;");
     expect(types).toContain("export function formatReuxSimulationDelta(delta: number | undefined, unit?: string): string");
     expect(types).toContain("export function summarizeReuxSimulationComparison<ScenarioName extends string, Metrics extends object, MetricName extends string>");
     expect(types).toContain("export function listReuxSimulationScenarioDeltas<ScenarioName extends string, Metrics extends object, MetricName extends string>");
