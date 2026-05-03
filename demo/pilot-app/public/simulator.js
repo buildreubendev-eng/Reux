@@ -99,12 +99,16 @@ function normalizePath(path) {
   return (path || "").replace(/^\$\./, "");
 }
 function markFieldError(inputId, message) {
-  const input = $("#" + inputId) || $(`[data-field="${inputId}"]`);
+  const input = document.getElementById(inputId) || $(`[data-field="${inputId}"]`);
   if (!input) return false;
   input.classList.add("sim-input-error");
   const errEl = el("span", { className: "sim-field-error" }, message);
   input.parentElement.append(errEl);
   return true;
+}
+function hasIssueField(path) {
+  const fieldId = issuePath2FieldId(path);
+  return Boolean(fieldId && (document.getElementById(fieldId) || $(`[data-field="${fieldId}"]`)));
 }
 function mapIssuesToFields(issues) {
   if (!issues?.length) return false;
@@ -260,7 +264,7 @@ async function runSim() {
     if (err.issues?.length && !hasMappedFields) {
       msg += "\n" + err.issues.map(i => `• ${i.path}: ${i.message}`).join("\n");
     } else if (err.issues?.length && hasMappedFields) {
-      const unmapped = err.issues.filter(i => !$("#" + issuePath2FieldId(i.path)));
+      const unmapped = err.issues.filter(i => !hasIssueField(i.path));
       if (unmapped.length) msg += "\n" + unmapped.map(i => `• ${i.path}: ${i.message}`).join("\n");
     }
     setText("#runErrorMessage", msg);
@@ -440,7 +444,7 @@ async function loadSavedRun(id) {
 }
 
 // ─── Pilot CTA ───
-function handlePilotSubmit(e) {
+async function handlePilotSubmit(e) {
   e.preventDefault();
   // Clear previous pilot field errors
   for (const inp of $$("#pilotForm .sim-input-error")) inp.classList.remove("sim-input-error");
@@ -454,20 +458,69 @@ function handlePilotSubmit(e) {
   const decision = decisionInput.value.trim();
   let valid = true;
 
-  if (!name) { nameInput.classList.add("sim-input-error"); nameInput.parentElement.append(el("span", { className: "sim-field-error" }, "Name is required")); valid = false; }
-  if (!email) { emailInput.classList.add("sim-input-error"); emailInput.parentElement.append(el("span", { className: "sim-field-error" }, "Email is required")); valid = false; }
-  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { emailInput.classList.add("sim-input-error"); emailInput.parentElement.append(el("span", { className: "sim-field-error" }, "Enter a valid email address")); valid = false; }
-  if (!decision) { decisionInput.classList.add("sim-input-error"); decisionInput.parentElement.append(el("span", { className: "sim-field-error" }, "Describe the decision you are modeling")); valid = false; }
+  if (!name) { markPilotFieldError(nameInput, "Name is required"); valid = false; }
+  if (!email) { markPilotFieldError(emailInput, "Email is required"); valid = false; }
+  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { markPilotFieldError(emailInput, "Enter a valid email address"); valid = false; }
+  if (!decision) { markPilotFieldError(decisionInput, "Describe the decision you are modeling"); valid = false; }
 
   if (!valid) { notify("Please fix the highlighted fields", true); return; }
 
-  // Build mailto — easy to replace with a POST endpoint later:
-  // Replace this block with: await apiPost("/api/pilot-request", { name, email, decision });
-  const subject = encodeURIComponent("Business Simulator Pilot Request");
-  const body = encodeURIComponent(`Name: ${name}\nEmail: ${email}\nDecision: ${decision}`);
-  window.open(`mailto:pilot@reuben.dev?subject=${subject}&body=${body}`, "_self");
-  hide("#pilotForm"); show("#pilotConfirmation");
-  notify("Pilot request sent");
+  // Submit to the backend first; the backend returns a mailto fallback when email delivery is not configured.
+  const submitButton = $("#pilotSubmit");
+  const originalLabel = submitButton.textContent;
+  submitButton.disabled = true;
+  submitButton.textContent = "Sending...";
+
+  try {
+    const result = await apiPost("/pilot-requests", {
+      name,
+      email,
+      decision,
+      sourceRunId: state.savedRunId || new URLSearchParams(window.location.search).get("run") || undefined,
+      pageUrl: window.location.href,
+    });
+    const delivery = result.delivery || {};
+
+    if (delivery.mailto && delivery.status !== "sent") {
+      window.location.href = delivery.mailto;
+      setText("#pilotConfirmation", "Your email app should open with a prefilled pilot request. Send it to complete the handoff.");
+    } else {
+      setText("#pilotConfirmation", `Thanks. Your pilot request was received${result.request?.id ? ` (${result.request.id})` : ""}.`);
+    }
+
+    hide("#pilotForm"); show("#pilotConfirmation");
+    notify(delivery.status === "sent" ? "Pilot request received" : "Pilot request ready to send");
+  } catch (err) {
+    const mapped = mapPilotIssuesToFields(err.issues);
+    notify(mapped ? "Please fix the highlighted fields" : err.userAction || err.message || "Could not send pilot request", true);
+  } finally {
+    submitButton.disabled = false;
+    submitButton.textContent = originalLabel;
+  }
+}
+
+// ─── Pilot CTA helpers ───
+function markPilotFieldError(input, message) {
+  input.classList.add("sim-input-error");
+  input.parentElement.append(el("span", { className: "sim-field-error" }, message));
+}
+
+function mapPilotIssuesToFields(issues) {
+  if (!issues?.length) return false;
+  let mapped = 0;
+  const fieldMap = {
+    name: $("#pilotName"),
+    email: $("#pilotEmail"),
+    decision: $("#pilotDecision"),
+  };
+  for (const issue of issues) {
+    const path = normalizePath(issue.path);
+    const input = fieldMap[path];
+    if (!input) continue;
+    markPilotFieldError(input, issue.message);
+    mapped += 1;
+  }
+  return mapped > 0;
 }
 
 // ─── Deep link handling ───
