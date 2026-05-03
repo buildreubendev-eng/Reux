@@ -54,7 +54,11 @@
     "simulationRunTtlMsDefault": 86400000,
     "businessSimulatorMaxRunScenarios": 8,
     "businessSimulatorMaxCompareScenarios": 12,
-    "businessSimulatorMaxForecastPeriods": 52
+    "businessSimulatorMaxForecastPeriods": 52,
+    "businessSimulatorMaxEmployees": 10000,
+    "businessSimulatorMaxWeeklyDemand": 1000000,
+    "businessSimulatorMaxAverageHourlyCost": 1000,
+    "businessSimulatorMaxAverageOrderValue": 1000000
   },
   "errorCodes": [
     "business_simulator_validation_failed",

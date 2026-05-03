@@ -53,7 +53,8 @@ export function assertBusinessSimulatorRunRequest(value: unknown): asserts value
   }
 
   validateAssumptions(value.baseline, "$.baseline", issues);
-  validateScenarioInputs(value.scenarios, "$.scenarios", issues);
+  validateAssumptionRelationships(value.baseline, "$.baseline", issues);
+  validateScenarioInputs(value.scenarios, "$.scenarios", value.baseline, issues);
 
   validateOptionalBoundedString(
     value.name,
@@ -125,7 +126,12 @@ function validateAssumptions(value: unknown, path: string, issues: BusinessSimul
   }
 }
 
-function validateScenarioInputs(value: unknown, path: string, issues: BusinessSimulatorValidationIssue[]): void {
+function validateScenarioInputs(
+  value: unknown,
+  path: string,
+  baseline: unknown,
+  issues: BusinessSimulatorValidationIssue[],
+): void {
   if (!Array.isArray(value) || value.length === 0) {
     issues.push({ path, message: "must contain at least one scenario" });
     return;
@@ -150,6 +156,7 @@ function validateScenarioInputs(value: unknown, path: string, issues: BusinessSi
     validateBoundedString(scenario.name, `${scenarioPath}.name`, "name", businessSimulatorLimits.maxScenarioNameLength, issues);
     validateOptionalBoundedString(scenario.description, `${scenarioPath}.description`, "description", businessSimulatorLimits.maxScenarioDescriptionLength, issues);
     validateScenarioAssumptions(scenario.assumptions, `${scenarioPath}.assumptions`, issues);
+    validateScenarioBusinessRules(scenario.assumptions, `${scenarioPath}.assumptions`, baseline, issues);
   });
 }
 
@@ -172,6 +179,42 @@ function validateScenarioAssumptions(value: unknown, path: string, issues: Busin
   }
 }
 
+function validateScenarioBusinessRules(
+  value: unknown,
+  path: string,
+  baseline: unknown,
+  issues: BusinessSimulatorValidationIssue[],
+): void {
+  if (!isRecord(value)) return;
+  const supportedOverrideFields = Object.keys(value).filter((field) =>
+    field !== "forecastPeriods" &&
+    field !== "forecastUnit" &&
+    assumptionFields.includes(field as keyof BusinessSimulatorAssumptions),
+  );
+  if (supportedOverrideFields.length === 0) {
+    issues.push({ path, message: "must include at least one supported assumption override" });
+    return;
+  }
+  const baselineAssumptions = readAssumptions(baseline);
+  if (!baselineAssumptions) return;
+
+  const changedFields = supportedOverrideFields.filter((field) =>
+    typeof value[field] === "number" &&
+    Number.isFinite(value[field]) &&
+    baselineAssumptions[field as keyof BusinessSimulatorAssumptions] !== value[field],
+  );
+  if (changedFields.length === 0) {
+    issues.push({ path, message: "must change at least one baseline assumption" });
+  }
+
+  validateAssumptionRelationships(
+    { ...baselineAssumptions, ...value },
+    path,
+    issues,
+    supportedOverrideFields,
+  );
+}
+
 function validateAssumptionValue(
   field: keyof BusinessSimulatorAssumptions,
   value: unknown,
@@ -188,6 +231,14 @@ function validateAssumptionValue(
     issues.push({ path, message: "must be a finite number" });
     return;
   }
+  if (field === "employees") {
+    if (!Number.isInteger(value) || value < 1) {
+      issues.push({ path, message: "must be a positive integer" });
+    } else if (value > businessSimulatorLimits.maxEmployees) {
+      issues.push({ path, message: `must be ${businessSimulatorLimits.maxEmployees} or less` });
+    }
+    return;
+  }
   if (field === "forecastPeriods") {
     if (!Number.isInteger(value) || value < 1) {
       issues.push({ path, message: "must be a positive integer" });
@@ -200,8 +251,53 @@ function validateAssumptionValue(
     issues.push({ path, message: "must be between 0 and 1" });
     return;
   }
+  if ((field === "averageHourlyCost" || field === "averageOrderValue") && value <= 0) {
+    issues.push({ path, message: "must be greater than 0" });
+    return;
+  }
+  if (field === "averageHourlyCost" && value > businessSimulatorLimits.maxAverageHourlyCost) {
+    issues.push({ path, message: `must be ${businessSimulatorLimits.maxAverageHourlyCost} or less` });
+    return;
+  }
+  if (field === "averageOrderValue" && value > businessSimulatorLimits.maxAverageOrderValue) {
+    issues.push({ path, message: `must be ${businessSimulatorLimits.maxAverageOrderValue} or less` });
+    return;
+  }
+  if (field === "weeklyDemand" && value > businessSimulatorLimits.maxWeeklyDemand) {
+    issues.push({ path, message: `must be ${businessSimulatorLimits.maxWeeklyDemand} or less` });
+    return;
+  }
   if (value < 0) {
     issues.push({ path, message: "must be non-negative" });
+  }
+}
+
+function validateAssumptionRelationships(
+  value: unknown,
+  path: string,
+  issues: BusinessSimulatorValidationIssue[],
+  preferredPaths: string[] = [],
+): void {
+  if (!isRecord(value)) return;
+  const supplierDelayRiskRate = value.supplierDelayRiskRate;
+  const defectRate = value.defectRate;
+  if (
+    typeof supplierDelayRiskRate === "number" &&
+    Number.isFinite(supplierDelayRiskRate) &&
+    typeof defectRate === "number" &&
+    Number.isFinite(defectRate) &&
+    supplierDelayRiskRate >= 0 &&
+    defectRate >= 0 &&
+    supplierDelayRiskRate <= 1 &&
+    defectRate <= 1 &&
+    supplierDelayRiskRate + defectRate > 1
+  ) {
+    const target = preferredPaths.includes("supplierDelayRiskRate")
+      ? "supplierDelayRiskRate"
+      : preferredPaths.includes("defectRate")
+        ? "defectRate"
+        : "supplierDelayRiskRate";
+    issues.push({ path: `${path}.${target}`, message: "combined supplier delay risk and defect rate must be 1 or less" });
   }
 }
 
@@ -316,6 +412,17 @@ function validateMetricSnapshot(value: unknown, path: string, issues: BusinessSi
       issues.push({ path: `${path}.${metric}`, message: "is not a supported metric" });
     }
   }
+}
+
+function readAssumptions(value: unknown): Partial<BusinessSimulatorAssumptions> | undefined {
+  if (!isRecord(value)) return undefined;
+  const assumptions: Partial<BusinessSimulatorAssumptions> = {};
+  for (const field of assumptionFields) {
+    if (field in value) {
+      assumptions[field] = value[field] as never;
+    }
+  }
+  return assumptions;
 }
 
 function throwIfIssues(issues: BusinessSimulatorValidationIssue[]): void {

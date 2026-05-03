@@ -153,7 +153,7 @@ The same fixture includes `invalidRunResponse`, a deterministic example of the v
 
 For public API handlers, call `assertBusinessSimulatorRunRequest(body)` before running a simulation and `assertBusinessSimulatorCompareRequest(body)` before comparing existing results. Validation failures throw `BusinessSimulatorValidationError` with stable `issues[].path` values such as `$.baseline.grossMarginRate`, which lets frontends display field-level errors instead of a generic failed request.
 
-Run requests also reject unsupported `simulationId` values and duplicate scenario IDs. Compare requests reject duplicate scenario result IDs and metric snapshots with unknown or non-numeric metrics. Scenario IDs should be unique because comparison results are keyed by scenario ID.
+Run requests also reject unsupported `simulationId` values, duplicate scenario IDs, no-op scenarios, impossible headcount, and risk profiles where `supplierDelayRiskRate + defectRate` exceeds `1`. Compare requests reject duplicate scenario result IDs and metric snapshots with unknown or non-numeric metrics. Scenario IDs should be unique because comparison results are keyed by scenario ID.
 
 Public-demo limits are intentionally conservative:
 
@@ -166,6 +166,11 @@ Public-demo limits are intentionally conservative:
 | Scenario ID length | 64 |
 | Scenario name length | 120 |
 | Scenario description length | 500 |
+| Employees | positive integer, max 10,000 |
+| Weekly demand | max 1,000,000 |
+| Average hourly cost | greater than 0, max 1,000 |
+| Average order value | greater than 0, max 1,000,000 |
+| Combined supplier-delay and defect risk | max 1 |
 
 Scenario IDs must use letters, numbers, underscores, or hyphens and must start with a letter or number. These limits keep the public demo responsive and make validation errors predictable for frontend field-level UI.
 

@@ -65,6 +65,10 @@ export const businessSimulatorLimits = {
   maxScenarioIdLength: 64,
   maxScenarioNameLength: 120,
   maxScenarioDescriptionLength: 500,
+  maxEmployees: 10_000,
+  maxWeeklyDemand: 1_000_000,
+  maxAverageHourlyCost: 1_000,
+  maxAverageOrderValue: 1_000_000,
 } as const;
 
 export interface BusinessSimulatorAssumptions {

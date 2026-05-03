@@ -415,10 +415,10 @@ function normalizeRunRequest(request: BusinessSimulatorRunRequest): BusinessSimu
 function normalizeAssumptions(assumptions: BusinessSimulatorAssumptions): BusinessSimulatorAssumptions {
   return {
     ...assumptions,
-    employees: positiveNumber("employees", assumptions.employees),
-    averageHourlyCost: positiveNumber("averageHourlyCost", assumptions.averageHourlyCost),
+    employees: positiveInteger("employees", assumptions.employees),
+    averageHourlyCost: positiveMoney("averageHourlyCost", assumptions.averageHourlyCost),
     weeklyDemand: positiveNumber("weeklyDemand", assumptions.weeklyDemand),
-    averageOrderValue: positiveNumber("averageOrderValue", assumptions.averageOrderValue),
+    averageOrderValue: positiveMoney("averageOrderValue", assumptions.averageOrderValue),
     grossMarginRate: rate("grossMarginRate", assumptions.grossMarginRate),
     productivityGainRate: rate("productivityGainRate", assumptions.productivityGainRate),
     overtimeReductionRate: rate("overtimeReductionRate", assumptions.overtimeReductionRate),
@@ -893,6 +893,11 @@ function toPercentQuantity(value: number): number {
 
 function positiveNumber(name: string, value: number): number {
   if (!Number.isFinite(value) || value < 0) throw new Error(`${name} must be a non-negative finite number`);
+  return value;
+}
+
+function positiveMoney(name: string, value: number): number {
+  if (!Number.isFinite(value) || value <= 0) throw new Error(`${name} must be greater than 0`);
   return value;
 }
 

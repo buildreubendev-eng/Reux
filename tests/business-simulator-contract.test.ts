@@ -545,6 +545,47 @@ describe("business simulator API contract", () => {
     }
   });
 
+  it("rejects untrustworthy business assumptions before formula execution", () => {
+    try {
+      assertBusinessSimulatorRunRequest({
+        baseline: {
+          ...businessSimulatorDefaultAssumptions,
+          employees: 0,
+          averageHourlyCost: 0,
+          averageOrderValue: businessSimulatorLimits.maxAverageOrderValue + 1,
+          supplierDelayRiskRate: 0.7,
+          defectRate: 0.4,
+        },
+        scenarios: [
+          {
+            id: "no-change",
+            name: "No Change",
+            assumptions: {
+              productivityGainRate: businessSimulatorDefaultAssumptions.productivityGainRate,
+            },
+          },
+          {
+            id: "risk-overload",
+            name: "Risk Overload",
+            assumptions: {
+              supplierDelayRiskRate: 0.95,
+            },
+          },
+        ],
+      });
+      throw new Error("expected validation to fail");
+    } catch (error) {
+      expect(error).toBeInstanceOf(BusinessSimulatorValidationError);
+      const issueMap = new Map((error as BusinessSimulatorValidationError).issues.map((issue) => [issue.path, issue.message]));
+      expect(issueMap.get("$.baseline.employees")).toBe("must be a positive integer");
+      expect(issueMap.get("$.baseline.averageHourlyCost")).toBe("must be greater than 0");
+      expect(issueMap.get("$.baseline.averageOrderValue")).toBe(`must be ${businessSimulatorLimits.maxAverageOrderValue} or less`);
+      expect(issueMap.get("$.baseline.supplierDelayRiskRate")).toBe("combined supplier delay risk and defect rate must be 1 or less");
+      expect(issueMap.get("$.scenarios[0].assumptions")).toBe("must change at least one baseline assumption");
+      expect(issueMap.get("$.scenarios[1].assumptions.supplierDelayRiskRate")).toBe("combined supplier delay risk and defect rate must be 1 or less");
+    }
+  });
+
   it("rejects malformed compare requests with stable validation paths", () => {
     const run = runBusinessSimulator(
       {

@@ -280,6 +280,10 @@ Missing saved-run lookups return `404`:
 | Business Simulator run scenarios | `8` | source contract |
 | Business Simulator compare scenarios | `12` | source contract |
 | Business Simulator forecast periods | `52` | source contract |
+| Business Simulator employees | positive integer, max `10000` | source contract |
+| Business Simulator weekly demand | max `1000000` | source contract |
+| Business Simulator average hourly cost | greater than `0`, max `1000` | source contract |
+| Business Simulator average order value | greater than `0`, max `1000000` | source contract |
 
 The health response reports active body, rate-limit, request-counter, session-cache, and saved-run limits, so host config can be verified after redeploy. Rate-limited responses use `429`, `code: "rate_limited"`, `retryAfterSeconds`, and `resetAt`; frontend clients should show a calm retry message instead of treating this as a broken backend. Operators can prune expired or over-limit saved runs with `npm run demo:maintenance`.
 
