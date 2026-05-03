@@ -47,14 +47,15 @@
     "Document public reset/session behavior for testers",
     "Polished public tester flow from landing through reset, transaction, outbox processing, and result viewing",
     "Consistent 'what just happened' summaries across commerce, logistics, and simulation flows",
-    "Next-best-action guidance after reset, transaction, simulation run, and process-outbox"
+    "Next-best-action guidance after reset, transaction, simulation run, and process-outbox",
+    "Functionally complete Commerce, Logistics, and Operations demo frontend"
   ],
   "capabilityGroups": [
     {
       "name": "Commercial Productization",
       "status": "active",
       "summary": "The first sellable wedge is Business Simulator, aimed at teams that need operational scenario planning, saved results, and explainable recommendations.",
-      "capabilityCount": 5
+      "capabilityCount": 6
     },
     {
       "name": "Language Core",
@@ -78,7 +79,7 @@
       "name": "Public Demo",
       "status": "live",
       "summary": "The hosted demo lets public users test commerce, logistics, and Business Simulator workflows with isolated visitor sessions, stable public error envelopes, public API rate limiting, request counters, generic Reux simulation execution, PostgreSQL-backed saved simulation runs, saved-run health checks, and maintenance cleanup tooling.",
-      "capabilityCount": 17
+      "capabilityCount": 18
     },
     {
       "name": "Pilots And Validation",
@@ -90,36 +91,42 @@
   "nextMilestones": [
     {
       "order": 1,
+      "title": "Sellable Business Simulator Frontend",
+      "goal": "Finish the buyer-facing Business Simulator product UI now that the demo console is functionally complete.",
+      "itemCount": 6
+    },
+    {
+      "order": 2,
+      "title": "Commercialization Wedge",
+      "goal": "Turn Business Simulator into the first sellable Reux-powered product.",
+      "itemCount": 4
+    },
+    {
+      "order": 3,
       "title": "Website & Status Sync",
       "goal": "Keep public project cards, roadmap badges, live/demo links, and completed/in-progress labels current.",
       "itemCount": 4
     },
     {
-      "order": 2,
-      "title": "Frontend Reliability & Ops Depth",
-      "goal": "Add graceful failure states and deepen ops observability.",
-      "itemCount": 6
-    },
-    {
-      "order": 3,
+      "order": 4,
       "title": "Documentation Handoff",
       "goal": "Keep docs aligned with the actual demo.",
-      "itemCount": 2
+      "itemCount": 3
     },
     {
-      "order": 4,
+      "order": 5,
       "title": "Simulation Foundation",
       "goal": "Make Reux useful for structured forecasting and scenario comparison.",
       "itemCount": 5
     },
     {
-      "order": 5,
+      "order": 6,
       "title": "Product Ecosystem",
       "goal": "Keep Reux grounded in real products instead of building language features in isolation.",
       "itemCount": 5
     },
     {
-      "order": 6,
+      "order": 7,
       "title": "Developer Experience",
       "goal": "Make Reux approachable for technical reviewers and early users.",
       "itemCount": 4

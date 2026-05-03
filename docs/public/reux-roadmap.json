@@ -45,36 +45,48 @@
     "Document public reset/session behavior for testers",
     "Polished public tester flow from landing through reset, transaction, outbox processing, and result viewing",
     "Consistent 'what just happened' summaries across commerce, logistics, and simulation flows",
-    "Next-best-action guidance after reset, transaction, simulation run, and process-outbox"
+    "Next-best-action guidance after reset, transaction, simulation run, and process-outbox",
+    "Functionally complete Commerce, Logistics, and Operations demo frontend"
   ],
   "milestones": [
+    {
+      "title": "Sellable Business Simulator Frontend",
+      "goal": "Finish the buyer-facing Business Simulator product UI now that the demo console is functionally complete.",
+      "items": [
+        "Expose template selection for operations-decision and capacity-planning",
+        "Build the guided assumption and scenario run flow for non-developer buyers",
+        "Render decisionSummary, recommendedAction, confidenceSummary, watchouts, and keyMetric as first-class result content",
+        "Add saved-result list, shareable result loading, expired-result, and not-found states",
+        "Add pilot CTA and product positioning from the Business Simulator product brief",
+        "Run responsive visual QA on the Business Simulator product path"
+      ]
+    },
+    {
+      "title": "Commercialization Wedge",
+      "goal": "Turn Business Simulator into the first sellable Reux-powered product.",
+      "items": [
+        "Package Business Simulator as the first sellable wedge around operational scenario planning",
+        "Keep completion focused on result creation, saved runs, shareable summaries, and clear recommendations",
+        "Define buyer, user, early-adopter signal, and pilot qualification notes",
+        "Add simple pilot offer and CTA copy for website and sales handoff"
+      ]
+    },
     {
       "title": "Website & Status Sync",
       "goal": "Keep public project cards, roadmap badges, live/demo links, and completed/in-progress labels current.",
       "items": [
-        "Never complete frontend work without updating the status surfaces that describe it",
-        "Run a full responsive polish pass (Visual QA)",
-        "Fix all mobile layout issues",
-        "Ensure no cards/buttons/tables overflow or overlap"
-      ]
-    },
-    {
-      "title": "Frontend Reliability & Ops Depth",
-      "goal": "Add graceful failure states and deepen ops observability.",
-      "items": [
-        "Add graceful API failure states",
-        "Add retry affordances where useful",
-        "Make session/setup/reset failures understandable to non-developers",
-        "Improve queue/worker observability presentation",
-        "Add clearer stale/dead-letter explanations",
-        "Make the dashboard usable as a real operational page, not just a debug screen"
+        "Never complete sellable-product frontend work without updating the status surfaces that describe it",
+        "Keep demo-console completion marked as live unless a concrete regression is found",
+        "Update Business Simulator completion/status labels as the product UI lands",
+        "Keep docs/public/business-simulator-frontend-roadmap.md aligned with the actual frontend"
       ]
     },
     {
       "title": "Documentation Handoff",
       "goal": "Keep docs aligned with the actual demo.",
       "items": [
-        "Update public testing docs and screenshots/copy references if UI changes",
+        "Update public testing docs and screenshots/copy references if demo UI changes",
+        "Update Business Simulator product docs when sellable-product UI changes",
         "Keep docs/public/reux-demo-testing-guide.md aligned with the actual demo"
       ]
     },

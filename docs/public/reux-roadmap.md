@@ -45,29 +45,33 @@ Current status:
 - Executable business operations simulation example alongside the workforce example.
 - Generated simulation catalog helpers so product apps can discover available Reux simulation models.
 - Language-core completion pass for transaction control flow, expression typing, reusable filters, worker contracts, null-aware lowering, and diagnostics.
+- Functionally complete Commerce, Logistics, and Operations demo frontend.
 
 ## Next Milestones
 
-### 1. Commercialization Wedge
+### 1. Sellable Business Simulator Frontend
+
+Goal: finish the buyer-facing Business Simulator product UI now that the demo console is functionally complete.
+
+Planned work:
+
+- Expose template selection for operations-decision and capacity-planning.
+- Build the guided assumption and scenario run flow for non-developer buyers.
+- Render decisionSummary, recommendedAction, confidenceSummary, watchouts, and keyMetric as first-class result content.
+- Add saved-result list, shareable result loading, expired-result, and not-found states.
+- Add pilot CTA and product positioning from the Business Simulator product brief.
+- Run responsive visual QA on the Business Simulator product path.
+
+### 2. Commercialization Wedge
 
 Goal: turn Business Simulator into the first sellable Reux-powered product.
 
 Planned work:
 
 - Package Business Simulator as the first sellable wedge around operational scenario planning.
-- Keep demo completion focused on result creation, saved runs, shareable summaries, and clear recommendations.
+- Keep completion focused on result creation, saved runs, shareable summaries, and clear recommendations.
 - Define buyer, user, early-adopter signal, and pilot qualification notes.
 - Add simple pilot offer and CTA copy for website and sales handoff.
-
-### 2. Frontend Completion
-
-Goal: get the public frontend/demo surfaces close to completion.
-
-Planned work:
-
-- Add a polished public tester flow from landing/demo entry to successful transaction to outbox processing.
-- Make "what just happened" summaries consistent across commerce and logistics.
-- Ensure the demo always shows the next best action after reset, transaction, and process-outbox.
 
 ### 3. Website & Status Sync
 
@@ -75,34 +79,22 @@ Goal: keep public project cards, roadmap badges, live/demo links, and completed/
 
 Planned work:
 
-- Never complete frontend work without updating the status surfaces that describe it.
-- Run a full responsive polish pass (Visual QA).
-- Fix all mobile layout issues.
-- Ensure no cards/buttons/tables overflow or overlap.
+- Never complete sellable-product frontend work without updating the status surfaces that describe it.
+- Keep demo-console completion marked as live unless a concrete regression is found.
+- Update Business Simulator completion/status labels as the product UI lands.
+- Keep docs/public/business-simulator-frontend-roadmap.md aligned with the actual frontend.
 
-### 4. Frontend Reliability & Ops Depth
-
-Goal: add graceful failure states and deepen ops observability.
-
-Planned work:
-
-- Add graceful API failure states.
-- Add retry affordances where useful.
-- Make session/setup/reset failures understandable to non-developers.
-- Improve queue/worker observability presentation.
-- Add clearer stale/dead-letter explanations.
-- Make the dashboard usable as a real operational page, not just a debug screen.
-
-### 5. Documentation Handoff
+### 4. Documentation Handoff
 
 Goal: keep docs aligned with the actual demo.
 
 Planned work:
 
-- Update public testing docs and screenshots/copy references if UI changes.
+- Update public testing docs and screenshots/copy references if demo UI changes.
+- Update Business Simulator product docs when sellable-product UI changes.
 - Keep docs/public/reux-demo-testing-guide.md aligned with the actual demo.
 
-### 6. Simulation Foundation
+### 5. Simulation Foundation
 
 Goal: make Reux useful for structured forecasting and scenario comparison.
 
@@ -114,7 +106,7 @@ Planned work:
 - Improve comparison reports and explanation output.
 - Expand simulation APIs from generated catalog discovery into full product-facing execution services.
 
-### 7. Product Ecosystem
+### 6. Product Ecosystem
 
 Goal: keep Reux grounded in real products instead of building language features in isolation.
 
@@ -126,7 +118,7 @@ Planned work:
 - Use clinic, logistics, and future product pilots to keep language features grounded in real workflows.
 - Add deeper product pilots for PLOS and enterprise operations once the core language/runtime path is stable.
 
-### 8. Developer Experience
+### 7. Developer Experience
 
 Goal: make Reux approachable for technical reviewers and early users.
 

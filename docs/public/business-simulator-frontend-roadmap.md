@@ -1,10 +1,19 @@
 # Business Simulator Frontend Roadmap
 
-This roadmap is for Opus/Gemini frontend work. Keep changes focused on the buyer-facing Business Simulator product and the public demo surfaces that support it.
+This roadmap is for Opus/Gemini frontend work. Keep changes focused on the buyer-facing Business Simulator product. The Commerce, Logistics, and Operations demo frontend is considered functionally complete; only touch those demo-console surfaces to fix regressions or keep status links accurate.
 
 ## Goal
 
 Make Business Simulator feel like a finished, sellable product: a visitor can understand the offer, run a scenario, save or reload results, and share an explainable recommendation without knowing Reux internals.
+
+## Current Focus
+
+The active frontend priority is the sellable Business Simulator product surface, not more demo-console polish.
+
+- Treat the public Commerce/Logistics/Ops demo frontend as complete unless QA finds a concrete regression.
+- Build the Business Simulator experience around the live backend contract: template selection, guided assumptions, scenario comparison, saved runs, shareable results, and buyer-facing recommendation guidance.
+- Render the current backend fields directly where useful: `capacity-planning`, `decisionSummary`, `recommendedAction`, `confidence`, `confidenceSummary`, `watchouts`, `resultSummary`, `keyMetric`, and `expiryNote`.
+- Keep status surfaces current when Business Simulator product UI moves from planned to in progress to complete.
 
 ## Definition Of Sellable
 
@@ -16,12 +25,13 @@ Make Business Simulator feel like a finished, sellable product: a visitor can un
 
 ## P0 Completion Path
 
-1. Entry and positioning
+1. Sellable product entry and positioning
    - Make the Reuben/Reux entry point frame Business Simulator as the first sellable wedge.
    - Use the product promise from `docs/public/business-simulator-product-brief.md`.
    - Add a visible pilot CTA using the brief's "Bring one real decision..." language.
 
-2. Guided run flow
+2. Template selection and guided run flow
+   - Let users choose between `operations-decision` and `capacity-planning`.
    - Make baseline assumptions and scenario assumptions easy to scan and edit.
    - Keep labels business-readable; avoid compiler/source terminology in the main path.
    - Show validation errors next to the affected field when the API returns `issues[].path`.
@@ -29,6 +39,7 @@ Make Business Simulator feel like a finished, sellable product: a visitor can un
 
 3. Results and recommendation
    - Show the winning scenario, key metric deltas, risk/tradeoff summary, and recommendation rationale.
+   - Render `decisionSummary`, `recommendedAction`, `confidenceSummary`, and `watchouts` as first-class result-page content.
    - Explain "what changed from baseline" in plain language.
    - Provide a next action after every run: save, revise assumptions, compare another scenario, or share.
 
@@ -39,9 +50,9 @@ Make Business Simulator feel like a finished, sellable product: a visitor can un
 
 ## P1 Product Polish
 
-- Make commerce/logistics demo summaries visually and verbally consistent with Business Simulator summaries.
+- Keep commerce/logistics demo summaries stable; do not spend new frontend passes there unless a regression appears.
 - Add empty, loading, error, retry, and expired-result states for every public simulator route.
-- Make the operations dashboard useful for a non-developer evaluator: queue health, stale/dead-letter meaning, last smoke status, and saved-run store status.
+- Add saved-result list and shared-result loading states for the Business Simulator product path.
 - Run responsive visual QA at mobile, tablet, 1366x768, 1440x900, and wide desktop.
 - Fix overflow, cramped nav, nested cards, disproportionate hierarchy visuals, and text clipping.
 - Keep the Reuben > Reux > PLOS/Business Simulator hierarchy compact and balanced.
@@ -69,12 +80,15 @@ Do not mark an item complete unless the UI path is actually usable and checked a
 ## Suggested Opus/Gemini Prompt
 
 ```text
-Work only in the Reux repo. Focus on the Business Simulator frontend and public demo surfaces. Use docs/public/business-simulator-product-brief.md and docs/public/business-simulator-frontend-roadmap.md as the source of truth.
+Work only in the Reux repo. Use docs/public/business-simulator-product-brief.md and docs/public/business-simulator-frontend-roadmap.md as the source of truth.
+
+The Commerce/Logistics/Ops demo frontend is considered functionally complete. Do not spend this pass polishing the demo console unless you find a concrete regression. The active frontend focus is the sellable Business Simulator product.
 
 Implement the next highest-priority frontend item toward a sellable Business Simulator:
+- template selection for operations-decision and capacity-planning,
 - guided scenario run flow,
-- clear recommendation/result summary,
-- saved/shareable result page,
+- clear recommendation/result summary using decisionSummary, recommendedAction, confidenceSummary, and watchouts,
+- saved/shareable result page and reload states,
 - pilot CTA and product positioning,
 - responsive visual QA,
 - status surface updates.

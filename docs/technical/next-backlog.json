@@ -26,78 +26,113 @@
     },
     {
       "priority": "P1",
-      "ownerTrack": "Website & Status Sync",
-      "title": "Never complete frontend work without updating the status surfaces that describe it",
-      "why": "Keep public project cards, roadmap badges, live/demo links, and completed/in-progress labels current.",
+      "ownerTrack": "Sellable Business Simulator Frontend",
+      "title": "Expose template selection for operations-decision and capacity-planning",
+      "why": "Finish the buyer-facing Business Simulator product UI now that the demo console is functionally complete.",
       "source": "public-roadmap"
     },
     {
       "priority": "P1",
-      "ownerTrack": "Website & Status Sync",
-      "title": "Run a full responsive polish pass (Visual QA)",
-      "why": "Keep public project cards, roadmap badges, live/demo links, and completed/in-progress labels current.",
+      "ownerTrack": "Sellable Business Simulator Frontend",
+      "title": "Build the guided assumption and scenario run flow for non-developer buyers",
+      "why": "Finish the buyer-facing Business Simulator product UI now that the demo console is functionally complete.",
       "source": "public-roadmap"
     },
     {
       "priority": "P2",
-      "ownerTrack": "Website & Status Sync",
-      "title": "Fix all mobile layout issues",
-      "why": "Keep public project cards, roadmap badges, live/demo links, and completed/in-progress labels current.",
+      "ownerTrack": "Sellable Business Simulator Frontend",
+      "title": "Render decisionSummary, recommendedAction, confidenceSummary, watchouts, and keyMetric as first-class result content",
+      "why": "Finish the buyer-facing Business Simulator product UI now that the demo console is functionally complete.",
       "source": "public-roadmap"
     },
     {
       "priority": "P2",
-      "ownerTrack": "Website & Status Sync",
-      "title": "Ensure no cards/buttons/tables overflow or overlap",
-      "why": "Keep public project cards, roadmap badges, live/demo links, and completed/in-progress labels current.",
+      "ownerTrack": "Sellable Business Simulator Frontend",
+      "title": "Add saved-result list, shareable result loading, expired-result, and not-found states",
+      "why": "Finish the buyer-facing Business Simulator product UI now that the demo console is functionally complete.",
+      "source": "public-roadmap"
+    },
+    {
+      "priority": "P2",
+      "ownerTrack": "Sellable Business Simulator Frontend",
+      "title": "Add pilot CTA and product positioning from the Business Simulator product brief",
+      "why": "Finish the buyer-facing Business Simulator product UI now that the demo console is functionally complete.",
+      "source": "public-roadmap"
+    },
+    {
+      "priority": "P2",
+      "ownerTrack": "Sellable Business Simulator Frontend",
+      "title": "Run responsive visual QA on the Business Simulator product path",
+      "why": "Finish the buyer-facing Business Simulator product UI now that the demo console is functionally complete.",
       "source": "public-roadmap"
     },
     {
       "priority": "P1",
-      "ownerTrack": "Frontend Reliability & Ops Depth",
-      "title": "Add graceful API failure states",
-      "why": "Add graceful failure states and deepen ops observability.",
+      "ownerTrack": "Commercialization Wedge",
+      "title": "Package Business Simulator as the first sellable wedge around operational scenario planning",
+      "why": "Turn Business Simulator into the first sellable Reux-powered product.",
       "source": "public-roadmap"
     },
     {
       "priority": "P1",
-      "ownerTrack": "Frontend Reliability & Ops Depth",
-      "title": "Add retry affordances where useful",
-      "why": "Add graceful failure states and deepen ops observability.",
+      "ownerTrack": "Commercialization Wedge",
+      "title": "Keep completion focused on result creation, saved runs, shareable summaries, and clear recommendations",
+      "why": "Turn Business Simulator into the first sellable Reux-powered product.",
       "source": "public-roadmap"
     },
     {
       "priority": "P2",
-      "ownerTrack": "Frontend Reliability & Ops Depth",
-      "title": "Make session/setup/reset failures understandable to non-developers",
-      "why": "Add graceful failure states and deepen ops observability.",
+      "ownerTrack": "Commercialization Wedge",
+      "title": "Define buyer, user, early-adopter signal, and pilot qualification notes",
+      "why": "Turn Business Simulator into the first sellable Reux-powered product.",
       "source": "public-roadmap"
     },
     {
       "priority": "P2",
-      "ownerTrack": "Frontend Reliability & Ops Depth",
-      "title": "Improve queue/worker observability presentation",
-      "why": "Add graceful failure states and deepen ops observability.",
+      "ownerTrack": "Commercialization Wedge",
+      "title": "Add simple pilot offer and CTA copy for website and sales handoff",
+      "why": "Turn Business Simulator into the first sellable Reux-powered product.",
       "source": "public-roadmap"
     },
     {
       "priority": "P2",
-      "ownerTrack": "Frontend Reliability & Ops Depth",
-      "title": "Add clearer stale/dead-letter explanations",
-      "why": "Add graceful failure states and deepen ops observability.",
+      "ownerTrack": "Website & Status Sync",
+      "title": "Never complete sellable-product frontend work without updating the status surfaces that describe it",
+      "why": "Keep public project cards, roadmap badges, live/demo links, and completed/in-progress labels current.",
       "source": "public-roadmap"
     },
     {
       "priority": "P2",
-      "ownerTrack": "Frontend Reliability & Ops Depth",
-      "title": "Make the dashboard usable as a real operational page, not just a debug screen",
-      "why": "Add graceful failure states and deepen ops observability.",
+      "ownerTrack": "Website & Status Sync",
+      "title": "Keep demo-console completion marked as live unless a concrete regression is found",
+      "why": "Keep public project cards, roadmap badges, live/demo links, and completed/in-progress labels current.",
+      "source": "public-roadmap"
+    },
+    {
+      "priority": "P2",
+      "ownerTrack": "Website & Status Sync",
+      "title": "Update Business Simulator completion/status labels as the product UI lands",
+      "why": "Keep public project cards, roadmap badges, live/demo links, and completed/in-progress labels current.",
+      "source": "public-roadmap"
+    },
+    {
+      "priority": "P2",
+      "ownerTrack": "Website & Status Sync",
+      "title": "Keep docs/public/business-simulator-frontend-roadmap.md aligned with the actual frontend",
+      "why": "Keep public project cards, roadmap badges, live/demo links, and completed/in-progress labels current.",
       "source": "public-roadmap"
     },
     {
       "priority": "P2",
       "ownerTrack": "Documentation Handoff",
-      "title": "Update public testing docs and screenshots/copy references if UI changes",
+      "title": "Update public testing docs and screenshots/copy references if demo UI changes",
+      "why": "Keep docs aligned with the actual demo.",
+      "source": "public-roadmap"
+    },
+    {
+      "priority": "P2",
+      "ownerTrack": "Documentation Handoff",
+      "title": "Update Business Simulator product docs when sellable-product UI changes",
       "why": "Keep docs aligned with the actual demo.",
       "source": "public-roadmap"
     },
@@ -109,35 +144,35 @@
       "source": "public-roadmap"
     },
     {
-      "priority": "P2",
+      "priority": "P3",
       "ownerTrack": "Simulation Foundation",
       "title": "Expand simulation domain packs for PLOS and business operations",
       "why": "Make Reux useful for structured forecasting and scenario comparison.",
       "source": "public-roadmap"
     },
     {
-      "priority": "P2",
+      "priority": "P3",
       "ownerTrack": "Simulation Foundation",
       "title": "Add richer time-series and assumption modeling",
       "why": "Make Reux useful for structured forecasting and scenario comparison.",
       "source": "public-roadmap"
     },
     {
-      "priority": "P2",
+      "priority": "P3",
       "ownerTrack": "Simulation Foundation",
       "title": "Add stronger unit and formula validation",
       "why": "Make Reux useful for structured forecasting and scenario comparison.",
       "source": "public-roadmap"
     },
     {
-      "priority": "P2",
+      "priority": "P3",
       "ownerTrack": "Simulation Foundation",
       "title": "Improve comparison reports and explanation output",
       "why": "Make Reux useful for structured forecasting and scenario comparison.",
       "source": "public-roadmap"
     },
     {
-      "priority": "P2",
+      "priority": "P3",
       "ownerTrack": "Simulation Foundation",
       "title": "Expand simulation APIs from generated catalog discovery into full product-facing execution services",
       "why": "Make Reux useful for structured forecasting and scenario comparison.",

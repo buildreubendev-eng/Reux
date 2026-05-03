@@ -28,6 +28,7 @@ The first sellable wedge is Business Simulator, aimed at teams that need operati
 
 - Business Simulator product brief with first-wedge positioning, buyer/user definition, pilot signal, and offer copy.
 - Separate frontend and backend roadmaps for finished, sellable-product execution.
+- Active frontend focus on the sellable Business Simulator product, not more demo-console polish.
 - Guided pilot offer for turning one real spreadsheet-modeled decision into a reusable scenario model.
 - Buyer-facing framing around operational decisions before committing money, staff, time, or risk.
 - Demo completion bar focused on result creation, saved runs, shareable summaries, and recommendations.
@@ -86,6 +87,7 @@ The hosted demo lets public users test commerce, logistics, and Business Simulat
 - Railway-hosted backend connected to PostgreSQL.
 - Reuben website embed/link for public testing.
 - Health checks, deep smoke checks, CI smoke automation, monitor wrapper, webhook alerts, and operations dashboard.
+- Functionally complete Commerce, Logistics, and Operations demo frontend.
 
 ### Pilots And Validation
 

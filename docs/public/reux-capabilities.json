@@ -22,6 +22,7 @@
       "capabilities": [
         "Business Simulator product brief with first-wedge positioning, buyer/user definition, pilot signal, and offer copy",
         "Separate frontend and backend roadmaps for finished, sellable-product execution",
+        "Active frontend focus on the sellable Business Simulator product, not more demo-console polish",
         "Guided pilot offer for turning one real spreadsheet-modeled decision into a reusable scenario model",
         "Buyer-facing framing around operational decisions before committing money, staff, time, or risk",
         "Demo completion bar focused on result creation, saved runs, shareable summaries, and recommendations"
@@ -84,7 +85,8 @@
         "Hosted deep health checks for saved-run creation, reload, listing, missing-run handling, and frontend-ready result metadata",
         "Health checks, deep smoke checks, CI smoke automation, monitor wrapper, webhook alerts, and operations dashboard",
         "Responsive, accessible UI with mobile layout polish",
-        "Polished tester flow with consistent action summaries and next-best-action guidance across all demo domains"
+        "Polished tester flow with consistent action summaries and next-best-action guidance across all demo domains",
+        "Functionally complete Commerce, Logistics, and Operations demo frontend"
       ]
     },
     {
