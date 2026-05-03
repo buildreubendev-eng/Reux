@@ -160,11 +160,17 @@ export interface BusinessSimulatorMetricDelta {
   unit?: "USD" | "percent" | "count" | "index";
 }
 
+export type BusinessSimulatorRecommendationConfidence = "low" | "medium" | "high";
+
 export interface BusinessSimulatorRecommendation {
   scenarioId: string;
   scenarioName: string;
   score: number;
   summary: string;
+  decisionSummary: string;
+  recommendedAction: string;
+  confidence: BusinessSimulatorRecommendationConfidence;
+  confidenceSummary: string;
   whyThisWon: string;
   whatChangedFromBaseline: string[];
   keyMetricDeltas: BusinessSimulatorMetricDelta[];
@@ -172,6 +178,7 @@ export interface BusinessSimulatorRecommendation {
   tradeoffSummary: string;
   reasons: string[];
   tradeoffs: string[];
+  watchouts: string[];
 }
 
 export interface BusinessSimulatorComparison {

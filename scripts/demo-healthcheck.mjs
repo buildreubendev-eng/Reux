@@ -548,6 +548,7 @@ function validateSimulationRun(response, body, expectedId) {
   if (!body?.comparison?.recommendedScenarioId) {
     diagnostics.push("business simulator run did not include a recommended scenario");
   }
+  diagnostics.push(...validateRecommendationGuidance(body?.comparison?.recommendation));
   if (typeof body?.reuxSource !== "string" || !body.reuxSource.includes("simulate operations_decision")) {
     diagnostics.push("business simulator run did not include Reux source transparency output");
   }
@@ -558,6 +559,26 @@ function validateSimulationRun(response, body, expectedId) {
     diagnostics.push(`business simulator saved-run metadata expected simulationId=${expectedId}, got ${body?.run?.simulationId ?? "missing"}`);
   }
   if (!body?.generatedAt) diagnostics.push("business simulator run did not include generatedAt");
+  return diagnostics;
+}
+
+function validateRecommendationGuidance(recommendation) {
+  const diagnostics = [];
+  if (!recommendation) {
+    diagnostics.push("business simulator run did not include recommendation guidance");
+    return diagnostics;
+  }
+  for (const field of ["decisionSummary", "recommendedAction", "confidenceSummary", "whyThisWon", "riskSummary", "tradeoffSummary"]) {
+    if (typeof recommendation[field] !== "string" || recommendation[field].length === 0) {
+      diagnostics.push(`business simulator recommendation did not include ${field}`);
+    }
+  }
+  if (!["low", "medium", "high"].includes(recommendation.confidence)) {
+    diagnostics.push("business simulator recommendation did not include a valid confidence value");
+  }
+  if (!Array.isArray(recommendation.watchouts) || recommendation.watchouts.length === 0) {
+    diagnostics.push("business simulator recommendation did not include watchouts");
+  }
   return diagnostics;
 }
 

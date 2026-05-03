@@ -164,6 +164,10 @@ describe("business simulator API contract", () => {
     expect(response.comparison.metricDeltasByScenario["process-improvement"].some((delta) => delta.metric === "marginDelta")).toBe(true);
     expect(response.comparison.recommendation?.scenarioId).toBe("process-improvement");
     expect(response.comparison.recommendation?.whyThisWon).toContain("Process Improvement is recommended because");
+    expect(response.comparison.recommendation?.decisionSummary).toContain("Process Improvement is the");
+    expect(response.comparison.recommendation?.recommendedAction).toContain("Process Improvement");
+    expect(response.comparison.recommendation?.confidence).toMatch(/^(low|medium|high)$/);
+    expect(response.comparison.recommendation?.confidenceSummary).toContain("confidence");
     expect(response.comparison.recommendation?.whatChangedFromBaseline).toEqual(
       expect.arrayContaining([
         "productivity gain rate increased to 12%",
@@ -178,6 +182,7 @@ describe("business simulator API contract", () => {
     ]);
     expect(response.comparison.recommendation?.riskSummary).toContain("Risk stays flat");
     expect(response.comparison.recommendation?.tradeoffSummary).toBeTruthy();
+    expect(response.comparison.recommendation?.watchouts.length).toBeGreaterThan(0);
     expect(response.reuxSource).toContain("simulate operations_decision");
     expect(response.generatedAt).toBe("2026-05-01T00:00:00.000Z");
   });
@@ -214,6 +219,8 @@ describe("business simulator API contract", () => {
     });
     expect(response.comparison.recommendation?.reasons.length).toBeGreaterThan(0);
     expect(response.comparison.recommendation?.tradeoffs.length).toBeGreaterThan(0);
+    expect(response.comparison.recommendation?.watchouts.length).toBeGreaterThan(0);
+    expect(response.comparison.recommendation?.recommendedAction).toContain("Process Improvement");
     expect(response.comparison.recommendation?.keyMetricDeltas).toHaveLength(4);
     expect(response.comparison.recommendation?.whatChangedFromBaseline.length).toBeGreaterThan(0);
     expect(response).not.toHaveProperty("reuxSource");
@@ -281,6 +288,8 @@ describe("business simulator API contract", () => {
     expect(response.simulation.id).toBe("capacity-planning");
     expect(response.scenarios.map((scenario) => scenario.id)).toEqual(["add-shift", "automation-assist"]);
     expect(response.comparison.recommendation?.whyThisWon).toContain("is recommended because");
+    expect(response.comparison.recommendation?.decisionSummary).toContain("recommendation because");
+    expect(response.comparison.recommendation?.confidenceSummary).toContain("confidence");
     expect(response.reuxSource).toContain("simulate capacity_planning");
   });
 
@@ -295,6 +304,8 @@ describe("business simulator API contract", () => {
     expect(fixture.runRequest.name).toBe("Contract Fixture Business Simulation");
     expect(fixture.runResponse.reuxSource).toContain("simulate operations_decision");
     expect(fixture.runResponse.comparison.recommendedScenarioId).toBeTruthy();
+    expect(fixture.runResponse.comparison.recommendation?.decisionSummary).toContain("recommendation because");
+    expect(fixture.runResponse.comparison.recommendation?.recommendedAction).toBeTruthy();
     expect(fixture.compareResponse.comparison.metricDeltasByScenario["process-improvement"]).toBeTruthy();
     expect(fixture.frontendMapping.ratesAreDecimals).toBe(true);
     expect(fixture.invalidRunResponse.code).toBe("business_simulator_validation_failed");

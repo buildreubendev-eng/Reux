@@ -137,7 +137,9 @@ export function recordSummary(record) {
     displayTitle: name,
     displaySubtitle,
     shareLabel: `Business Simulator result: ${name}`,
-    ...(recommendation?.whyThisWon || recommendation?.summary ? { resultSummary: recommendation.whyThisWon ?? recommendation.summary } : {}),
+    ...(recommendation?.decisionSummary || recommendation?.whyThisWon || recommendation?.summary
+      ? { resultSummary: recommendation.decisionSummary ?? recommendation.whyThisWon ?? recommendation.summary }
+      : {}),
     ...(keyMetric ? { keyMetric } : {}),
     ...(record.expiresAt ? { expiryNote: `Temporary result expires at ${record.expiresAt}.` } : {}),
     session: record.session,

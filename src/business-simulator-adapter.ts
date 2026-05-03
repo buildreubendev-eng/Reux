@@ -11,6 +11,7 @@ import {
   BusinessSimulatorMetricName,
   BusinessSimulatorMetricSnapshot,
   BusinessSimulatorRecommendation,
+  BusinessSimulatorRecommendationConfidence,
   BusinessSimulatorRunRequest,
   BusinessSimulatorRunResponse,
   BusinessSimulatorScenarioInput,
@@ -399,12 +400,18 @@ function recommendScenario(
     .sort((left, right) => right.score - left.score || left.scenario.name.localeCompare(right.scenario.name));
   const best = scored[0];
   if (!best) return undefined;
+  const runnerUp = scored[1];
+  const confidence = recommendationConfidence(best.score, runnerUp?.score, best.deltas);
 
   return {
     scenarioId: best.scenario.id,
     scenarioName: best.scenario.name,
     score: best.score,
     summary: `${best.scenario.name} has the strongest blended score across margin, productivity, operating cost, and risk.`,
+    decisionSummary: decisionSummary(best.scenario, best.deltas, confidence),
+    recommendedAction: recommendedAction(best.scenario, best.deltas, confidence, runnerUp?.scenario.name),
+    confidence,
+    confidenceSummary: confidenceSummary(confidence, best.score, runnerUp),
     whyThisWon: recommendationRationale(best.scenario, best.deltas),
     whatChangedFromBaseline: baselineChangeSummary(baseline.assumptions, best.scenario.assumptions, best.deltas),
     keyMetricDeltas: keyMetricDeltas(best.deltas),
@@ -412,6 +419,7 @@ function recommendScenario(
     tradeoffSummary: tradeoffSummary(best.deltas),
     reasons: recommendationReasons(best.deltas),
     tradeoffs: recommendationTradeoffs(best.deltas),
+    watchouts: recommendationWatchouts(best.deltas),
   };
 }
 
@@ -450,6 +458,18 @@ function recommendationTradeoffs(deltas: BusinessSimulatorMetricDelta[]): string
   return tradeoffs.length > 0 ? tradeoffs : ["No major negative tradeoff appears in the primary decision metrics."];
 }
 
+function recommendationWatchouts(deltas: BusinessSimulatorMetricDelta[]): string[] {
+  const watchouts = unfavorableDecisionDeltas(deltas)
+    .map((delta) => watchoutFor(delta))
+    .slice(0, 3);
+  return watchouts.length > 0
+    ? watchouts
+    : [
+        "No major metric-level watchout surfaced in margin, productivity, cost, or risk.",
+        "Validate that the modeled assumption changes are achievable before committing.",
+      ];
+}
+
 function recommendationRationale(
   scenario: BusinessSimulatorScenarioResult,
   deltas: BusinessSimulatorMetricDelta[],
@@ -459,6 +479,73 @@ function recommendationRationale(
   const positiveText = positives[0] ?? "it has the best overall balance in the primary decision metrics";
   const tradeoffText = tradeoffs[0] ?? "no major negative tradeoff appears in the primary decision metrics";
   return `${scenario.name} is recommended because ${positiveText}. ${tradeoffText}`;
+}
+
+function decisionSummary(
+  scenario: BusinessSimulatorScenarioResult,
+  deltas: BusinessSimulatorMetricDelta[],
+  confidence: BusinessSimulatorRecommendationConfidence,
+): string {
+  const margin = deltas.find((delta) => delta.metric === "marginDelta");
+  const productivity = deltas.find((delta) => delta.metric === "productivity");
+  const cost = deltas.find((delta) => delta.metric === "operatingCost");
+  const risk = deltas.find((delta) => delta.metric === "riskScore");
+  const marginText = margin && margin.delta !== 0
+    ? `${margin.delta > 0 ? "adds" : "reduces"} ${formatDelta(margin)} in modeled margin`
+    : "keeps modeled margin roughly flat";
+  const productivityText = productivity && productivity.delta !== 0
+    ? `${productivity.delta > 0 ? "improves" : "reduces"} productivity by ${formatDelta(productivity)}`
+    : "keeps productivity roughly flat";
+  const costText = cost && cost.delta !== 0
+    ? `${cost.delta < 0 ? "lowers" : "raises"} operating cost by ${formatDelta(cost)}`
+    : "keeps operating cost roughly flat";
+  const riskText = risk && risk.delta !== 0
+    ? `${risk.delta < 0 ? "lowers" : "raises"} risk by ${formatDelta(risk)}`
+    : "keeps risk roughly flat";
+  return `${scenario.name} is the ${confidence}-confidence recommendation because it ${marginText}, ${productivityText}, ${costText}, and ${riskText}.`;
+}
+
+function recommendedAction(
+  scenario: BusinessSimulatorScenarioResult,
+  deltas: BusinessSimulatorMetricDelta[],
+  confidence: BusinessSimulatorRecommendationConfidence,
+  runnerUpName: string | undefined,
+): string {
+  const watchouts = recommendationWatchouts(deltas);
+  const primaryWatchout = watchouts[0].startsWith("No major metric-level watchout")
+    ? "the operating assumptions"
+    : watchouts[0].replace(/\.$/, "").toLowerCase();
+  if (confidence === "high") {
+    return `Use ${scenario.name} as the lead plan and validate ${primaryWatchout} before rollout.`;
+  }
+  if (confidence === "medium") {
+    return `Use ${scenario.name} as the working plan, then compare it against ${runnerUpName ?? "the next-best scenario"} with real operating constraints before committing.`;
+  }
+  return `Treat ${scenario.name} as a promising option, but run another sensitivity pass before using it as the final plan.`;
+}
+
+function recommendationConfidence(
+  bestScore: number,
+  runnerUpScore: number | undefined,
+  deltas: BusinessSimulatorMetricDelta[],
+): BusinessSimulatorRecommendationConfidence {
+  const scoreGap = runnerUpScore === undefined ? Math.abs(bestScore) : bestScore - runnerUpScore;
+  const majorWatchoutCount = unfavorableDecisionDeltas(deltas).length;
+  if (scoreGap >= 20 && majorWatchoutCount <= 1) return "high";
+  if (scoreGap >= 5 || majorWatchoutCount <= 1) return "medium";
+  return "low";
+}
+
+function confidenceSummary(
+  confidence: BusinessSimulatorRecommendationConfidence,
+  bestScore: number,
+  runnerUp: { scenario: BusinessSimulatorScenarioResult; score: number } | undefined,
+): string {
+  if (!runnerUp) {
+    return `${capitalize(confidence)} confidence because this is the only scenario with a complete score.`;
+  }
+  const gap = Number((bestScore - runnerUp.score).toFixed(4));
+  return `${capitalize(confidence)} confidence because the recommendation leads ${runnerUp.scenario.name} by ${gap} blended-score points.`;
 }
 
 function baselineChangeSummary(
@@ -503,6 +590,30 @@ function riskSummary(deltas: BusinessSimulatorMetricDelta[]): string {
   return risk.delta < 0
     ? `Risk improves by ${formatDelta(risk)} against the baseline.`
     : `Risk increases by ${formatDelta(risk)} against the baseline.`;
+}
+
+function watchoutFor(delta: BusinessSimulatorMetricDelta): string {
+  switch (delta.metric) {
+    case "operatingCost":
+      return `Operating cost rises by ${formatDelta(delta)}; confirm the extra spend is acceptable.`;
+    case "riskScore":
+      return `Risk rises by ${formatDelta(delta)}; define mitigation before committing.`;
+    case "marginDelta":
+      return `Modeled margin falls by ${formatDelta(delta)}; check whether the strategic benefit justifies it.`;
+    case "productivity":
+      return `Productivity falls by ${formatDelta(delta)}; confirm the team can absorb the load.`;
+    default:
+      return `${formatMetricName(delta.metric)} moves unfavorably by ${formatDelta(delta)}.`;
+  }
+}
+
+function unfavorableDecisionDeltas(deltas: BusinessSimulatorMetricDelta[]): BusinessSimulatorMetricDelta[] {
+  return deltas.filter((delta) =>
+    (delta.metric === "operatingCost" && delta.delta > 0) ||
+    (delta.metric === "riskScore" && delta.delta > 0) ||
+    (delta.metric === "marginDelta" && delta.delta < 0) ||
+    (delta.metric === "productivity" && delta.delta < 0),
+  );
 }
 
 function tradeoffSummary(deltas: BusinessSimulatorMetricDelta[]): string {
@@ -586,6 +697,10 @@ function changeVerb(delta: number): "increased" | "decreased" {
 
 function pluralizeForecastUnit(unit: BusinessSimulatorAssumptions["forecastUnit"], count: number): string {
   return count === 1 ? unit : `${unit}s`;
+}
+
+function capitalize(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 function findBusinessSimulatorTemplate(id: string): BusinessSimulatorTemplate | undefined {

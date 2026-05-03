@@ -15,6 +15,7 @@ Current status:
 - Public browser demo for logistics workflows.
 - Public Business Simulator demo with PostgreSQL-backed saved run records for result pages and sharing.
 - Business Simulator operations-decision and capacity-planning templates for product pilots.
+- Business Simulator buyer-facing recommendation guidance with action, confidence, and watchout fields.
 - Business Simulator error envelopes for validation, expired saved runs, missing records, oversized requests, malformed JSON, and rate limits.
 - Business Simulator first-wedge product brief for buyer, offer, and pilot positioning.
 - Separate Business Simulator frontend and backend roadmaps for sellable-product execution.

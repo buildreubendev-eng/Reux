@@ -11,6 +11,7 @@
     "Public logistics workflow demo",
     "Public Business Simulator powered by generic Reux simulation execution",
     "Business Simulator operations-decision and capacity-planning templates for product pilots",
+    "Business Simulator buyer-facing recommendation guidance with action, confidence, and watchout fields",
     "PostgreSQL-backed Business Simulator run records for result pages and sharing",
     "Public API rate limiting and request counters for hosted demo protection",
     "Dry-run/apply maintenance cleanup for visitor schemas and saved simulation runs",
