@@ -19,7 +19,7 @@ Current status:
 - Separate Business Simulator frontend and backend roadmaps for sellable-product execution.
 - Public API rate limiting and request counters for hosted demo protection.
 - Dry-run/apply maintenance cleanup for visitor schemas and saved simulation runs.
-- Hosted deep health checks for saved-run creation, reload, and listing.
+- Hosted deep health checks for saved-run creation, reload, listing, missing-run handling, and frontend-ready result metadata.
 - Clinic pilot source and walkthrough for appointment and care-task workflows.
 - In-page public testing guide and clearer empty states for first-time visitors.
 - Hosted Railway backend connected to PostgreSQL.

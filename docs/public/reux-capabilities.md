@@ -80,7 +80,7 @@ The hosted demo lets public users test commerce, logistics, and Business Simulat
 - Business Simulator error envelopes for validation, expired saved runs, missing records, oversized requests, malformed JSON, and rate limits.
 - Public API rate limiting and request counters for hosted demo protection.
 - Dry-run/apply maintenance cleanup for visitor schemas and saved simulation runs.
-- Hosted deep health checks for saved-run creation, reload, and listing.
+- Hosted deep health checks for saved-run creation, reload, listing, missing-run handling, and frontend-ready result metadata.
 - Railway-hosted backend connected to PostgreSQL.
 - Reuben website embed/link for public testing.
 - Health checks, deep smoke checks, CI smoke automation, monitor wrapper, webhook alerts, and operations dashboard.

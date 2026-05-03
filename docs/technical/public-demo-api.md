@@ -221,7 +221,7 @@ npm run demo:healthcheck -- https://your-demo-host.example.com --deep
 npm run demo:healthcheck -- https://your-demo-host.example.com --smoke
 ```
 
-Deep mode validates CORS, queue stats, Business Simulator run/compare/validation behavior, saved-run creation and reload, recent-run listing, generic Reux simulation execution, rate-limit metadata, request counters, and saved-run storage metadata.
+Deep mode validates CORS, queue stats, Business Simulator run/compare/validation behavior, saved-run creation and reload, recent-run listing, missing-run handling, frontend-ready saved-run metadata, generic Reux simulation execution, rate-limit metadata, request counters, and saved-run storage metadata.
 
 For Business Simulator fixture parity:
 

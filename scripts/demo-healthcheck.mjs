@@ -234,6 +234,7 @@ async function runBusinessSimulatorApiCheck(baseUrl) {
 
   let savedRun = null;
   let savedRunList = null;
+  let missingSavedRun = null;
   if (runId) {
     savedRun = await fetchJson(baseUrl, `/api/simulation-runs/${encodeURIComponent(runId)}`, { headers });
     checks.push(savedRun);
@@ -243,6 +244,11 @@ async function runBusinessSimulatorApiCheck(baseUrl) {
     checks.push(savedRunList);
     diagnostics.push(...validateSavedSimulationRunList(savedRunList.response, savedRunList.body, runId));
   }
+
+  const missingRunId = "live_healthcheck_missing";
+  missingSavedRun = await fetchJson(baseUrl, `/api/simulation-runs/${missingRunId}`, { headers });
+  checks.push(missingSavedRun);
+  diagnostics.push(...validateMissingSavedSimulationRun(missingSavedRun.response, missingSavedRun.body, missingRunId));
 
   const compare = await fetchJson(baseUrl, "/api/scenarios/compare", {
     method: "POST",
@@ -286,6 +292,7 @@ async function runBusinessSimulatorApiCheck(baseUrl) {
       savedRunId: runId ?? null,
       savedRunReloaded: savedRun?.body?.run?.id === runId,
       recentRunListed: Boolean(savedRunList?.body?.runs?.some((candidate) => candidate.id === runId)),
+      missingRunHandled: missingSavedRun?.response?.status === 404 && missingSavedRun?.body?.code === "not_found",
       recommendedScenarioId: run.body?.comparison?.recommendedScenarioId ?? null,
       reuxSource: typeof run.body?.reuxSource === "string" && run.body.reuxSource.includes("simulate operations_decision"),
       validationIssues: invalidRun.body?.issues?.length ?? 0,
@@ -580,6 +587,19 @@ function validateSavedSimulationRunList(response, body, expectedId) {
   return diagnostics;
 }
 
+function validateMissingSavedSimulationRun(response, body, expectedId) {
+  const diagnostics = [];
+  if (response.status !== 404) diagnostics.push(`missing saved simulation run expected 404, got ${response.status}`);
+  if (body?.ok !== false) diagnostics.push("missing saved simulation run error did not include ok=false");
+  if (body?.code !== "not_found") {
+    diagnostics.push(`missing saved simulation run error had unexpected code=${body?.code ?? "missing"}`);
+  }
+  if (typeof body?.message !== "string" || !body.message.includes(expectedId)) {
+    diagnostics.push("missing saved simulation run error message did not include the run id");
+  }
+  return diagnostics;
+}
+
 function validateSavedSimulationRunSummary(summary, expectedId, label) {
   const diagnostics = [];
   if (!summary) {
@@ -589,6 +609,17 @@ function validateSavedSimulationRunSummary(summary, expectedId, label) {
   if (summary.id !== expectedId) diagnostics.push(`${label} expected id=${expectedId}, got ${summary.id ?? "missing"}`);
   if (typeof summary.name !== "string" || summary.name.length === 0) diagnostics.push(`${label} did not include a display name`);
   if (summary.simulationId !== "operations-decision") diagnostics.push(`${label} had unexpected simulationId=${summary.simulationId ?? "missing"}`);
+  if (typeof summary.displayTitle !== "string" || summary.displayTitle.length === 0) diagnostics.push(`${label} did not include displayTitle`);
+  if (typeof summary.displaySubtitle !== "string" || !summary.displaySubtitle.includes("scenarios compared")) {
+    diagnostics.push(`${label} did not include a scenario comparison displaySubtitle`);
+  }
+  if (typeof summary.shareLabel !== "string" || !summary.shareLabel.startsWith("Business Simulator result:")) {
+    diagnostics.push(`${label} did not include a shareLabel`);
+  }
+  if (typeof summary.resultSummary !== "string" || summary.resultSummary.length === 0) diagnostics.push(`${label} did not include resultSummary`);
+  if (summary.keyMetric?.metric !== "margin" || typeof summary.keyMetric?.value !== "number") {
+    diagnostics.push(`${label} did not include a margin keyMetric`);
+  }
   if (typeof summary.scenarioCount !== "number" || summary.scenarioCount < 2) diagnostics.push(`${label} did not include baseline plus scenario count`);
   if (typeof summary.bestMargin !== "number") diagnostics.push(`${label} did not include numeric bestMargin`);
   if (typeof summary.bestMarginScenario !== "string" || summary.bestMarginScenario.length === 0) diagnostics.push(`${label} did not include bestMarginScenario`);
@@ -596,6 +627,9 @@ function validateSavedSimulationRunSummary(summary, expectedId, label) {
   if (typeof summary.recommendedScenarioId !== "string" || summary.recommendedScenarioId.length === 0) diagnostics.push(`${label} did not include recommendedScenarioId`);
   if (typeof summary.recommendedScenarioName !== "string" || summary.recommendedScenarioName.length === 0) diagnostics.push(`${label} did not include recommendedScenarioName`);
   if (typeof summary.expiresAt !== "string" || Number.isNaN(Date.parse(summary.expiresAt))) diagnostics.push(`${label} did not include a valid expiresAt timestamp`);
+  if (typeof summary.expiryNote !== "string" || !summary.expiryNote.includes(summary.expiresAt)) {
+    diagnostics.push(`${label} did not include expiryNote with expiresAt`);
+  }
   return diagnostics;
 }
 

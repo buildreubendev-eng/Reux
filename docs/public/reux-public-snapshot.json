@@ -15,7 +15,7 @@
     "PostgreSQL-backed Business Simulator run records for result pages and sharing",
     "Public API rate limiting and request counters for hosted demo protection",
     "Dry-run/apply maintenance cleanup for visitor schemas and saved simulation runs",
-    "Hosted deep health checks for saved-run creation, reload, and listing",
+    "Hosted deep health checks for saved-run creation, reload, listing, missing-run handling, and frontend-ready result metadata",
     "Clinic pilot source and walkthrough for appointment and care-task workflows",
     "In-page public testing guide and clearer empty states",
     "Hosted Railway backend connected to PostgreSQL",

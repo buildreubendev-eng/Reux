@@ -34,6 +34,9 @@ Deep mode also checks `/api/outbox/stats`, `/api/logistics/outbox/stats`, the Bu
 GET /api/simulations
 GET /api/simulations/operations-decision
 POST /api/simulations/run
+GET /api/simulation-runs/:id
+GET /api/simulation-runs
+GET /api/simulation-runs/:missing-id
 POST /api/scenarios/compare
 POST /api/simulations/run with invalid input
 GET /api/reux/simulations
@@ -42,7 +45,7 @@ POST /api/reux/simulations/personal_finance/run
 POST /api/reux/simulations/personal_finance/run with invalid input
 ```
 
-This is the quickest backend-side check that the Reuben website can still run the public simulator after a deploy. The invalid-input checks confirm the specialized Business Simulator API returns `400` with `code: "business_simulator_validation_failed"` and the generic Reux simulation API returns `400` with `code: "simulation_execution_validation_failed"`. Both include stable `issues[].path` entries, which product frontends can use for helpful field-level errors.
+This is the quickest backend-side check that the Reuben website can still run the public simulator after a deploy. The saved-run checks validate frontend-ready result metadata such as `displayTitle`, `displaySubtitle`, `shareLabel`, `resultSummary`, `keyMetric`, and `expiryNote`. The invalid-input checks confirm the specialized Business Simulator API returns `400` with `code: "business_simulator_validation_failed"` and the generic Reux simulation API returns `400` with `code: "simulation_execution_validation_failed"`. Both include stable `issues[].path` entries, which product frontends can use for helpful field-level errors. The missing saved-run check confirms result pages receive `404` with `code: "not_found"` for unknown run IDs.
 
 The hosted service also exposes a small operations dashboard:
 
@@ -89,7 +92,7 @@ For release validation after a production redeploy, run the full public smoke pa
 npm run demo:healthcheck -- https://your-demo-host.example.com --smoke
 ```
 
-Smoke mode runs the health and deep checks, uses an isolated `healthcheck` browser session, resets commerce and logistics demo data, runs one transaction in each domain, confirms queue health moves to `working`, processes outbox events, and confirms queue health returns to `clear`. Deep checks validate the Business Simulator API, saved-run creation, saved-run reload, recent-run listing, generic Reux simulation execution, rate-limit metadata, request counters, and PostgreSQL-backed workflow demo. Reusing the `healthcheck` session prevents each redeploy check from creating a new schema forever. Override the session with `--session-id=<id>` or `REUX_HEALTHCHECK_SESSION_ID` if needed. Smoke mode refuses to run against shared-session demos unless `--allow-shared-smoke` is passed, because shared smoke would mutate the shared demo state.
+Smoke mode runs the health and deep checks, uses an isolated `healthcheck` browser session, resets commerce and logistics demo data, runs one transaction in each domain, confirms queue health moves to `working`, processes outbox events, and confirms queue health returns to `clear`. Deep checks validate the Business Simulator API, saved-run creation, saved-run reload, recent-run listing, missing-run handling, generic Reux simulation execution, rate-limit metadata, request counters, and PostgreSQL-backed workflow demo. Reusing the `healthcheck` session prevents each redeploy check from creating a new schema forever. Override the session with `--session-id=<id>` or `REUX_HEALTHCHECK_SESSION_ID` if needed. Smoke mode refuses to run against shared-session demos unless `--allow-shared-smoke` is passed, because shared smoke would mutate the shared demo state.
 
 For local or CI validation against a PostgreSQL-backed demo service, use:
 
