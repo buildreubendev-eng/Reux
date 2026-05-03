@@ -36,10 +36,10 @@ The browser-facing website should generate one stable session id and reuse it. T
 
 | Route | Purpose |
 | --- | --- |
-| `GET /api/health` | Deployment health, active domains, limits, request counters, `jsonBodyLimitBytes`, and `sessionCache` counters. |
+| `GET /api/health` | Deployment health, active domains, limits, request counters, `jsonBodyLimitBytes`, `sessionCache`, and pilot-request delivery status. |
 | `GET /api/ops` | Cross-domain queue health for the active session. |
 
-`/api/health` is the safest first call after a deploy. It should return `ok: true`, `module: "pilot"`, `apiVersion`, `packageVersion`, `build`, both `commerce` and `logistics` in `domains`, the active request-body limit, rate-limit config, request counters, session-cache stats, and saved simulation-run storage stats.
+`/api/health` is the safest first call after a deploy. It should return `ok: true`, `module: "pilot"`, `apiVersion`, `packageVersion`, `build`, both `commerce` and `logistics` in `domains`, the active request-body limit, rate-limit config, request counters, session-cache stats, saved simulation-run storage stats, and `pilotRequests.channel` so operators can confirm whether Resend delivery is configured.
 
 Public API responses also include:
 
@@ -63,10 +63,13 @@ Public API responses also include:
 | `GET /api/simulation-runs` | List recent saved run summaries for the current visitor session. |
 | `GET /api/simulation-runs/:id` | Load one saved Business Simulator run by ID for result pages or sharing. |
 | `POST /api/scenarios/compare` | Compare already-run scenario results. |
+| `POST /api/pilot-requests` | Accept a Founder Pilot request and send it through Resend when delivery is configured. |
 
 These routes are public and do not require an admin token or visitor session. They are the contract the Reuben website Business Simulator should use. The ready templates share the same response shape, so the frontend can present `operations-decision`, `capacity-planning`, `staffing-plan`, and `pricing-strategy` as product choices without a separate adapter.
 
 `POST /api/simulations/run` saves the hosted-demo result in PostgreSQL with a bounded in-memory fallback and includes a `run` summary with a `live_...` ID. The recommendation payload includes direct `decisionSummary`, `recommendedAction`, `confidence`, `confidenceSummary`, `whyThisWon`, `whatChangedFromBaseline`, `keyMetricDeltas`, `scoreBreakdown`, `riskSummary`, `tradeoffSummary`, and `watchouts` fields so result pages can render the sellable-product explanation without deriving copy from raw deltas. `comparison.scenarioRanking` lists every compared scenario in backend score order with rank, score gap, recommendation flag, and summary text for comparison cards. Saved-run summaries include `displayTitle`, `displaySubtitle`, `shareLabel`, `resultSummary`, `keyMetric`, `expiryNote`, and `storage` so list cards, shared result pages, and status panels do not have to synthesize product copy or guess persistence state. `storage` is either `postgres` or `memory`; memory fallback summaries include `persistenceWarning`. The run-list route is session-scoped; direct lookup by ID is public so result pages can be shared. Saved runs are intentionally temporary in the public demo and can expire; expired run lookups return `410` with `code: "saved_run_expired"` and `expiresAt` when the backend can still identify the expired record.
+
+`POST /api/pilot-requests` is the backend handoff for the Founder Pilot CTA. The request body accepts required `name`, `email`, and `decision` fields plus optional `company`, `role`, `phone`, `sourceRunId`, and `pageUrl`. A valid request returns `202` with `ok: true`, a generated `request.id`, `request.receivedAt`, and `delivery.status`. When `RESEND_API_KEY`, `REUX_PILOT_REQUEST_TO`, and `REUX_PILOT_REQUEST_FROM` are configured, delivery uses Resend and returns `delivery.status: "sent"`. Without those env vars, the route stays safe for public deployments and returns `delivery.status: "disabled"` plus a `delivery.mailto` fallback. Invalid lead forms return `400` with `code: "pilot_request_validation_failed"` and field-level `issues`.
 
 ## Generic Reux Simulation Routes
 
@@ -160,6 +163,7 @@ Known public error codes:
 | --- | ---: | --- |
 | `business_simulator_validation_failed` | `400` | Run/compare request failed contract validation. |
 | `simulation_execution_validation_failed` | `400` | Generic Reux simulation execution request failed validation. |
+| `pilot_request_validation_failed` | `400` | Founder Pilot request form failed field validation. |
 | `invalid_json` | `400` | Request body was not valid JSON. |
 | `request_too_large` | `413` | JSON body exceeded `REUX_DEMO_JSON_BODY_LIMIT_BYTES`. |
 | `rate_limited` | `429` | Visitor exceeded the public demo request limit. |

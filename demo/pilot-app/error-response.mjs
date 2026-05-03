@@ -38,6 +38,7 @@ export function demoErrorResponseBody(error, statusCode, options = {}) {
     code,
     ...errorMetadata(code, statusCode),
     ...(error?.expiresAt ? { expiresAt: error.expiresAt } : {}),
+    ...(Array.isArray(error?.issues) ? { issues: error.issues } : {}),
   };
 }
 
@@ -63,6 +64,7 @@ export function errorMetadata(code, statusCode) {
   switch (code) {
     case "business_simulator_validation_failed":
     case "simulation_execution_validation_failed":
+    case "pilot_request_validation_failed":
     case "invalid_json":
     case "request_too_large":
       return {

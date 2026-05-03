@@ -61,6 +61,7 @@ import {
   defaultSimulationRunTtlMs,
   recordSummary,
 } from "./simulation-runs.mjs";
+import { createPilotRequestSender, submitPilotRequest } from "./pilot-requests.mjs";
 
 const rootDir = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 const publicDir = join(rootDir, "demo", "pilot-app", "public");
@@ -90,6 +91,7 @@ const simulationRunStore = createSimulationRunStore({
   maxRecords: maxSimulationRunRecords,
   ttlMs: simulationRunTtlMs,
 });
+const pilotRequestSender = createPilotRequestSender();
 const buildId = buildIdentifier();
 const baseDatabaseUrl = process.env[config.databaseUrlEnv];
 const databases = new Map();
@@ -226,6 +228,7 @@ async function route(request, response, url = new URL(request.url ?? "/", `http:
       requests: requestStats.summary(),
       sessionCache: sessionCacheStats(databases, { idleMs: sessionIdleMs, maxContexts: maxSessionContexts }),
       simulationRuns: await simulationRunStats(),
+      pilotRequests: pilotRequestSender.status(),
       domains: Object.keys(domains),
       productSimulations: listProductSimulations().simulations.map((simulation) => simulation.name),
     });
@@ -283,6 +286,13 @@ async function route(request, response, url = new URL(request.url ?? "/", `http:
 
   if (url.pathname === "/api/scenarios/compare" && method === "POST") {
     sendJson(response, 200, businessScenarioCompare(await readJson(request, { limitBytes: jsonBodyLimitBytes })));
+    return;
+  }
+
+  if (url.pathname === "/api/pilot-requests" && method === "POST") {
+    sendJson(response, 202, await submitPilotRequest(await readJson(request, { limitBytes: jsonBodyLimitBytes }), {
+      sender: pilotRequestSender,
+    }));
     return;
   }
 

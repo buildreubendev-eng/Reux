@@ -63,6 +63,7 @@
   "errorCodes": [
     "business_simulator_validation_failed",
     "simulation_execution_validation_failed",
+    "pilot_request_validation_failed",
     "invalid_json",
     "request_too_large",
     "rate_limited",
@@ -188,7 +189,7 @@
       "path": "/api/health",
       "auth": "public",
       "session": "none",
-      "purpose": "Read deployment health, active domains, body limit, rate-limit settings, request counters, session-cache counters, and saved simulation-run storage stats."
+      "purpose": "Read deployment health, active domains, body limit, rate-limit settings, request counters, session-cache counters, saved simulation-run storage stats, and pilot-request delivery status."
     },
     {
       "name": "operationsDashboard",
@@ -269,6 +270,14 @@
       "auth": "public",
       "session": "none",
       "purpose": "Compare already-run Business Simulator scenario results."
+    },
+    {
+      "name": "createPilotRequest",
+      "method": "POST",
+      "path": "/api/pilot-requests",
+      "auth": "public",
+      "session": "none",
+      "purpose": "Accept a Founder Pilot request and send it through Resend when delivery is configured."
     },
     {
       "name": "listReuxSimulations",

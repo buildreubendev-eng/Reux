@@ -92,4 +92,21 @@ describe("demo public error responses", () => {
       issues: [{ path: "$.baseline.grossMarginRate", message: "must be between 0 and 1" }],
     });
   });
+
+  it("keeps pilot request validation issues public-safe", () => {
+    const error = new Error("$.email: email must be a valid email address");
+    error.code = "pilot_request_validation_failed";
+    error.issues = [{ path: "$.email", message: "email must be a valid email address" }];
+
+    expect(demoErrorResponseBody(error, 400)).toEqual({
+      ok: false,
+      error: "$.email: email must be a valid email address",
+      message: "$.email: email must be a valid email address",
+      code: "pilot_request_validation_failed",
+      category: "validation",
+      retryable: false,
+      userAction: "Fix the request fields and try again.",
+      issues: [{ path: "$.email", message: "email must be a valid email address" }],
+    });
+  });
 });
