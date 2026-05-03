@@ -85,6 +85,29 @@ export interface BusinessSimulatorAssumptions {
   forecastUnit: BusinessSimulatorForecastUnit;
 }
 
+export type BusinessSimulatorAssumptionGroup = "team" | "demand" | "margin" | "risk" | "forecast";
+export type BusinessSimulatorAssumptionInputKind = "integer" | "money" | "number" | "rate" | "select";
+
+export interface BusinessSimulatorAssumptionField {
+  name: keyof BusinessSimulatorAssumptions;
+  label: string;
+  description: string;
+  group: BusinessSimulatorAssumptionGroup;
+  inputKind: BusinessSimulatorAssumptionInputKind;
+  unit?: "USD" | "percent" | "count" | "orders" | "periods";
+  min?: number;
+  max?: number;
+  step?: number;
+  options?: BusinessSimulatorForecastUnit[];
+  required: boolean;
+  baselineEditable: boolean;
+  scenarioEditable: boolean;
+  display?: {
+    scale?: number;
+    suffix?: string;
+  };
+}
+
 export interface BusinessSimulatorValidationIssue {
   path: string;
   message: string;
@@ -301,6 +324,7 @@ export interface ListBusinessSimulationsResponse {
 export interface GetBusinessSimulationResponse {
   simulation: BusinessSimulatorSummary;
   defaultAssumptions: BusinessSimulatorAssumptions;
+  assumptionFields: BusinessSimulatorAssumptionField[];
   exampleScenarios: BusinessSimulatorScenarioInput[];
 }
 
@@ -317,5 +341,164 @@ export const businessSimulatorDefaultAssumptions: BusinessSimulatorAssumptions =
   forecastPeriods: 12,
   forecastUnit: "week",
 };
+
+export const businessSimulatorAssumptionFields: BusinessSimulatorAssumptionField[] = [
+  {
+    name: "employees",
+    label: "Employees",
+    description: "People available to handle the weekly workload.",
+    group: "team",
+    inputKind: "integer",
+    unit: "count",
+    min: 1,
+    max: businessSimulatorLimits.maxEmployees,
+    step: 1,
+    required: true,
+    baselineEditable: true,
+    scenarioEditable: true,
+  },
+  {
+    name: "averageHourlyCost",
+    label: "Average hourly cost",
+    description: "Fully loaded hourly cost per employee.",
+    group: "team",
+    inputKind: "money",
+    unit: "USD",
+    min: 0.01,
+    max: businessSimulatorLimits.maxAverageHourlyCost,
+    step: 1,
+    required: true,
+    baselineEditable: true,
+    scenarioEditable: true,
+  },
+  {
+    name: "weeklyDemand",
+    label: "Weekly demand",
+    description: "Expected weekly order, ticket, or unit volume.",
+    group: "demand",
+    inputKind: "number",
+    unit: "orders",
+    min: 0,
+    max: businessSimulatorLimits.maxWeeklyDemand,
+    step: 1,
+    required: true,
+    baselineEditable: true,
+    scenarioEditable: true,
+  },
+  {
+    name: "averageOrderValue",
+    label: "Average order value",
+    description: "Average revenue per order, ticket, or unit.",
+    group: "demand",
+    inputKind: "money",
+    unit: "USD",
+    min: 0.01,
+    max: businessSimulatorLimits.maxAverageOrderValue,
+    step: 1,
+    required: true,
+    baselineEditable: true,
+    scenarioEditable: true,
+  },
+  {
+    name: "grossMarginRate",
+    label: "Gross margin rate",
+    description: "Gross margin percentage before modeled labor, overtime, and defect costs.",
+    group: "margin",
+    inputKind: "rate",
+    unit: "percent",
+    min: 0,
+    max: 1,
+    step: 0.01,
+    required: true,
+    baselineEditable: true,
+    scenarioEditable: true,
+    display: { scale: 100, suffix: "%" },
+  },
+  {
+    name: "productivityGainRate",
+    label: "Productivity gain",
+    description: "Expected productivity lift from process, tooling, training, or automation changes.",
+    group: "margin",
+    inputKind: "rate",
+    unit: "percent",
+    min: 0,
+    max: 1,
+    step: 0.01,
+    required: true,
+    baselineEditable: true,
+    scenarioEditable: true,
+    display: { scale: 100, suffix: "%" },
+  },
+  {
+    name: "overtimeReductionRate",
+    label: "Overtime reduction",
+    description: "Expected reduction in overtime or avoidable labor pressure.",
+    group: "team",
+    inputKind: "rate",
+    unit: "percent",
+    min: 0,
+    max: 1,
+    step: 0.01,
+    required: true,
+    baselineEditable: true,
+    scenarioEditable: true,
+    display: { scale: 100, suffix: "%" },
+  },
+  {
+    name: "supplierDelayRiskRate",
+    label: "Supplier delay risk",
+    description: "Estimated probability of supplier or upstream delay affecting execution.",
+    group: "risk",
+    inputKind: "rate",
+    unit: "percent",
+    min: 0,
+    max: 1,
+    step: 0.01,
+    required: true,
+    baselineEditable: true,
+    scenarioEditable: true,
+    display: { scale: 100, suffix: "%" },
+  },
+  {
+    name: "defectRate",
+    label: "Defect rate",
+    description: "Estimated quality, rework, or defect rate affecting margin.",
+    group: "risk",
+    inputKind: "rate",
+    unit: "percent",
+    min: 0,
+    max: 1,
+    step: 0.001,
+    required: true,
+    baselineEditable: true,
+    scenarioEditable: true,
+    display: { scale: 100, suffix: "%" },
+  },
+  {
+    name: "forecastPeriods",
+    label: "Forecast periods",
+    description: "How many periods the simulator should forecast.",
+    group: "forecast",
+    inputKind: "integer",
+    unit: "periods",
+    min: 1,
+    max: businessSimulatorLimits.maxForecastPeriods,
+    step: 1,
+    required: true,
+    baselineEditable: true,
+    scenarioEditable: false,
+  },
+  {
+    name: "forecastUnit",
+    label: "Forecast unit",
+    description: "Time unit used for the forecast horizon.",
+    group: "forecast",
+    inputKind: "select",
+    options: [...businessSimulatorForecastUnits],
+    required: true,
+    baselineEditable: true,
+    scenarioEditable: false,
+  },
+];
 
 export const businessSimulatorContractVersion = "2026-05-02";

@@ -545,6 +545,30 @@ function validateSimulationTemplate(response, body, expectedId) {
       diagnostics.push(`business simulator template defaultAssumptions missing ${field}`);
     }
   }
+  const assumptionFields = body?.assumptionFields;
+  if (!Array.isArray(assumptionFields) || assumptionFields.length === 0) {
+    diagnostics.push("business simulator template did not include assumptionFields metadata");
+  } else {
+    for (const field of ["employees", "grossMarginRate", "forecastUnit"]) {
+      const metadata = assumptionFields.find((candidate) => candidate.name === field);
+      if (!metadata) {
+        diagnostics.push(`business simulator template assumptionFields missing ${field}`);
+        continue;
+      }
+      if (typeof metadata.label !== "string" || metadata.label.length === 0) {
+        diagnostics.push(`business simulator template assumptionFields ${field} missing label`);
+      }
+      if (typeof metadata.description !== "string" || metadata.description.length === 0) {
+        diagnostics.push(`business simulator template assumptionFields ${field} missing description`);
+      }
+      if (metadata.name === "grossMarginRate" && metadata.inputKind !== "rate") {
+        diagnostics.push("business simulator template grossMarginRate metadata should use rate inputKind");
+      }
+      if (metadata.name === "forecastUnit" && (!Array.isArray(metadata.options) || !metadata.options.includes("week"))) {
+        diagnostics.push("business simulator template forecastUnit metadata should include forecast unit options");
+      }
+    }
+  }
   if (!Array.isArray(body?.exampleScenarios) || body.exampleScenarios.length === 0) {
     diagnostics.push("business simulator template did not include exampleScenarios");
   }

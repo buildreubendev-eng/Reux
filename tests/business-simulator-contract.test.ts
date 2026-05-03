@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import {
   businessSimulatorContractVersion,
+  businessSimulatorAssumptionFields,
   businessSimulatorDefaultAssumptions,
   businessSimulatorEndpoints,
   businessSimulatorErrorCodes,
@@ -51,6 +52,19 @@ describe("business simulator API contract", () => {
     ]);
     expect(businessSimulatorLimits.maxRunScenarios).toBe(8);
     expect(businessSimulatorLimits.maxForecastPeriods).toBe(52);
+    expect(businessSimulatorAssumptionFields.map((field) => field.name)).toEqual([
+      "employees",
+      "averageHourlyCost",
+      "weeklyDemand",
+      "averageOrderValue",
+      "grossMarginRate",
+      "productivityGainRate",
+      "overtimeReductionRate",
+      "supplierDelayRiskRate",
+      "defectRate",
+      "forecastPeriods",
+      "forecastUnit",
+    ]);
   });
 
   it("keeps frontend assumption defaults in the public contract", () => {
@@ -253,6 +267,25 @@ describe("business simulator API contract", () => {
     ]);
     const template = getBusinessSimulation("operations-decision");
     expect(template.defaultAssumptions).toEqual(businessSimulatorDefaultAssumptions);
+    expect(template.assumptionFields.map((field) => field.name)).toEqual(
+      businessSimulatorAssumptionFields.map((field) => field.name),
+    );
+    expect(template.assumptionFields.find((field) => field.name === "grossMarginRate")).toMatchObject({
+      label: "Gross margin rate",
+      inputKind: "rate",
+      unit: "percent",
+      min: 0,
+      max: 1,
+      display: { scale: 100, suffix: "%" },
+      baselineEditable: true,
+      scenarioEditable: true,
+    });
+    expect(template.assumptionFields.find((field) => field.name === "forecastUnit")).toMatchObject({
+      inputKind: "select",
+      options: ["week", "month", "quarter"],
+      baselineEditable: true,
+      scenarioEditable: false,
+    });
     expect(template.exampleScenarios.length).toBeGreaterThan(0);
 
     const run = runBusinessSimulator(
@@ -409,6 +442,13 @@ describe("business simulator API contract", () => {
     expect(fixture.endpoints.runSimulation).toBe("POST /api/simulations/run");
     expect(fixture.limits.maxRunScenarios).toBe(8);
     expect(fixture.templateResponse.simulation.id).toBe("operations-decision");
+    expect(fixture.templateResponse.assumptionFields.length).toBe(businessSimulatorAssumptionFields.length);
+    expect(fixture.templateResponse.assumptionFields[0]).toMatchObject({
+      name: "employees",
+      label: "Employees",
+      group: "team",
+      inputKind: "integer",
+    });
     expect(fixture.runRequest.options?.includeReuxSource).toBe(true);
     expect(fixture.runRequest.name).toBe("Contract Fixture Business Simulation");
     expect(fixture.runResponse.reuxSource).toContain("simulate operations_decision");

@@ -60,6 +60,157 @@
     "businessSimulatorMaxAverageHourlyCost": 1000,
     "businessSimulatorMaxAverageOrderValue": 1000000
   },
+  "businessSimulatorAssumptionFields": [
+    {
+      "name": "employees",
+      "label": "Employees",
+      "group": "team",
+      "inputKind": "integer",
+      "unit": "count",
+      "min": 1,
+      "max": 10000,
+      "step": 1,
+      "baselineEditable": true,
+      "scenarioEditable": true
+    },
+    {
+      "name": "averageHourlyCost",
+      "label": "Average hourly cost",
+      "group": "team",
+      "inputKind": "money",
+      "unit": "USD",
+      "min": 0.01,
+      "max": 1000,
+      "step": 1,
+      "baselineEditable": true,
+      "scenarioEditable": true
+    },
+    {
+      "name": "weeklyDemand",
+      "label": "Weekly demand",
+      "group": "demand",
+      "inputKind": "number",
+      "unit": "orders",
+      "min": 0,
+      "max": 1000000,
+      "step": 1,
+      "baselineEditable": true,
+      "scenarioEditable": true
+    },
+    {
+      "name": "averageOrderValue",
+      "label": "Average order value",
+      "group": "demand",
+      "inputKind": "money",
+      "unit": "USD",
+      "min": 0.01,
+      "max": 1000000,
+      "step": 1,
+      "baselineEditable": true,
+      "scenarioEditable": true
+    },
+    {
+      "name": "grossMarginRate",
+      "label": "Gross margin rate",
+      "group": "margin",
+      "inputKind": "rate",
+      "unit": "percent",
+      "min": 0,
+      "max": 1,
+      "step": 0.01,
+      "display": {
+        "scale": 100,
+        "suffix": "%"
+      },
+      "baselineEditable": true,
+      "scenarioEditable": true
+    },
+    {
+      "name": "productivityGainRate",
+      "label": "Productivity gain",
+      "group": "margin",
+      "inputKind": "rate",
+      "unit": "percent",
+      "min": 0,
+      "max": 1,
+      "step": 0.01,
+      "display": {
+        "scale": 100,
+        "suffix": "%"
+      },
+      "baselineEditable": true,
+      "scenarioEditable": true
+    },
+    {
+      "name": "overtimeReductionRate",
+      "label": "Overtime reduction",
+      "group": "team",
+      "inputKind": "rate",
+      "unit": "percent",
+      "min": 0,
+      "max": 1,
+      "step": 0.01,
+      "display": {
+        "scale": 100,
+        "suffix": "%"
+      },
+      "baselineEditable": true,
+      "scenarioEditable": true
+    },
+    {
+      "name": "supplierDelayRiskRate",
+      "label": "Supplier delay risk",
+      "group": "risk",
+      "inputKind": "rate",
+      "unit": "percent",
+      "min": 0,
+      "max": 1,
+      "step": 0.01,
+      "display": {
+        "scale": 100,
+        "suffix": "%"
+      },
+      "baselineEditable": true,
+      "scenarioEditable": true
+    },
+    {
+      "name": "defectRate",
+      "label": "Defect rate",
+      "group": "risk",
+      "inputKind": "rate",
+      "unit": "percent",
+      "min": 0,
+      "max": 1,
+      "step": 0.001,
+      "display": {
+        "scale": 100,
+        "suffix": "%"
+      },
+      "baselineEditable": true,
+      "scenarioEditable": true
+    },
+    {
+      "name": "forecastPeriods",
+      "label": "Forecast periods",
+      "group": "forecast",
+      "inputKind": "integer",
+      "unit": "periods",
+      "min": 1,
+      "max": 52,
+      "step": 1,
+      "baselineEditable": true,
+      "scenarioEditable": false
+    },
+    {
+      "name": "forecastUnit",
+      "label": "Forecast unit",
+      "group": "forecast",
+      "inputKind": "select",
+      "options": ["week", "month", "quarter"],
+      "baselineEditable": true,
+      "scenarioEditable": false
+    }
+  ],
   "errorCodes": [
     "business_simulator_validation_failed",
     "simulation_execution_validation_failed",
@@ -213,7 +364,7 @@
       "path": "/api/simulations/operations-decision",
       "auth": "public",
       "session": "none",
-      "purpose": "Load the current operations-decision template, defaults, and starter scenarios."
+      "purpose": "Load the current operations-decision template, defaults, assumption field metadata, and starter scenarios."
     },
     {
       "name": "getCapacityPlanningSimulation",
@@ -221,7 +372,7 @@
       "path": "/api/simulations/capacity-planning",
       "auth": "public",
       "session": "none",
-      "purpose": "Load the capacity-planning template, defaults, and starter scenarios."
+      "purpose": "Load the capacity-planning template, defaults, assumption field metadata, and starter scenarios."
     },
     {
       "name": "getStaffingPlanSimulation",
@@ -229,7 +380,7 @@
       "path": "/api/simulations/staffing-plan",
       "auth": "public",
       "session": "none",
-      "purpose": "Load the staffing-plan template, defaults, and starter scenarios."
+      "purpose": "Load the staffing-plan template, defaults, assumption field metadata, and starter scenarios."
     },
     {
       "name": "getPricingStrategySimulation",
@@ -237,7 +388,7 @@
       "path": "/api/simulations/pricing-strategy",
       "auth": "public",
       "session": "none",
-      "purpose": "Load the pricing-strategy template, defaults, and starter scenarios."
+      "purpose": "Load the pricing-strategy template, defaults, assumption field metadata, and starter scenarios."
     },
     {
       "name": "runBusinessSimulation",

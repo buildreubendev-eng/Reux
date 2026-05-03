@@ -101,6 +101,23 @@ for (const [key, value] of Object.entries(contract.limits ?? {})) {
   if (value === undefined || value === null) failures.push(`contract limit ${key} must have a value`);
 }
 
+const assumptionFields = contract.businessSimulatorAssumptionFields ?? [];
+if (!Array.isArray(assumptionFields) || assumptionFields.length === 0) {
+  failures.push("contract must include businessSimulatorAssumptionFields");
+} else {
+  for (const fieldName of ["employees", "grossMarginRate", "forecastUnit"]) {
+    const field = assumptionFields.find((candidate) => candidate.name === fieldName);
+    if (!field) {
+      failures.push(`contract missing assumption field metadata: ${fieldName}`);
+      continue;
+    }
+    for (const requiredKey of ["label", "group", "inputKind"]) {
+      if (!field[requiredKey]) failures.push(`assumption field ${fieldName} missing ${requiredKey}`);
+    }
+  }
+  if (!docs.includes("assumptionFields")) failures.push("docs must mention assumptionFields");
+}
+
 const errorExamples = new Map((contract.errorExamples ?? []).map((example) => [example.name, example]));
 for (const required of requiredErrorExamples) {
   const example = errorExamples.get(required.name);

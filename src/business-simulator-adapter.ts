@@ -1,6 +1,7 @@
 import { parseProgram } from "./parser.js";
 import { buildSimulationCatalog, runSimulationIr, SimulationRunResult, SimulationScenarioRunResult } from "./simulation-ir.js";
 import {
+  businessSimulatorAssumptionFields,
   businessSimulatorDefaultAssumptions,
   businessSimulatorMetricNames,
   BusinessSimulatorAssumptions,
@@ -303,6 +304,7 @@ export function getBusinessSimulation(id = defaultBusinessSimulatorTemplate.summ
   return {
     simulation: template.summary,
     defaultAssumptions: template.defaultAssumptions,
+    assumptionFields: businessSimulatorAssumptionFields,
     exampleScenarios: template.exampleScenarios,
   };
 }

@@ -31,6 +31,7 @@ import { emitTypeScriptSimulationContracts } from "./simulation-generator.js";
 export { emitReuxCapabilitiesJson, formatReuxCapabilitiesMarkdown, getReuxCapabilities } from "./capabilities.js";
 export type { ReuxCapabilities, ReuxCapabilityGroup } from "./capabilities.js";
 export {
+  businessSimulatorAssumptionFields,
   businessSimulatorContractVersion,
   businessSimulatorDefaultAssumptions,
   businessSimulatorEndpoints,
@@ -68,6 +69,9 @@ export {
   runReuxSimulation,
 } from "./simulation-service.js";
 export type {
+  BusinessSimulatorAssumptionField,
+  BusinessSimulatorAssumptionGroup,
+  BusinessSimulatorAssumptionInputKind,
   BusinessSimulatorAssumptions,
   BusinessSimulatorCompareRequest,
   BusinessSimulatorCompareResponse,

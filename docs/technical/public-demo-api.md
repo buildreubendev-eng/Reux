@@ -55,10 +55,10 @@ Public API responses also include:
 | Route | Purpose |
 | --- | --- |
 | `GET /api/simulations` | List available Business Simulator templates. |
-| `GET /api/simulations/operations-decision` | Load the current operations-decision template. |
-| `GET /api/simulations/capacity-planning` | Load the capacity-planning template. |
-| `GET /api/simulations/staffing-plan` | Load the staffing-plan template. |
-| `GET /api/simulations/pricing-strategy` | Load the pricing-strategy template. |
+| `GET /api/simulations/operations-decision` | Load the current operations-decision template, defaults, field metadata, and starter scenarios. |
+| `GET /api/simulations/capacity-planning` | Load the capacity-planning template, defaults, field metadata, and starter scenarios. |
+| `GET /api/simulations/staffing-plan` | Load the staffing-plan template, defaults, field metadata, and starter scenarios. |
+| `GET /api/simulations/pricing-strategy` | Load the pricing-strategy template, defaults, field metadata, and starter scenarios. |
 | `POST /api/simulations/run` | Run a baseline plus scenarios and return metrics, timeline, frontend-ready recommendation summaries, and optional Reux source. |
 | `GET /api/simulation-runs` | List recent saved run summaries for the current visitor session. |
 | `GET /api/simulation-runs/:id` | Load one saved Business Simulator run by ID for result pages or sharing. |
@@ -66,6 +66,8 @@ Public API responses also include:
 | `POST /api/pilot-requests` | Accept a Founder Pilot request and send it through Resend when delivery is configured. |
 
 These routes are public and do not require an admin token or visitor session. They are the contract the Reuben website Business Simulator should use. The ready templates share the same response shape, so the frontend can present `operations-decision`, `capacity-planning`, `staffing-plan`, and `pricing-strategy` as product choices without a separate adapter.
+
+Template responses include `assumptionFields`, a backend-owned metadata array for the guided assumption UI. Each entry includes labels, helper copy, grouping, units, min/max/step values, select options, and baseline/scenario editability flags so product clients do not need to hard-code field details.
 
 `POST /api/simulations/run` saves the hosted-demo result in PostgreSQL with a bounded in-memory fallback and includes a `run` summary with a `live_...` ID. The recommendation payload includes direct `decisionSummary`, `recommendedAction`, `confidence`, `confidenceSummary`, `whyThisWon`, `whatChangedFromBaseline`, `keyMetricDeltas`, `scoreBreakdown`, `riskSummary`, `tradeoffSummary`, and `watchouts` fields so result pages can render the sellable-product explanation without deriving copy from raw deltas. `comparison.scenarioRanking` lists every compared scenario in backend score order with rank, score gap, recommendation flag, and summary text for comparison cards. Saved-run summaries include `displayTitle`, `displaySubtitle`, `shareLabel`, `resultSummary`, `keyMetric`, `expiryNote`, and `storage` so list cards, shared result pages, and status panels do not have to synthesize product copy or guess persistence state. `storage` is either `postgres` or `memory`; memory fallback summaries include `persistenceWarning`. The run-list route is session-scoped; direct lookup by ID is public so result pages can be shared. Saved runs are intentionally temporary in the public demo and can expire; expired run lookups return `410` with `code: "saved_run_expired"` and `expiresAt` when the backend can still identify the expired record.
 

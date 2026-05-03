@@ -48,6 +48,31 @@ The Business Simulator model should cover the controls the frontend is building:
 
 Rate values use decimal form. For example, `0.08` means 8%.
 
+`GET /api/simulations/:id` also returns `assumptionFields`, a backend-owned metadata array for rendering product controls. Each field includes `name`, `label`, `description`, `group`, `inputKind`, optional `unit`, `min`, `max`, `step`, select `options`, and whether the value can be edited in the baseline or scenario override form. Frontend clients should prefer this metadata over hard-coded labels and limits when building the guided assumption UI.
+
+Example field metadata:
+
+```json
+{
+  "name": "grossMarginRate",
+  "label": "Gross margin rate",
+  "description": "Gross margin percentage before modeled labor, overtime, and defect costs.",
+  "group": "margin",
+  "inputKind": "rate",
+  "unit": "percent",
+  "min": 0,
+  "max": 1,
+  "step": 0.01,
+  "required": true,
+  "baselineEditable": true,
+  "scenarioEditable": true,
+  "display": {
+    "scale": 100,
+    "suffix": "%"
+  }
+}
+```
+
 ## Run Request
 
 ```json
@@ -129,7 +154,7 @@ Metric snapshots include:
 - `riskScore`
 - `defectCost`
 
-The source of truth also exports `businessSimulatorForecastUnits` and `businessSimulatorMetricNames` so product apps can build controls and charts without hand-copying enum values.
+The source of truth also exports `businessSimulatorForecastUnits`, `businessSimulatorMetricNames`, and `businessSimulatorAssumptionFields` so product apps can build controls and charts without hand-copying enum values, labels, units, or public-demo field limits.
 It also exports `businessSimulatorErrorCodes`, `BusinessSimulatorErrorResponse`, `BusinessSimulatorValidationErrorResponse`, and `businessSimulatorLimits` so clients can handle backend failures and mirror public-demo limits without inventing their own envelope or constraints.
 
 `options.includeTimeline` defaults to `true`. Set it to `false` for lighter responses that keep `finalMetrics` and comparison/recommendation output while returning empty `timeline` arrays. `options.includeReuxSource` defaults to `false`; set it to `true` only when a UI needs the Reux transparency panel.
