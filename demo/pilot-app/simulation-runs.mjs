@@ -96,20 +96,41 @@ export function recordSummary(record) {
   const bestMarginScenario = bestMargin === undefined
     ? undefined
     : scenarioResults.find((scenario) => Number(scenario?.finalMetrics?.margin) === bestMargin)?.name;
+  const name = record.request?.name ?? record.response?.simulation?.name ?? record.simulationId;
+  const scenarioCount = scenarioResults.length || record.response?.scenarios?.length || 0;
+  const recommendedScenarioName = recommendation?.scenarioName;
+  const displaySubtitle = recommendedScenarioName
+    ? `${scenarioCount} scenarios compared. Recommended: ${recommendedScenarioName}.`
+    : `${scenarioCount} scenarios compared.`;
+  const keyMetric = bestMargin === undefined
+    ? undefined
+    : {
+        metric: "margin",
+        label: "Best margin",
+        value: bestMargin,
+        unit: "USD",
+        ...(bestMarginScenario ? { scenarioName: bestMarginScenario } : {}),
+      };
 
   return {
     id: record.id,
-    name: record.request?.name ?? record.response?.simulation?.name ?? record.simulationId,
+    name,
     simulationId: record.simulationId,
     createdAt: record.createdAt,
     expiresAt: record.expiresAt,
+    displayTitle: name,
+    displaySubtitle,
+    shareLabel: `Business Simulator result: ${name}`,
+    ...(recommendation?.whyThisWon || recommendation?.summary ? { resultSummary: recommendation.whyThisWon ?? recommendation.summary } : {}),
+    ...(keyMetric ? { keyMetric } : {}),
+    ...(record.expiresAt ? { expiryNote: `Temporary result expires at ${record.expiresAt}.` } : {}),
     session: record.session,
-    scenarioCount: scenarioResults.length || record.response?.scenarios?.length || 0,
+    scenarioCount,
     ...(bestMargin !== undefined ? { bestMargin } : {}),
     ...(bestMarginScenario ? { bestMarginScenario } : {}),
     ...(risks.length > 0 ? { riskRange: [Math.min(...risks), Math.max(...risks)] } : {}),
     recommendedScenarioId: recommendation?.scenarioId,
-    recommendedScenarioName: recommendation?.scenarioName,
+    recommendedScenarioName,
   };
 }
 

@@ -27,6 +27,7 @@ describe("demo simulation run store", () => {
         recommendation: {
           scenarioId: "process-improvement",
           scenarioName: "Process Improvement",
+          whyThisWon: "Process Improvement is recommended because margin improved with lower risk.",
         },
       },
     };
@@ -42,12 +43,24 @@ describe("demo simulation run store", () => {
       id: "live_test_run",
       name: "Operations Decision Simulator",
       simulationId: "operations-decision",
+      displayTitle: "Operations Decision Simulator",
+      displaySubtitle: "2 scenarios compared. Recommended: Process Improvement.",
+      shareLabel: "Business Simulator result: Operations Decision Simulator",
+      resultSummary: "Process Improvement is recommended because margin improved with lower risk.",
       scenarioCount: 2,
       bestMargin: 1400,
       bestMarginScenario: "Process Improvement",
+      keyMetric: {
+        metric: "margin",
+        label: "Best margin",
+        value: 1400,
+        unit: "USD",
+        scenarioName: "Process Improvement",
+      },
       riskRange: [16, 20],
       recommendedScenarioId: "process-improvement",
       recommendedScenarioName: "Process Improvement",
+      expiryNote: "Temporary result expires at 2026-05-02T00:01:00.000Z.",
       session: {
         id: "abc12345",
         isolated: true,

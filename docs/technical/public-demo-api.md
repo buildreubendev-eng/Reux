@@ -63,7 +63,7 @@ Public API responses also include:
 
 These routes are public and do not require an admin token or visitor session. They are the contract the Reuben website Business Simulator should use.
 
-`POST /api/simulations/run` saves the hosted-demo result in PostgreSQL with a bounded in-memory fallback and includes a `run` summary with a `live_...` ID. The recommendation payload includes direct `whyThisWon`, `whatChangedFromBaseline`, `keyMetricDeltas`, `riskSummary`, and `tradeoffSummary` fields so result pages can render the sellable-product explanation without deriving copy from raw deltas. The run-list route is session-scoped; direct lookup by ID is public so result pages can be shared. Saved runs are intentionally temporary in the public demo and can expire.
+`POST /api/simulations/run` saves the hosted-demo result in PostgreSQL with a bounded in-memory fallback and includes a `run` summary with a `live_...` ID. The recommendation payload includes direct `whyThisWon`, `whatChangedFromBaseline`, `keyMetricDeltas`, `riskSummary`, and `tradeoffSummary` fields so result pages can render the sellable-product explanation without deriving copy from raw deltas. Saved-run summaries include `displayTitle`, `displaySubtitle`, `shareLabel`, `resultSummary`, `keyMetric`, and `expiryNote` so list cards and shared result pages do not have to synthesize product copy. The run-list route is session-scoped; direct lookup by ID is public so result pages can be shared. Saved runs are intentionally temporary in the public demo and can expire.
 
 ## Generic Reux Simulation Routes
 

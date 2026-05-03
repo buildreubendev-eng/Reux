@@ -14,6 +14,7 @@
     "Business Simulator first-wedge product brief for buyer, offer, and pilot positioning",
     "Separate Business Simulator frontend and backend roadmaps for sellable-product execution",
     "PostgreSQL-backed Business Simulator run records for result pages and sharing",
+    "Saved Business Simulator run summaries with display title, share label, key metric, result summary, and expiry note",
     "Public API rate limiting and request counters for hosted demo protection",
     "Dry-run/apply maintenance cleanup for visitor schemas and saved simulation runs",
     "Hosted deep health checks for saved-run creation, reload, and listing",

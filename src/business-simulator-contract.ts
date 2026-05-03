@@ -182,6 +182,12 @@ export interface BusinessSimulatorRunSummary {
   simulationId: string;
   createdAt: string;
   expiresAt?: string;
+  displayTitle: string;
+  displaySubtitle: string;
+  shareLabel: string;
+  resultSummary?: string;
+  keyMetric?: BusinessSimulatorRunKeyMetric;
+  expiryNote?: string;
   session?: {
     id: string;
     isolated: boolean;
@@ -193,6 +199,14 @@ export interface BusinessSimulatorRunSummary {
   riskRange?: [number, number];
   recommendedScenarioId?: string;
   recommendedScenarioName?: string;
+}
+
+export interface BusinessSimulatorRunKeyMetric {
+  metric: BusinessSimulatorMetricName;
+  label: string;
+  value: number;
+  unit?: BusinessSimulatorMetricDelta["unit"];
+  scenarioName?: string;
 }
 
 export interface BusinessSimulatorRunRecord extends BusinessSimulatorRunSummary {

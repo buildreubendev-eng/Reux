@@ -183,17 +183,29 @@ The hosted demo stores recent Business Simulator runs in PostgreSQL with a bound
     "simulationId": "operations-decision",
     "createdAt": "2026-05-02T00:00:00.000Z",
     "expiresAt": "2026-05-03T00:00:00.000Z",
+    "displayTitle": "Q2 Workforce Planning",
+    "displaySubtitle": "2 scenarios compared. Recommended: Process Improvement.",
+    "shareLabel": "Business Simulator result: Q2 Workforce Planning",
+    "resultSummary": "Process Improvement is recommended because productivity improves while risk stays flat.",
     "scenarioCount": 2,
+    "keyMetric": {
+      "metric": "margin",
+      "label": "Best margin",
+      "value": 23164,
+      "unit": "USD",
+      "scenarioName": "Process Improvement"
+    },
     "bestMargin": 23164,
     "bestMarginScenario": "Process Improvement",
     "riskRange": [18.4, 24.8],
     "recommendedScenarioId": "process-improvement",
-    "recommendedScenarioName": "Process Improvement"
+    "recommendedScenarioName": "Process Improvement",
+    "expiryNote": "Temporary result expires at 2026-05-03T00:00:00.000Z."
   }
 }
 ```
 
-`GET /api/simulation-runs` returns session-scoped summaries with display name, scenario count, best margin, best-margin scenario, risk range, recommendation metadata, and expiry time so a visitor can revisit recent work without seeing another visitor's run list. `GET /api/simulation-runs/:id` loads the full request and response for a known run ID, which is the shareable result-page path the frontend can use.
+`GET /api/simulation-runs` returns session-scoped summaries with display title, subtitle, share label, result summary, scenario count, key metric, best margin, best-margin scenario, risk range, recommendation metadata, expiry note, and expiry time so a visitor can revisit recent work without seeing another visitor's run list. `GET /api/simulation-runs/:id` loads the full request and response for a known run ID, which is the shareable result-page path the frontend can use.
 
 The persisted demo store is configured with:
 

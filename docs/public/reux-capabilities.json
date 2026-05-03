@@ -75,6 +75,7 @@
         "Business Simulator frontend wired to generic Reux simulation execution",
         "Business Simulator recommendation payloads with explicit winner rationale, key deltas, baseline-change summaries, risk summary, and tradeoff summary",
         "PostgreSQL-backed Business Simulator run records for result pages and sharing",
+        "Saved Business Simulator run summaries with display title, share label, key metric, result summary, and expiry note",
         "Public API rate limiting and request counters for hosted demo protection",
         "Dry-run/apply maintenance cleanup for visitor schemas and saved simulation runs",
         "Hosted deep health checks for saved-run creation, reload, and listing",
