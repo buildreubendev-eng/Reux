@@ -558,6 +558,7 @@ function validateSimulationRun(response, body, expectedId) {
   if (body?.run?.simulationId !== expectedId) {
     diagnostics.push(`business simulator saved-run metadata expected simulationId=${expectedId}, got ${body?.run?.simulationId ?? "missing"}`);
   }
+  diagnostics.push(...validateSavedRunStorage(body?.run, "business simulator run"));
   if (!body?.generatedAt) diagnostics.push("business simulator run did not include generatedAt");
   return diagnostics;
 }
@@ -659,6 +660,18 @@ function validateSavedSimulationRunSummary(summary, expectedId, label) {
   if (typeof summary.expiresAt !== "string" || Number.isNaN(Date.parse(summary.expiresAt))) diagnostics.push(`${label} did not include a valid expiresAt timestamp`);
   if (typeof summary.expiryNote !== "string" || !summary.expiryNote.includes(summary.expiresAt)) {
     diagnostics.push(`${label} did not include expiryNote with expiresAt`);
+  }
+  diagnostics.push(...validateSavedRunStorage(summary, label));
+  return diagnostics;
+}
+
+function validateSavedRunStorage(summary, label) {
+  const diagnostics = [];
+  if (!["postgres", "memory"].includes(summary?.storage)) {
+    diagnostics.push(`${label} did not include saved-run storage status`);
+  }
+  if (summary?.storage === "memory" && typeof summary.persistenceWarning !== "string") {
+    diagnostics.push(`${label} used memory fallback without persistenceWarning`);
   }
   return diagnostics;
 }

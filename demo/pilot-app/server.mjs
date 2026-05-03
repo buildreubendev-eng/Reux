@@ -688,8 +688,19 @@ async function businessSimulationRun(request, body) {
       session: simulationSession(request),
     });
     try {
+      record.storage = "postgres";
+      record.response = {
+        ...record.response,
+        run: recordSummary(record),
+      };
       await savePersistedSimulationRun(record);
     } catch (error) {
+      record.storage = "memory";
+      record.persistenceWarning = "Saved run is using temporary in-memory fallback storage.";
+      record.response = {
+        ...record.response,
+        run: recordSummary(record),
+      };
       console.warn(`failed to persist simulation run ${record.id}: ${error.message}`);
     }
     return record.response;

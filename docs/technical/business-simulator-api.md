@@ -234,6 +234,7 @@ The hosted demo stores recent Business Simulator runs in PostgreSQL with a bound
     "simulationId": "operations-decision",
     "createdAt": "2026-05-02T00:00:00.000Z",
     "expiresAt": "2026-05-03T00:00:00.000Z",
+    "storage": "postgres",
     "displayTitle": "Q2 Workforce Planning",
     "displaySubtitle": "2 scenarios compared. Recommended: Process Improvement.",
     "shareLabel": "Business Simulator result: Q2 Workforce Planning",
@@ -256,7 +257,7 @@ The hosted demo stores recent Business Simulator runs in PostgreSQL with a bound
 }
 ```
 
-`GET /api/simulation-runs` returns session-scoped summaries with display title, subtitle, share label, result summary, scenario count, key metric, best margin, best-margin scenario, risk range, recommendation metadata, expiry note, and expiry time so a visitor can revisit recent work without seeing another visitor's run list. `GET /api/simulation-runs/:id` loads the full request and response for a known run ID, which is the shareable result-page path the frontend can use. Expired saved runs return `410` with `code: "saved_run_expired"` and `expiresAt` when the backend can still identify the expired record; fully pruned or unknown IDs return `404` with `code: "not_found"`.
+`GET /api/simulation-runs` returns session-scoped summaries with display title, subtitle, share label, result summary, scenario count, key metric, best margin, best-margin scenario, risk range, recommendation metadata, expiry note, expiry time, and storage status so a visitor can revisit recent work without seeing another visitor's run list. `GET /api/simulation-runs/:id` loads the full request and response for a known run ID, which is the shareable result-page path the frontend can use. `storage` is either `postgres` or `memory`; `memory` means the hosted demo used temporary in-process fallback storage and includes `persistenceWarning` for UI/operator status surfaces. Expired saved runs return `410` with `code: "saved_run_expired"` and `expiresAt` when the backend can still identify the expired record; fully pruned or unknown IDs return `404` with `code: "not_found"`.
 
 The persisted demo store is configured with:
 

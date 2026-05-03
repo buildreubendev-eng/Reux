@@ -134,6 +134,10 @@ export function recordSummary(record) {
     simulationId: record.simulationId,
     createdAt: record.createdAt,
     expiresAt: record.expiresAt,
+    ...(record.storage ?? record.response?.run?.storage ? { storage: record.storage ?? record.response?.run?.storage } : {}),
+    ...(record.persistenceWarning ?? record.response?.run?.persistenceWarning
+      ? { persistenceWarning: record.persistenceWarning ?? record.response?.run?.persistenceWarning }
+      : {}),
     displayTitle: name,
     displaySubtitle,
     shareLabel: `Business Simulator result: ${name}`,

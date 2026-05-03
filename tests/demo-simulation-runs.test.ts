@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createSimulationRunStore } from "../demo/pilot-app/simulation-runs.mjs";
+import { createSimulationRunStore, recordSummary } from "../demo/pilot-app/simulation-runs.mjs";
 
 describe("demo simulation run store", () => {
   it("stores shareable business simulator run records with response metadata", () => {
@@ -86,6 +86,50 @@ describe("demo simulation run store", () => {
     expect(store.list({ sessionId: "sessionone" }).map((run) => run.id)).toEqual(["live_1"]);
     expect(store.list().map((run) => run.id)).toEqual(["live_2", "live_1"]);
     expect(store.get("live_1")?.session.id).toBe("sessionone");
+  });
+
+  it("preserves saved-run storage status in summary metadata", () => {
+    const summary = recordSummary({
+      id: "live_storage",
+      simulationId: "operations-decision",
+      createdAt: "2026-05-02T00:00:00.000Z",
+      expiresAt: "2026-05-03T00:00:00.000Z",
+      session: { id: "sessionone", isolated: true },
+      request: { name: "Fallback Run" },
+      response: {
+        simulation: { id: "operations-decision", name: "Operations Decision Simulator" },
+        baseline: {
+          id: "baseline",
+          name: "Current Operations",
+          finalMetrics: { margin: 1000, riskScore: 20 },
+        },
+        scenarios: [
+          {
+            id: "process-improvement",
+            name: "Process Improvement",
+            finalMetrics: { margin: 1400, riskScore: 16 },
+          },
+        ],
+        comparison: {
+          recommendation: {
+            scenarioId: "process-improvement",
+            scenarioName: "Process Improvement",
+            decisionSummary: "Process Improvement is recommended.",
+          },
+        },
+        run: {
+          storage: "memory",
+          persistenceWarning: "Saved run is using temporary in-memory fallback storage.",
+        },
+      },
+    });
+
+    expect(summary).toMatchObject({
+      id: "live_storage",
+      storage: "memory",
+      persistenceWarning: "Saved run is using temporary in-memory fallback storage.",
+      resultSummary: "Process Improvement is recommended.",
+    });
   });
 
   it("expires old records and enforces the configured record limit", () => {

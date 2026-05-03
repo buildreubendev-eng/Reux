@@ -204,6 +204,8 @@ export interface BusinessSimulatorRunSummary {
   simulationId: string;
   createdAt: string;
   expiresAt?: string;
+  storage?: "postgres" | "memory";
+  persistenceWarning?: string;
   displayTitle: string;
   displaySubtitle: string;
   shareLabel: string;

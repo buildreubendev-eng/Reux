@@ -202,7 +202,7 @@
       "path": "/api/simulations/run",
       "auth": "public",
       "session": "optional isolated visitor session",
-      "purpose": "Run a baseline plus scenarios, save a temporary PostgreSQL-backed run record, and return metrics, forecast timeline, frontend-ready recommendation summaries, optional Reux source, and run metadata."
+      "purpose": "Run a baseline plus scenarios, save a temporary run record, and return metrics, forecast timeline, frontend-ready recommendation summaries, optional Reux source, and run metadata with postgres or memory storage status."
     },
     {
       "name": "listBusinessSimulationRuns",
@@ -210,7 +210,7 @@
       "path": "/api/simulation-runs",
       "auth": "public",
       "session": "isolated visitor session",
-      "purpose": "List recent saved Business Simulator run summaries for the caller's session."
+      "purpose": "List recent saved Business Simulator run summaries for the caller's session, including persistence storage status."
     },
     {
       "name": "getBusinessSimulationRun",
@@ -218,7 +218,7 @@
       "path": "/api/simulation-runs/:id",
       "auth": "public",
       "session": "shareable run id",
-      "purpose": "Load one saved Business Simulator run by ID for result pages or sharing."
+      "purpose": "Load one saved Business Simulator run by ID for result pages or sharing, including persistence storage status."
     },
     {
       "name": "compareBusinessScenarios",
