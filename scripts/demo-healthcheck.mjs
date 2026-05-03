@@ -200,6 +200,10 @@ async function runBusinessSimulatorApiCheck(baseUrl) {
   checks.push(staffingTemplate);
   diagnostics.push(...validateSimulationTemplate(staffingTemplate.response, staffingTemplate.body, "staffing-plan"));
 
+  const pricingTemplate = await fetchJson(baseUrl, "/api/simulations/pricing-strategy");
+  checks.push(pricingTemplate);
+  diagnostics.push(...validateSimulationTemplate(pricingTemplate.response, pricingTemplate.body, "pricing-strategy"));
+
   const runRequest = {
     name: "Healthcheck Business Simulation",
     simulationId: templateId,
@@ -299,6 +303,7 @@ async function runBusinessSimulatorApiCheck(baseUrl) {
       templateCount: list.body?.simulations?.length ?? 0,
       capacityTemplateReady: capacityTemplate?.body?.simulation?.id === "capacity-planning",
       staffingTemplateReady: staffingTemplate?.body?.simulation?.id === "staffing-plan",
+      pricingTemplateReady: pricingTemplate?.body?.simulation?.id === "pricing-strategy",
       scenarioCount: run.body?.scenarios?.length ?? 0,
       savedRunId: runId ?? null,
       savedRunReloaded: savedRun?.body?.run?.id === runId,
@@ -453,6 +458,9 @@ function validateSimulationList(response, body) {
   }
   if (!body?.simulations?.some((simulation) => simulation.id === "staffing-plan")) {
     diagnostics.push("business simulator list did not include staffing-plan");
+  }
+  if (!body?.simulations?.some((simulation) => simulation.id === "pricing-strategy")) {
+    diagnostics.push("business simulator list did not include pricing-strategy");
   }
   return diagnostics;
 }

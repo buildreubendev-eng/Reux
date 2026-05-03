@@ -207,6 +207,72 @@ const businessSimulatorTemplates: BusinessSimulatorTemplate[] = [
       },
     ],
   },
+  {
+    summary: {
+      id: "pricing-strategy",
+      name: "Pricing Strategy Simulator",
+      description: "Compare price, demand, margin, and quality-risk tradeoffs before changing commercial strategy.",
+      domain: "finance",
+      status: "ready",
+      updatedAt: "2026-05-03T00:00:00.000Z",
+    },
+    defaultAssumptions: {
+      ...businessSimulatorDefaultAssumptions,
+      employees: 28,
+      averageHourlyCost: 38,
+      weeklyDemand: 920,
+      averageOrderValue: 120,
+      grossMarginRate: 0.44,
+      productivityGainRate: 0.06,
+      overtimeReductionRate: 0.08,
+      supplierDelayRiskRate: 0.09,
+      defectRate: 0.018,
+      forecastPeriods: 12,
+      forecastUnit: "week",
+    },
+    exampleScenarios: [
+      {
+        id: "premium-price",
+        name: "Premium Price",
+        description: "Raise price while modeling softer demand and a slightly higher service-risk burden.",
+        assumptions: {
+          averageOrderValue: 136,
+          weeklyDemand: 830,
+          supplierDelayRiskRate: 0.11,
+        },
+      },
+      {
+        id: "volume-discount",
+        name: "Volume Discount",
+        description: "Lower price to lift volume while testing operational load.",
+        assumptions: {
+          averageOrderValue: 108,
+          weeklyDemand: 1080,
+          overtimeReductionRate: 0.04,
+        },
+      },
+      {
+        id: "margin-protect",
+        name: "Margin Protect",
+        description: "Hold demand steady while improving margin through cleaner process and quality controls.",
+        assumptions: {
+          grossMarginRate: 0.48,
+          productivityGainRate: 0.11,
+          defectRate: 0.012,
+        },
+      },
+      {
+        id: "market-push",
+        name: "Market Push",
+        description: "Lift demand and average order value together, then inspect cost and risk pressure.",
+        assumptions: {
+          weeklyDemand: 1040,
+          averageOrderValue: 128,
+          supplierDelayRiskRate: 0.14,
+        },
+      },
+    ],
+  },
 ];
 
 const defaultBusinessSimulatorTemplate = businessSimulatorTemplates[0];

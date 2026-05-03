@@ -205,6 +205,14 @@
       "purpose": "Load the staffing-plan template, defaults, and starter scenarios."
     },
     {
+      "name": "getPricingStrategySimulation",
+      "method": "GET",
+      "path": "/api/simulations/pricing-strategy",
+      "auth": "public",
+      "session": "none",
+      "purpose": "Load the pricing-strategy template, defaults, and starter scenarios."
+    },
+    {
       "name": "runBusinessSimulation",
       "method": "POST",
       "path": "/api/simulations/run",

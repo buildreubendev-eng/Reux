@@ -37,7 +37,7 @@ describe("business simulator API contract", () => {
     });
     expect(businessSimulatorForecastUnits).toEqual(["week", "month", "quarter"]);
     expect(businessSimulatorMetricNames).toContain("marginDelta");
-    expect(businessSimulatorSimulationIds).toEqual(["operations-decision", "capacity-planning", "staffing-plan"]);
+    expect(businessSimulatorSimulationIds).toEqual(["operations-decision", "capacity-planning", "staffing-plan", "pricing-strategy"]);
     expect(businessSimulatorErrorCodes).toEqual([
       "business_simulator_validation_failed",
       "simulation_execution_validation_failed",
@@ -229,7 +229,12 @@ describe("business simulator API contract", () => {
   });
 
   it("lists templates, loads a template, and compares already-run scenarios", () => {
-    expect(listBusinessSimulations().simulations.map((simulation) => simulation.id)).toEqual(["operations-decision", "capacity-planning", "staffing-plan"]);
+    expect(listBusinessSimulations().simulations.map((simulation) => simulation.id)).toEqual([
+      "operations-decision",
+      "capacity-planning",
+      "staffing-plan",
+      "pricing-strategy",
+    ]);
     const template = getBusinessSimulation("operations-decision");
     expect(template.defaultAssumptions).toEqual(businessSimulatorDefaultAssumptions);
     expect(template.exampleScenarios.length).toBeGreaterThan(0);
@@ -331,6 +336,49 @@ describe("business simulator API contract", () => {
     expect(response.comparison.recommendation?.recommendedAction).toContain(response.comparison.recommendation?.scenarioName);
     expect(response.comparison.recommendation?.whatChangedFromBaseline.length).toBeGreaterThan(0);
     expect(response.reuxSource).toContain("simulate staffing_plan");
+  });
+
+  it("includes a pricing-strategy decision template for commercial pilots", () => {
+    const template = getBusinessSimulation("pricing-strategy");
+
+    expect(template.simulation).toMatchObject({
+      id: "pricing-strategy",
+      name: "Pricing Strategy Simulator",
+      domain: "finance",
+      status: "ready",
+    });
+    expect(template.defaultAssumptions.averageOrderValue).toBe(120);
+    expect(template.defaultAssumptions.grossMarginRate).toBe(0.44);
+    expect(template.exampleScenarios.map((scenario) => scenario.id)).toEqual([
+      "premium-price",
+      "volume-discount",
+      "margin-protect",
+      "market-push",
+    ]);
+
+    const response = runBusinessSimulator(
+      {
+        name: "Pricing Pilot",
+        simulationId: "pricing-strategy",
+        baseline: template.defaultAssumptions,
+        scenarios: template.exampleScenarios.slice(0, 3),
+        options: {
+          includeReuxSource: true,
+        },
+      },
+      new Date("2026-05-03T00:00:00.000Z"),
+    );
+
+    expect(response.simulation.id).toBe("pricing-strategy");
+    expect(response.scenarios.map((scenario) => scenario.id)).toEqual(["premium-price", "volume-discount", "margin-protect"]);
+    expect(response.comparison.recommendation?.keyMetricDeltas.map((delta) => delta.metric)).toEqual([
+      "marginDelta",
+      "productivity",
+      "operatingCost",
+      "riskScore",
+    ]);
+    expect(response.comparison.recommendation?.riskSummary).toBeTruthy();
+    expect(response.reuxSource).toContain("simulate pricing_strategy");
   });
 
   it("emits a deterministic frontend handoff fixture", () => {
@@ -441,7 +489,7 @@ describe("business simulator API contract", () => {
     } catch (error) {
       expect(error).toBeInstanceOf(BusinessSimulatorValidationError);
       const issueMap = new Map((error as BusinessSimulatorValidationError).issues.map((issue) => [issue.path, issue.message]));
-      expect(issueMap.get("$.simulationId")).toBe("must be one of operations-decision, capacity-planning, staffing-plan");
+      expect(issueMap.get("$.simulationId")).toBe("must be one of operations-decision, capacity-planning, staffing-plan, pricing-strategy");
       expect(issueMap.get("$.scenarios[1].id")).toBe("must be unique");
     }
   });

@@ -35,6 +35,7 @@ GET /api/simulations
 GET /api/simulations/operations-decision
 GET /api/simulations/capacity-planning
 GET /api/simulations/staffing-plan
+GET /api/simulations/pricing-strategy
 POST /api/simulations/run
 GET /api/simulation-runs/:id
 GET /api/simulation-runs
@@ -221,6 +222,7 @@ The website can call the Business Simulator API routes directly from the browser
 GET /api/simulations
 GET /api/simulations/operations-decision
 GET /api/simulations/staffing-plan
+GET /api/simulations/pricing-strategy
 POST /api/simulations/run
 POST /api/scenarios/compare
 ```

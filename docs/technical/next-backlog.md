@@ -15,7 +15,7 @@ Updated: 2026-05-02
 - P2 | Developer Experience | Compiler-backed language-server features
   Why: Move beyond prototype completion into deeper product and language capability.
   Source: capability-research-track
-- P1 | Sellable Business Simulator Frontend | Expose template selection for operations-decision, capacity-planning, and staffing-plan
+- P1 | Sellable Business Simulator Frontend | Expose template selection for operations-decision, capacity-planning, staffing-plan, and pricing-strategy
   Why: Finish the buyer-facing Business Simulator product UI now that the demo console is functionally complete.
   Source: public-roadmap
 - P1 | Sellable Business Simulator Frontend | Build the guided assumption and scenario run flow for non-developer buyers
