@@ -12,6 +12,7 @@
     "Public commerce workflow demo",
     "Public logistics workflow demo",
     "Public Business Simulator powered by generic Reux simulation execution",
+    "Business Simulator recommendation payloads with winner rationale, key deltas, baseline-change summaries, risk summary, and tradeoff summary",
     "Business Simulator first-wedge product brief for buyer, offer, and pilot positioning",
     "Separate Business Simulator frontend and backend roadmaps for sellable-product execution",
     "PostgreSQL-backed Business Simulator run records for result pages and sharing",
@@ -75,7 +76,7 @@
       "name": "Public Demo",
       "status": "live",
       "summary": "The hosted demo lets public users test commerce, logistics, and Business Simulator workflows with isolated visitor sessions, public API rate limiting, request counters, generic Reux simulation execution, PostgreSQL-backed saved simulation runs, saved-run health checks, and maintenance cleanup tooling.",
-      "capabilityCount": 11
+      "capabilityCount": 12
     },
     {
       "name": "Pilots And Validation",

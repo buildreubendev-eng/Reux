@@ -140,7 +140,7 @@ export function compareBusinessSimulatorScenarioResults(
   const metricDeltasByScenario = Object.fromEntries(
     scenarios.map((scenario) => [scenario.id, businessSimulatorMetricNames.map((metric) => metricDelta(metric, baseline.finalMetrics, scenario.finalMetrics))]),
   );
-  const recommendation = recommendScenario(scenarios, metricDeltasByScenario);
+  const recommendation = recommendScenario(baseline, scenarios, metricDeltasByScenario);
 
   return {
     baselineScenarioId: baseline.id,
@@ -307,6 +307,7 @@ function metricDelta(
 }
 
 function recommendScenario(
+  baseline: BusinessSimulatorScenarioResult,
   scenarios: BusinessSimulatorScenarioResult[],
   metricDeltasByScenario: Record<string, BusinessSimulatorMetricDelta[]>,
 ): BusinessSimulatorRecommendation | undefined {
@@ -325,6 +326,11 @@ function recommendScenario(
     scenarioName: best.scenario.name,
     score: best.score,
     summary: `${best.scenario.name} has the strongest blended score across margin, productivity, operating cost, and risk.`,
+    whyThisWon: recommendationRationale(best.scenario, best.deltas),
+    whatChangedFromBaseline: baselineChangeSummary(baseline.assumptions, best.scenario.assumptions, best.deltas),
+    keyMetricDeltas: keyMetricDeltas(best.deltas),
+    riskSummary: riskSummary(best.deltas),
+    tradeoffSummary: tradeoffSummary(best.deltas),
     reasons: recommendationReasons(best.deltas),
     tradeoffs: recommendationTradeoffs(best.deltas),
   };
@@ -363,6 +369,66 @@ function recommendationTradeoffs(deltas: BusinessSimulatorMetricDelta[]): string
     .map((delta) => `${formatMetricName(delta.metric)} moves unfavorably by ${formatDelta(delta)}`)
     .slice(0, 4);
   return tradeoffs.length > 0 ? tradeoffs : ["No major negative tradeoff appears in the primary decision metrics."];
+}
+
+function recommendationRationale(
+  scenario: BusinessSimulatorScenarioResult,
+  deltas: BusinessSimulatorMetricDelta[],
+): string {
+  const positives = recommendationReasons(deltas);
+  const tradeoffs = recommendationTradeoffs(deltas);
+  const positiveText = positives[0] ?? "it has the best overall balance in the primary decision metrics";
+  const tradeoffText = tradeoffs[0] ?? "no major negative tradeoff appears in the primary decision metrics";
+  return `${scenario.name} is recommended because ${positiveText}. ${tradeoffText}`;
+}
+
+function baselineChangeSummary(
+  baseline: BusinessSimulatorAssumptions,
+  scenario: BusinessSimulatorAssumptions,
+  deltas: BusinessSimulatorMetricDelta[],
+): string[] {
+  const importantMetrics = keyMetricDeltas(deltas)
+    .filter((delta) => delta.direction !== "flat")
+    .map((delta) => `${formatMetricName(delta.metric)} ${delta.direction === "decrease" ? "decreased" : "increased"} by ${formatDelta(delta)}`);
+  const assumptionSignals = [
+    scenario.productivityGainRate !== baseline.productivityGainRate
+      ? `productivity gain rate ${changeVerb(scenario.productivityGainRate - baseline.productivityGainRate)} to ${formatRate(scenario.productivityGainRate)}`
+      : undefined,
+    scenario.overtimeReductionRate !== baseline.overtimeReductionRate
+      ? `overtime reduction rate ${changeVerb(scenario.overtimeReductionRate - baseline.overtimeReductionRate)} to ${formatRate(scenario.overtimeReductionRate)}`
+      : undefined,
+    scenario.supplierDelayRiskRate !== baseline.supplierDelayRiskRate
+      ? `supplier delay risk ${changeVerb(scenario.supplierDelayRiskRate - baseline.supplierDelayRiskRate)} to ${formatRate(scenario.supplierDelayRiskRate)}`
+      : undefined,
+    scenario.defectRate !== baseline.defectRate
+      ? `defect rate ${changeVerb(scenario.defectRate - baseline.defectRate)} to ${formatRate(scenario.defectRate)}`
+      : undefined,
+    scenario.employees !== baseline.employees
+      ? `staffing changed to ${scenario.employees} employees`
+      : undefined,
+    scenario.weeklyDemand !== baseline.weeklyDemand
+      ? `weekly demand changed to ${scenario.weeklyDemand}`
+      : undefined,
+  ].filter((value): value is string => Boolean(value));
+  return [...assumptionSignals, ...importantMetrics].slice(0, 6);
+}
+
+function keyMetricDeltas(deltas: BusinessSimulatorMetricDelta[]): BusinessSimulatorMetricDelta[] {
+  const keyMetrics: BusinessSimulatorMetricName[] = ["marginDelta", "productivity", "operatingCost", "riskScore"];
+  return keyMetrics.flatMap((metric) => deltas.find((delta) => delta.metric === metric) ?? []);
+}
+
+function riskSummary(deltas: BusinessSimulatorMetricDelta[]): string {
+  const risk = deltas.find((delta) => delta.metric === "riskScore");
+  if (!risk || risk.delta === 0) return "Risk stays flat against the baseline.";
+  return risk.delta < 0
+    ? `Risk improves by ${formatDelta(risk)} against the baseline.`
+    : `Risk increases by ${formatDelta(risk)} against the baseline.`;
+}
+
+function tradeoffSummary(deltas: BusinessSimulatorMetricDelta[]): string {
+  const tradeoffs = recommendationTradeoffs(deltas);
+  return tradeoffs[0] ?? "No major negative tradeoff appears in the primary decision metrics.";
 }
 
 function findScenarioRun(run: SimulationRunResult, name: string): SimulationScenarioRunResult {
@@ -429,6 +495,14 @@ function formatMetricName(metric: BusinessSimulatorMetricName): string {
 function formatDelta(delta: BusinessSimulatorMetricDelta): string {
   const absolute = Math.abs(Number(delta.delta.toFixed(6)));
   return delta.unit ? `${absolute} ${delta.unit}` : String(absolute);
+}
+
+function formatRate(value: number): string {
+  return `${Number((value * 100).toFixed(6))}%`;
+}
+
+function changeVerb(delta: number): "increased" | "decreased" {
+  return delta > 0 ? "increased" : "decreased";
 }
 
 function pluralizeForecastUnit(unit: BusinessSimulatorAssumptions["forecastUnit"], count: number): string {

@@ -86,6 +86,18 @@ Rate values use decimal form. For example, `0.08` means 8%.
 - `reuxSource`: optional read-only Reux source used for transparency panels.
 - `generatedAt`: ISO timestamp.
 
+Recommendation payloads are intentionally frontend-friendly. `comparison.recommendation` includes:
+
+- `scenarioId` and `scenarioName`: the recommended scenario.
+- `score`: deterministic blended score across margin, productivity, operating cost, and risk.
+- `summary`: short recommendation headline.
+- `whyThisWon`: one plain-language sentence suitable for a result page.
+- `whatChangedFromBaseline`: stable bullet strings describing important assumption and metric changes.
+- `keyMetricDeltas`: direct deltas for margin, productivity, operating cost, and risk so frontends do not need to mine `metricDeltasByScenario`.
+- `riskSummary`: plain-language risk movement against baseline.
+- `tradeoffSummary`: the most important unfavorable movement, or a no-major-tradeoff message.
+- `reasons` and `tradeoffs`: supporting bullets for expanded result details.
+
 Metric snapshots include:
 
 - `revenue`

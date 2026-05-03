@@ -150,6 +150,11 @@ export interface BusinessSimulatorRecommendation {
   scenarioName: string;
   score: number;
   summary: string;
+  whyThisWon: string;
+  whatChangedFromBaseline: string[];
+  keyMetricDeltas: BusinessSimulatorMetricDelta[];
+  riskSummary: string;
+  tradeoffSummary: string;
   reasons: string[];
   tradeoffs: string[];
 }

@@ -9,6 +9,7 @@ describe("public capabilities", () => {
     expect(capabilities.status.demoReadinessPercent).toBeGreaterThanOrEqual(99);
     expect(capabilities.status.fullCompletionPercent).toBeGreaterThanOrEqual(100);
     expect(capabilities.capabilityGroups.map((group) => group.name)).toEqual([
+      "Commercial Productization",
       "Language Core",
       "Runtime And Database",
       "Developer Experience",
@@ -21,7 +22,7 @@ describe("public capabilities", () => {
     const emitted = JSON.parse(emitReuxCapabilitiesJson());
 
     expect(emitted.project).toBe("Reux");
-    expect(emitted.capabilityGroups).toHaveLength(5);
+    expect(emitted.capabilityGroups).toHaveLength(6);
     expect(emitted.nextResearchTracks).toContain("Product-facing simulation execution APIs");
   });
 
