@@ -86,6 +86,40 @@
       }
     },
     {
+      "name": "tooManyBusinessSimulatorScenarios",
+      "status": 400,
+      "code": "business_simulator_validation_failed",
+      "body": {
+        "ok": false,
+        "error": "$.scenarios: must contain 8 or fewer scenarios",
+        "message": "$.scenarios: must contain 8 or fewer scenarios",
+        "code": "business_simulator_validation_failed",
+        "issues": [
+          {
+            "path": "$.scenarios",
+            "message": "must contain 8 or fewer scenarios"
+          }
+        ]
+      }
+    },
+    {
+      "name": "invalidReuxSimulationUnit",
+      "status": 400,
+      "code": "simulation_execution_validation_failed",
+      "body": {
+        "ok": false,
+        "error": "$.assumptions.income: must preserve declared unit USD",
+        "message": "$.assumptions.income: must preserve declared unit USD",
+        "code": "simulation_execution_validation_failed",
+        "issues": [
+          {
+            "path": "$.assumptions.income",
+            "message": "must preserve declared unit USD"
+          }
+        ]
+      }
+    },
+    {
       "name": "expiredBusinessSimulatorRun",
       "status": 410,
       "code": "saved_run_expired",
@@ -95,6 +129,17 @@
         "message": "simulation run 'live_4f6c9f1a20b3448d' expired at 2026-05-03T00:00:00.000Z",
         "code": "saved_run_expired",
         "expiresAt": "2026-05-03T00:00:00.000Z"
+      }
+    },
+    {
+      "name": "missingBusinessSimulatorRun",
+      "status": 404,
+      "code": "not_found",
+      "body": {
+        "ok": false,
+        "error": "simulation run 'live_missing' was not found",
+        "message": "simulation run 'live_missing' was not found",
+        "code": "not_found"
       }
     },
     {

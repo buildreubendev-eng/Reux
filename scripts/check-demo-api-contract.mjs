@@ -36,6 +36,35 @@ const requiredRoutes = [
   "POST /api/logistics/outbox/process",
   "GET /api/logistics/outbox/stats",
 ];
+const requiredErrorExamples = [
+  {
+    name: "invalidBusinessSimulatorField",
+    code: "business_simulator_validation_failed",
+    path: "$.baseline.grossMarginRate",
+  },
+  {
+    name: "tooManyBusinessSimulatorScenarios",
+    code: "business_simulator_validation_failed",
+    path: "$.scenarios",
+  },
+  {
+    name: "invalidReuxSimulationUnit",
+    code: "simulation_execution_validation_failed",
+    path: "$.assumptions.income",
+  },
+  {
+    name: "expiredBusinessSimulatorRun",
+    code: "saved_run_expired",
+  },
+  {
+    name: "missingBusinessSimulatorRun",
+    code: "not_found",
+  },
+  {
+    name: "rateLimited",
+    code: "rate_limited",
+  },
+];
 
 if (contract.project !== "Reux") failures.push("contract project must be Reux");
 if (contract.contract !== "public-demo-api") failures.push("contract id must be public-demo-api");
@@ -66,6 +95,24 @@ for (const header of contract.responseHeaders ?? []) {
 
 for (const [key, value] of Object.entries(contract.limits ?? {})) {
   if (value === undefined || value === null) failures.push(`contract limit ${key} must have a value`);
+}
+
+const errorExamples = new Map((contract.errorExamples ?? []).map((example) => [example.name, example]));
+for (const required of requiredErrorExamples) {
+  const example = errorExamples.get(required.name);
+  if (!example) {
+    failures.push(`contract missing error example: ${required.name}`);
+    continue;
+  }
+  if (example.code !== required.code || example.body?.code !== required.code) {
+    failures.push(`error example ${required.name} must use code ${required.code}`);
+  }
+  if (!docs.includes(required.name)) failures.push(`docs missing error example: ${required.name}`);
+  if (required.path) {
+    const paths = new Set((example.body?.issues ?? []).map((issue) => issue.path));
+    if (!paths.has(required.path)) failures.push(`error example ${required.name} missing issue path ${required.path}`);
+    if (!docs.includes(required.path)) failures.push(`docs missing issue path: ${required.path}`);
+  }
 }
 
 if ((contract.routes ?? []).some((route) => !route.name || !route.method || !route.path || !route.purpose)) {

@@ -182,16 +182,43 @@ The hosted demo server serializes those failures as `400` responses:
 
 Other public API failures use the same `ok: false`, `error`, `message`, and `code` envelope. Frontend clients should prefer `issues` for field-level UI and fall back to `message` or `error` for a page-level alert.
 
-Common Business Simulator failure examples:
+Common Business Simulator failure examples are mirrored in `docs/public/reux-demo-api-contract.json` under `errorExamples`:
 
-| Case | HTTP status | Code |
-| --- | ---: | --- |
-| Invalid field value or too many scenarios | `400` | `business_simulator_validation_failed` |
-| Missing simulation or saved-run ID | `404` | `not_found` |
-| Expired saved run | `410` | `saved_run_expired` |
-| Malformed JSON body | `400` | `invalid_json` |
-| Oversized JSON body | `413` | `request_too_large` |
-| Public demo rate limit exceeded | `429` | `rate_limited` |
+| Example | HTTP status | Code | Field path |
+| --- | ---: | --- | --- |
+| `invalidBusinessSimulatorField` | `400` | `business_simulator_validation_failed` | `$.baseline.grossMarginRate` |
+| `tooManyBusinessSimulatorScenarios` | `400` | `business_simulator_validation_failed` | `$.scenarios` |
+| `missingBusinessSimulatorRun` | `404` | `not_found` | n/a |
+| `expiredBusinessSimulatorRun` | `410` | `saved_run_expired` | n/a |
+| `rateLimited` | `429` | `rate_limited` | n/a |
+
+Too many scenarios:
+
+```json
+{
+  "ok": false,
+  "error": "$.scenarios: must contain 8 or fewer scenarios",
+  "message": "$.scenarios: must contain 8 or fewer scenarios",
+  "code": "business_simulator_validation_failed",
+  "issues": [
+    {
+      "path": "$.scenarios",
+      "message": "must contain 8 or fewer scenarios"
+    }
+  ]
+}
+```
+
+Missing saved run:
+
+```json
+{
+  "ok": false,
+  "error": "simulation run 'live_missing' was not found",
+  "message": "simulation run 'live_missing' was not found",
+  "code": "not_found"
+}
+```
 
 ## Saved Run Records
 

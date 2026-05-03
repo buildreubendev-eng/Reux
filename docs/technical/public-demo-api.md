@@ -178,6 +178,53 @@ Business Simulator validation errors also include:
 
 Frontend clients should prefer `issues` for field-level UI and fall back to `message` for page-level alerts.
 
+Common frontend failure examples:
+
+| Example | HTTP status | Code | Field path |
+| --- | ---: | --- | --- |
+| `invalidBusinessSimulatorField` | `400` | `business_simulator_validation_failed` | `$.baseline.grossMarginRate` |
+| `tooManyBusinessSimulatorScenarios` | `400` | `business_simulator_validation_failed` | `$.scenarios` |
+| `invalidReuxSimulationUnit` | `400` | `simulation_execution_validation_failed` | `$.assumptions.income` |
+| `expiredBusinessSimulatorRun` | `410` | `saved_run_expired` | n/a |
+| `missingBusinessSimulatorRun` | `404` | `not_found` | n/a |
+| `rateLimited` | `429` | `rate_limited` | n/a |
+
+These same examples are available in `docs/public/reux-demo-api-contract.json` under `errorExamples` so frontend clients can mock error states without reading backend source.
+
+Too many Business Simulator scenarios:
+
+```json
+{
+  "ok": false,
+  "error": "$.scenarios: must contain 8 or fewer scenarios",
+  "message": "$.scenarios: must contain 8 or fewer scenarios",
+  "code": "business_simulator_validation_failed",
+  "issues": [
+    {
+      "path": "$.scenarios",
+      "message": "must contain 8 or fewer scenarios"
+    }
+  ]
+}
+```
+
+Generic Reux simulation unit mismatch:
+
+```json
+{
+  "ok": false,
+  "error": "$.assumptions.income: must preserve declared unit USD",
+  "message": "$.assumptions.income: must preserve declared unit USD",
+  "code": "simulation_execution_validation_failed",
+  "issues": [
+    {
+      "path": "$.assumptions.income",
+      "message": "must preserve declared unit USD"
+    }
+  ]
+}
+```
+
 Saved-run expiration errors include the expiry timestamp when it is still available:
 
 ```json
@@ -187,6 +234,17 @@ Saved-run expiration errors include the expiry timestamp when it is still availa
   "message": "simulation run 'live_4f6c9f1a20b3448d' expired at 2026-05-03T00:00:00.000Z",
   "code": "saved_run_expired",
   "expiresAt": "2026-05-03T00:00:00.000Z"
+}
+```
+
+Missing saved-run lookups return `404`:
+
+```json
+{
+  "ok": false,
+  "error": "simulation run 'live_missing' was not found",
+  "message": "simulation run 'live_missing' was not found",
+  "code": "not_found"
 }
 ```
 
