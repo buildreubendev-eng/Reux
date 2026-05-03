@@ -91,6 +91,9 @@ export interface BusinessSimulatorErrorResponse {
   error: string;
   message: string;
   code: BusinessSimulatorErrorCode;
+  category: "validation" | "rate_limit" | "expired" | "not_found" | "method" | "request" | "server";
+  retryable: boolean;
+  userAction: string;
 }
 
 export interface BusinessSimulatorValidationErrorResponse extends BusinessSimulatorErrorResponse {

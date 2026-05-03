@@ -110,6 +110,9 @@ for (const required of requiredErrorExamples) {
   if (example.code !== required.code || example.body?.code !== required.code) {
     failures.push(`error example ${required.name} must use code ${required.code}`);
   }
+  if (!example.body?.category) failures.push(`error example ${required.name} missing category`);
+  if (typeof example.body?.retryable !== "boolean") failures.push(`error example ${required.name} missing retryable`);
+  if (!example.body?.userAction) failures.push(`error example ${required.name} missing userAction`);
   if (!docs.includes(required.name)) failures.push(`docs missing error example: ${required.name}`);
   if (required.path) {
     const paths = new Set((example.body?.issues ?? []).map((issue) => issue.path));

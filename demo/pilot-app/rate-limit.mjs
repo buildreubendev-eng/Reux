@@ -12,6 +12,7 @@ export class RateLimitExceededError extends Error {
     this.remaining = result.remaining;
     this.resetAt = result.resetAt;
     this.retryAfterSeconds = result.retryAfterSeconds;
+    this.windowMs = result.windowMs;
   }
 }
 
@@ -83,10 +84,14 @@ export function rateLimitErrorBody(error) {
     error: error.message,
     message: error.message,
     code: error.code,
+    category: "rate_limit",
+    retryable: true,
+    userAction: "Wait until the retry window opens, then try again.",
     limit: error.limit,
     remaining: error.remaining,
     resetAt: error.resetAt,
     retryAfterSeconds: error.retryAfterSeconds,
+    ...(Number.isFinite(error.windowMs) ? { windowMs: error.windowMs } : {}),
   };
 }
 

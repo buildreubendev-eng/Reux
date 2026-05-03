@@ -173,6 +173,9 @@ The hosted demo server serializes those failures as `400` responses:
   "error": "$.baseline.grossMarginRate: must be between 0 and 1",
   "message": "$.baseline.grossMarginRate: must be between 0 and 1",
   "code": "business_simulator_validation_failed",
+  "category": "validation",
+  "retryable": false,
+  "userAction": "Fix the request fields and try again.",
   "issues": [
     {
       "path": "$.baseline.grossMarginRate",
@@ -182,7 +185,7 @@ The hosted demo server serializes those failures as `400` responses:
 }
 ```
 
-Other public API failures use the same `ok: false`, `error`, `message`, and `code` envelope. Frontend clients should prefer `issues` for field-level UI and fall back to `message` or `error` for a page-level alert.
+Other public API failures use the same `ok: false`, `error`, `message`, `code`, `category`, `retryable`, and `userAction` envelope. Frontend clients should prefer `issues` for field-level UI and use `category`, `retryable`, and `userAction` for page-level states.
 
 Common Business Simulator failure examples are mirrored in `docs/public/reux-demo-api-contract.json` under `errorExamples`:
 
@@ -202,6 +205,9 @@ Too many scenarios:
   "error": "$.scenarios: must contain 8 or fewer scenarios",
   "message": "$.scenarios: must contain 8 or fewer scenarios",
   "code": "business_simulator_validation_failed",
+  "category": "validation",
+  "retryable": false,
+  "userAction": "Fix the request fields and try again.",
   "issues": [
     {
       "path": "$.scenarios",
@@ -218,7 +224,10 @@ Missing saved run:
   "ok": false,
   "error": "simulation run 'live_missing' was not found",
   "message": "simulation run 'live_missing' was not found",
-  "code": "not_found"
+  "code": "not_found",
+  "category": "not_found",
+  "retryable": false,
+  "userAction": "Check the link or create a new result."
 }
 ```
 

@@ -377,7 +377,7 @@ async function route(request, response, url = new URL(request.url ?? "/", `http:
   }
 
   if (method !== "GET") {
-    sendJson(response, 405, { error: "method not allowed" });
+    sendJson(response, 405, demoErrorResponseBody(new Error("method not allowed"), 405));
     return;
   }
 

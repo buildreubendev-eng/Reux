@@ -67,6 +67,9 @@ export interface ReuxSimulationExecutionErrorResponse {
   error: string;
   message: string;
   code: "simulation_execution_validation_failed";
+  category: "validation";
+  retryable: false;
+  userAction: string;
   issues: ReuxSimulationExecutionIssue[];
 }
 
@@ -461,6 +464,9 @@ function simulationErrorResponse(error: ReuxSimulationExecutionError): ReuxSimul
     error: error.message,
     message: error.message,
     code: error.code,
+    category: "validation",
+    retryable: false,
+    userAction: "Fix the request fields and try again.",
     issues: error.issues,
   };
 }

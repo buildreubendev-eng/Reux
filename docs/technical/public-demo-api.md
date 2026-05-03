@@ -147,7 +147,10 @@ Public errors use a stable JSON envelope:
   "ok": false,
   "error": "human-readable message",
   "message": "human-readable message",
-  "code": "request_failed"
+  "code": "request_failed",
+  "category": "server",
+  "retryable": true,
+  "userAction": "Try again later."
 }
 ```
 
@@ -165,7 +168,7 @@ Known public error codes:
 | `method_not_allowed` | `405` | Route exists but does not support the method. |
 | `request_failed` | varies | General fallback for unexpected failures. |
 
-Unexpected server failures with HTTP `500` intentionally return the generic message `request failed`. Do not rely on internal exception text reaching browser clients. Public-safe, user-actionable failures such as validation errors, missing saved runs, expired saved runs, and rate limits keep their specific codes and fields.
+Unexpected server failures with HTTP `500` intentionally return the generic message `request failed`. Do not rely on internal exception text reaching browser clients. Public-safe, user-actionable failures such as validation errors, missing saved runs, expired saved runs, and rate limits keep their specific codes and fields. Frontend clients can use `category`, `retryable`, and `userAction` for page-level UI states without parsing `message`.
 
 Business Simulator validation errors also include:
 
@@ -203,6 +206,9 @@ Too many Business Simulator scenarios:
   "error": "$.scenarios: must contain 8 or fewer scenarios",
   "message": "$.scenarios: must contain 8 or fewer scenarios",
   "code": "business_simulator_validation_failed",
+  "category": "validation",
+  "retryable": false,
+  "userAction": "Fix the request fields and try again.",
   "issues": [
     {
       "path": "$.scenarios",
@@ -220,6 +226,9 @@ Generic Reux simulation unit mismatch:
   "error": "$.assumptions.income: must preserve declared unit USD",
   "message": "$.assumptions.income: must preserve declared unit USD",
   "code": "simulation_execution_validation_failed",
+  "category": "validation",
+  "retryable": false,
+  "userAction": "Fix the request fields and try again.",
   "issues": [
     {
       "path": "$.assumptions.income",
@@ -237,6 +246,9 @@ Saved-run expiration errors include the expiry timestamp when it is still availa
   "error": "simulation run 'live_4f6c9f1a20b3448d' expired at 2026-05-03T00:00:00.000Z",
   "message": "simulation run 'live_4f6c9f1a20b3448d' expired at 2026-05-03T00:00:00.000Z",
   "code": "saved_run_expired",
+  "category": "expired",
+  "retryable": false,
+  "userAction": "Start a new simulation run.",
   "expiresAt": "2026-05-03T00:00:00.000Z"
 }
 ```
@@ -248,7 +260,10 @@ Missing saved-run lookups return `404`:
   "ok": false,
   "error": "simulation run 'live_missing' was not found",
   "message": "simulation run 'live_missing' was not found",
-  "code": "not_found"
+  "code": "not_found",
+  "category": "not_found",
+  "retryable": false,
+  "userAction": "Check the link or create a new result."
 }
 ```
 

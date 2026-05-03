@@ -11,6 +11,9 @@ describe("demo public error responses", () => {
       error: "request failed",
       message: "request failed",
       code: "request_failed",
+      category: "server",
+      retryable: true,
+      userAction: "Try again later.",
     });
   });
 
@@ -23,6 +26,9 @@ describe("demo public error responses", () => {
       error: "simulation run 'live_missing' was not found",
       message: "simulation run 'live_missing' was not found",
       code: "not_found",
+      category: "not_found",
+      retryable: false,
+      userAction: "Check the link or create a new result.",
     });
 
     const expired = new Error("simulation run 'live_old' expired at 2026-05-03T00:00:00.000Z");
@@ -34,6 +40,9 @@ describe("demo public error responses", () => {
       error: "simulation run 'live_old' expired at 2026-05-03T00:00:00.000Z",
       message: "simulation run 'live_old' expired at 2026-05-03T00:00:00.000Z",
       code: "saved_run_expired",
+      category: "expired",
+      retryable: false,
+      userAction: "Start a new simulation run.",
       expiresAt: "2026-05-03T00:00:00.000Z",
     });
   });
@@ -49,6 +58,8 @@ describe("demo public error responses", () => {
     expect(demoErrorResponseBody(error, 429)).toMatchObject({
       ok: false,
       code: "rate_limited",
+      category: "rate_limit",
+      retryable: true,
       retryAfterSeconds: 30,
     });
     expect(demoErrorHeaders(error)).toEqual({
@@ -75,6 +86,9 @@ describe("demo public error responses", () => {
       error: "$.baseline.grossMarginRate: must be between 0 and 1",
       message: "$.baseline.grossMarginRate: must be between 0 and 1",
       code: "business_simulator_validation_failed",
+      category: "validation",
+      retryable: false,
+      userAction: "Fix the request fields and try again.",
       issues: [{ path: "$.baseline.grossMarginRate", message: "must be between 0 and 1" }],
     });
   });

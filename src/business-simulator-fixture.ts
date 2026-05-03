@@ -81,6 +81,9 @@ export function createBusinessSimulatorContractFixture(now: Date = new Date(busi
       error: "$.baseline.grossMarginRate: must be between 0 and 1",
       message: "$.baseline.grossMarginRate: must be between 0 and 1",
       code: "business_simulator_validation_failed",
+      category: "validation",
+      retryable: false,
+      userAction: "Fix the request fields and try again.",
       issues: [
         {
           path: "$.baseline.grossMarginRate",
