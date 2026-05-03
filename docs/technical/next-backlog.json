@@ -27,35 +27,35 @@
     {
       "priority": "P1",
       "ownerTrack": "Sellable Business Simulator Frontend",
-      "title": "Expose template selection for operations-decision, capacity-planning, staffing-plan, and pricing-strategy",
+      "title": "[DONE] Expose template selection for operations-decision, capacity-planning, staffing-plan, and pricing-strategy",
       "why": "Finish the buyer-facing Business Simulator product UI now that the demo console is functionally complete.",
       "source": "public-roadmap"
     },
     {
       "priority": "P1",
       "ownerTrack": "Sellable Business Simulator Frontend",
-      "title": "Build the guided assumption and scenario run flow for non-developer buyers",
+      "title": "[DONE] Build the guided assumption and scenario run flow for non-developer buyers",
       "why": "Finish the buyer-facing Business Simulator product UI now that the demo console is functionally complete.",
       "source": "public-roadmap"
     },
     {
       "priority": "P2",
       "ownerTrack": "Sellable Business Simulator Frontend",
-      "title": "Render decisionSummary, recommendedAction, confidenceSummary, watchouts, and keyMetric as first-class result content",
+      "title": "[DONE] Render decisionSummary, recommendedAction, confidenceSummary, watchouts, keyMetric, scoreBreakdown, scenarioRanking, and scoreGap as first-class result content",
       "why": "Finish the buyer-facing Business Simulator product UI now that the demo console is functionally complete.",
       "source": "public-roadmap"
     },
     {
       "priority": "P2",
       "ownerTrack": "Sellable Business Simulator Frontend",
-      "title": "Add saved-result list, shareable result loading, expired-result, and not-found states",
+      "title": "[DONE] Add saved-result list, shareable result loading, expired-result, and not-found states",
       "why": "Finish the buyer-facing Business Simulator product UI now that the demo console is functionally complete.",
       "source": "public-roadmap"
     },
     {
       "priority": "P2",
       "ownerTrack": "Sellable Business Simulator Frontend",
-      "title": "Add pilot CTA and product positioning from the Business Simulator product brief",
+      "title": "[DONE] Add pilot CTA and product positioning from the Business Simulator product brief",
       "why": "Finish the buyer-facing Business Simulator product UI now that the demo console is functionally complete.",
       "source": "public-roadmap"
     },

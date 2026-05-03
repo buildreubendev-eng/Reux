@@ -25,28 +25,28 @@ The active frontend priority is the sellable Business Simulator product surface,
 
 ## P0 Completion Path
 
-1. Sellable product entry and positioning
-   - Make the Reuben/Reux entry point frame Business Simulator as the first sellable wedge.
-   - Use the product promise from `docs/public/business-simulator-product-brief.md`.
-   - Add a visible pilot CTA using the brief's "Bring one real decision..." language.
+Status: complete. All P0 items have been implemented in `simulator.html` + `simulator.js`.
 
-2. Template selection and guided run flow
-   - Let users choose between `operations-decision`, `capacity-planning`, `staffing-plan`, and `pricing-strategy`.
-   - Make baseline assumptions and scenario assumptions easy to scan and edit.
-   - Keep labels business-readable; avoid compiler/source terminology in the main path.
-   - Show validation errors next to the affected field when the API returns `issues[].path`.
-   - Keep the primary action obvious from first load through successful run.
+1. [DONE] Sellable product entry and positioning
+   - Simulator hero with product promise from the product brief.
+   - Pilot CTA using the brief's "Bring one real decision..." language.
+   - Navigation links from demo console and ops dashboard.
 
-3. Results and recommendation
-   - Show the winning scenario, key metric deltas, risk/tradeoff summary, and recommendation rationale.
-   - Render `decisionSummary`, `recommendedAction`, `confidenceSummary`, and `watchouts` as first-class result-page content.
-   - Explain "what changed from baseline" in plain language.
-   - Provide a next action after every run: save, revise assumptions, compare another scenario, or share.
+2. [DONE] Template selection and guided run flow
+   - Users choose between `operations-decision`, `capacity-planning`, `staffing-plan`, and `pricing-strategy`.
+   - Baseline assumptions and scenario assumptions are easy to scan and edit with business-readable labels.
+   - Validation errors rendered inline using API `issues[].path`.
+   - Primary action obvious from first load through successful run.
 
-4. Saved and shareable results
-   - Make saved-run loading feel like a product result page, not a debug payload.
-   - Show run metadata, scenario count, best scenario, generated time, and expiry/temporary-data note.
-   - Provide copy that is understandable when someone opens a shared result cold.
+3. [DONE] Results and recommendation
+   - Renders `decisionSummary`, `recommendedAction`, `confidenceSummary`, `watchouts`, `keyMetric`, `scoreBreakdown`, `scenarioRanking`, and `scoreGap`.
+   - "What changed from baseline" in plain language.
+   - Next actions: revise assumptions, new simulation, copy share link.
+
+4. [DONE] Saved and shareable results
+   - Saved-run list with display title, subtitle, scenario count, and recommendation.
+   - Deep-link loading via `?run=<id>` query parameter.
+   - Empty, loading, error, expired, and not-found states.
 
 ## P1 Product Polish
 

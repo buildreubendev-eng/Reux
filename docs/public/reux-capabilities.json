@@ -86,7 +86,10 @@
         "Health checks, deep smoke checks, CI smoke automation, monitor wrapper, webhook alerts, and operations dashboard",
         "Responsive, accessible UI with mobile layout polish",
         "Polished tester flow with consistent action summaries and next-best-action guidance across all demo domains",
-        "Functionally complete Commerce, Logistics, and Operations demo frontend"
+        "Functionally complete Commerce, Logistics, and Operations demo frontend",
+        "Sellable Business Simulator product frontend with template selection, guided run flow, recommendation results, saved/shareable runs, and pilot CTA",
+        "Business Simulator frontend renders scoreBreakdown, scenarioRanking, scoreGap, and structured API error fields",
+        "Business Simulator saved-result states for empty, loading, error, expired, and not-found"
       ]
     },
     {

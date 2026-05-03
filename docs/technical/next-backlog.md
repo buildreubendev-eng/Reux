@@ -15,19 +15,19 @@ Updated: 2026-05-02
 - P2 | Developer Experience | Compiler-backed language-server features
   Why: Move beyond prototype completion into deeper product and language capability.
   Source: capability-research-track
-- P1 | Sellable Business Simulator Frontend | Expose template selection for operations-decision, capacity-planning, staffing-plan, and pricing-strategy
+- P1 | Sellable Business Simulator Frontend | [DONE] Expose template selection for operations-decision, capacity-planning, staffing-plan, and pricing-strategy
   Why: Finish the buyer-facing Business Simulator product UI now that the demo console is functionally complete.
   Source: public-roadmap
-- P1 | Sellable Business Simulator Frontend | Build the guided assumption and scenario run flow for non-developer buyers
+- P1 | Sellable Business Simulator Frontend | [DONE] Build the guided assumption and scenario run flow for non-developer buyers
   Why: Finish the buyer-facing Business Simulator product UI now that the demo console is functionally complete.
   Source: public-roadmap
-- P2 | Sellable Business Simulator Frontend | Render decisionSummary, recommendedAction, confidenceSummary, watchouts, and keyMetric as first-class result content
+- P2 | Sellable Business Simulator Frontend | [DONE] Render decisionSummary, recommendedAction, confidenceSummary, watchouts, keyMetric, scoreBreakdown, scenarioRanking, and scoreGap as first-class result content
   Why: Finish the buyer-facing Business Simulator product UI now that the demo console is functionally complete.
   Source: public-roadmap
-- P2 | Sellable Business Simulator Frontend | Add saved-result list, shareable result loading, expired-result, and not-found states
+- P2 | Sellable Business Simulator Frontend | [DONE] Add saved-result list, shareable result loading, expired-result, and not-found states
   Why: Finish the buyer-facing Business Simulator product UI now that the demo console is functionally complete.
   Source: public-roadmap
-- P2 | Sellable Business Simulator Frontend | Add pilot CTA and product positioning from the Business Simulator product brief
+- P2 | Sellable Business Simulator Frontend | [DONE] Add pilot CTA and product positioning from the Business Simulator product brief
   Why: Finish the buyer-facing Business Simulator product UI now that the demo console is functionally complete.
   Source: public-roadmap
 - P2 | Sellable Business Simulator Frontend | Run responsive visual QA on the Business Simulator product path

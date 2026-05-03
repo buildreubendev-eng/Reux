@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Business Simulator — Reux</title>
+    <meta name="description" content="Compare operational decisions before committing money, staff, time, or risk. Run what-if scenarios, save results, and explain the recommendation.">
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <header class="topbar sim-topbar">
+      <div>
+        <p class="eyebrow">Reux &middot; Business Simulator</p>
+        <h1>Business Simulator</h1>
+        <p class="session-line">A Reux-powered planning tool for teams that compare operational decisions.</p>
+      </div>
+      <div class="header-tools">
+        <nav class="sim-nav" aria-label="Simulator navigation">
+          <a href="/simulator.html" class="sim-nav-link active">Simulator</a>
+          <a href="/" class="sim-nav-link">Demo Console</a>
+          <a href="/ops.html" class="sim-nav-link">Ops Dashboard</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <!-- Hero / Product Positioning -->
+      <section id="simHero" class="sim-hero" aria-label="Product overview">
+        <div class="sim-hero-content">
+          <h2>Compare decisions before they become commitments</h2>
+          <p>Business Simulator helps teams run operational what-if scenarios, save and share results, and explain which scenario performs best — before decisions become real-world commitments.</p>
+          <div class="sim-hero-actions">
+            <button id="startSimulator" class="sim-primary-btn" type="button">Start a Simulation</button>
+            <button id="viewSavedRuns" class="sim-secondary-btn" type="button">View Saved Results</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Template Picker -->
+      <section id="templateSection" class="sim-section" aria-label="Choose a template" hidden>
+        <div class="sim-section-header">
+          <h2>Choose a Template</h2>
+          <p>Each template is pre-configured with assumptions and example scenarios for a specific type of operational decision.</p>
+        </div>
+        <div id="templateGrid" class="sim-template-grid">
+          <!-- Templates rendered by JS -->
+        </div>
+        <div id="templateLoading" class="sim-state-loading" hidden>
+          <div class="sim-spinner"></div>
+          <p>Loading templates…</p>
+        </div>
+        <div id="templateError" class="sim-state-error" hidden>
+          <strong>Could not load templates</strong>
+          <p id="templateErrorMessage"></p>
+          <button id="templateRetry" class="sim-retry-btn" type="button">Try Again</button>
+        </div>
+      </section>
+
+      <!-- Guided Run Flow -->
+      <section id="runSection" class="sim-section" aria-label="Configure and run simulation" hidden>
+        <div class="sim-section-header">
+          <div class="sim-breadcrumb">
+            <button id="backToTemplates" class="sim-link-btn" type="button">&larr; Templates</button>
+            <span id="selectedTemplateName"></span>
+          </div>
+          <p id="selectedTemplateDescription"></p>
+        </div>
+
+        <!-- Baseline Assumptions -->
+        <div class="sim-panel">
+          <div class="sim-panel-heading">
+            <h3>Baseline Assumptions</h3>
+            <span>These are the starting values. Scenarios compare against this baseline.</span>
+          </div>
+          <div id="baselineForm" class="sim-assumptions-grid">
+            <!-- Rendered by JS -->
+          </div>
+          <div id="baselineErrors" class="sim-field-errors" hidden></div>
+        </div>
+
+        <!-- Scenarios -->
+        <div class="sim-panel">
+          <div class="sim-panel-heading">
+            <h3>Scenarios</h3>
+            <div class="sim-panel-actions">
+              <span id="scenarioCount">0 scenarios</span>
+              <button id="addScenario" class="sim-secondary-btn sim-small-btn" type="button">+ Add Scenario</button>
+            </div>
+          </div>
+          <div id="scenarioList" class="sim-scenario-list">
+            <!-- Rendered by JS -->
+          </div>
+          <div id="scenarioErrors" class="sim-field-errors" hidden></div>
+        </div>
+
+        <!-- Run Button -->
+        <div class="sim-run-bar">
+          <button id="runSimulation" class="sim-primary-btn sim-large-btn" type="button">Run Simulation</button>
+          <div id="runError" class="sim-inline-error" hidden>
+            <strong id="runErrorTitle">Error</strong>
+            <p id="runErrorMessage"></p>
+            <p id="runErrorAction" class="sim-error-action"></p>
+            <button id="runRetry" class="sim-retry-btn" type="button" hidden>Try Again</button>
+          </div>
+          <div id="runLoading" class="sim-state-loading sim-inline" hidden>
+            <div class="sim-spinner"></div>
+            <span>Running simulation…</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Results -->
+      <section id="resultsSection" class="sim-section" aria-label="Simulation results" hidden>
+        <div class="sim-section-header">
+          <div class="sim-breadcrumb">
+            <button id="backToRun" class="sim-link-btn" type="button">&larr; Edit Assumptions</button>
+            <span id="resultTitle">Results</span>
+          </div>
+        </div>
+
+        <!-- Run metadata -->
+        <div id="runMeta" class="sim-run-meta" hidden>
+          <div id="runMetaSummary"></div>
+          <div id="runMetaKeyMetric" class="sim-key-metric" hidden></div>
+          <p id="runMetaExpiry" class="sim-expiry-note" hidden></p>
+        </div>
+
+        <!-- Recommendation Card -->
+        <div id="recommendationCard" class="sim-recommendation" hidden>
+          <div class="sim-rec-header">
+            <div>
+              <span class="sim-rec-label">Recommended</span>
+              <h3 id="recScenarioName"></h3>
+            </div>
+            <span id="recConfidenceBadge" class="sim-confidence-badge"></span>
+          </div>
+          <p id="recDecisionSummary" class="sim-rec-decision"></p>
+          <div class="sim-rec-action-box">
+            <strong>Recommended Action</strong>
+            <p id="recAction"></p>
+          </div>
+          <p id="recConfidenceSummary" class="sim-rec-confidence-text"></p>
+
+          <!-- Score Breakdown -->
+          <div id="scoreBreakdownSection" class="sim-score-breakdown" hidden>
+            <h4>Score Breakdown</h4>
+            <div id="scoreBreakdownGrid" class="sim-breakdown-grid"></div>
+            <p id="scoreGapNote" class="sim-score-gap"></p>
+          </div>
+
+          <!-- Watchouts -->
+          <div id="watchoutsSection" class="sim-watchouts" hidden>
+            <h4>Watch Out For</h4>
+            <ul id="watchoutsList"></ul>
+          </div>
+
+          <!-- What Changed -->
+          <div id="whatChangedSection" class="sim-what-changed" hidden>
+            <h4>What Changed From Baseline</h4>
+            <ul id="whatChangedList"></ul>
+          </div>
+        </div>
+
+        <!-- Key Metric Deltas -->
+        <div id="metricDeltaGrid" class="sim-delta-grid"></div>
+
+        <!-- Scenario Ranking -->
+        <div id="rankingSection" class="sim-panel" hidden>
+          <div class="sim-panel-heading">
+            <h3>Scenario Ranking</h3>
+          </div>
+          <div id="rankingTable" class="table"></div>
+        </div>
+
+        <!-- Scenario Comparison Table -->
+        <div id="comparisonSection" class="sim-panel">
+          <div class="sim-panel-heading">
+            <h3>Scenario Comparison</h3>
+          </div>
+          <div id="comparisonTable" class="table"></div>
+        </div>
+
+        <!-- Result Actions -->
+        <div class="sim-result-actions">
+          <button id="reviseAssumptions" class="sim-secondary-btn" type="button">Revise Assumptions</button>
+          <button id="newSimulation" class="sim-secondary-btn" type="button">New Simulation</button>
+          <button id="copyShareLink" class="sim-secondary-btn" type="button">Copy Share Link</button>
+        </div>
+      </section>
+
+      <!-- Saved Runs -->
+      <section id="savedRunsSection" class="sim-section" aria-label="Saved results" hidden>
+        <div class="sim-section-header">
+          <div class="sim-breadcrumb">
+            <button id="backFromSaved" class="sim-link-btn" type="button">&larr; Back</button>
+            <span>Saved Results</span>
+          </div>
+          <p>Previously saved simulation results. Click to view the full recommendation and metrics.</p>
+        </div>
+        <div id="savedRunsList" class="sim-saved-runs-grid"></div>
+        <div id="savedRunsLoading" class="sim-state-loading" hidden>
+          <div class="sim-spinner"></div>
+          <p>Loading saved results…</p>
+        </div>
+        <div id="savedRunsEmpty" class="sim-state-empty" hidden>
+          <strong>No saved results yet</strong>
+          <p>Run a simulation to create your first saved result.</p>
+          <button id="startFromEmpty" class="sim-primary-btn" type="button">Start a Simulation</button>
+        </div>
+        <div id="savedRunsError" class="sim-state-error" hidden>
+          <strong>Could not load saved results</strong>
+          <p id="savedRunsErrorMessage"></p>
+          <button id="savedRunsRetry" class="sim-retry-btn" type="button">Try Again</button>
+        </div>
+      </section>
+
+      <!-- Pilot CTA -->
+      <section id="pilotCta" class="sim-pilot-cta" aria-label="Pilot program">
+        <h2>Bring a real decision</h2>
+        <p>Bring one real decision you are currently modeling in a spreadsheet. We will turn it into a reusable Business Simulator scenario so you can compare options, save results, and explain the recommendation.</p>
+        <form id="pilotForm" class="sim-pilot-form">
+          <label>
+            <span>Name</span>
+            <input id="pilotName" type="text" placeholder="Your name" autocomplete="name">
+          </label>
+          <label>
+            <span>Email</span>
+            <input id="pilotEmail" type="email" placeholder="you@company.com" autocomplete="email">
+          </label>
+          <label class="sim-pilot-wide">
+            <span>What decision are you modeling?</span>
+            <textarea id="pilotDecision" rows="3" placeholder="e.g. We need to decide between hiring 4 people or investing in process automation before Q3"></textarea>
+          </label>
+          <button id="pilotSubmit" class="sim-primary-btn" type="submit">Request Pilot Access</button>
+        </form>
+        <p id="pilotConfirmation" class="sim-pilot-confirm" hidden>Thanks! We will reach out to set up your pilot scenario.</p>
+      </section>
+    </main>
+
+    <div id="toast" role="status" aria-live="polite"></div>
+    <script src="/simulator.js" type="module"></script>
+  </body>
+</html>

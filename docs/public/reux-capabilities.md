@@ -88,7 +88,9 @@ The hosted demo lets public users test commerce, logistics, and Business Simulat
 - Reuben website embed/link for public testing.
 - Health checks, deep smoke checks, CI smoke automation, monitor wrapper, webhook alerts, and operations dashboard.
 - Functionally complete Commerce, Logistics, and Operations demo frontend.
-
+- Sellable Business Simulator product frontend with template selection, guided run flow, recommendation results, saved/shareable runs, and pilot CTA.
+- Business Simulator frontend renders scoreBreakdown, scenarioRanking, scoreGap, and structured API error fields.
+- Business Simulator saved-result states for empty, loading, error, expired, and not-found.
 ### Pilots And Validation
 
 Status: active.

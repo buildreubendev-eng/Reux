@@ -46,18 +46,24 @@
     "Polished public tester flow from landing through reset, transaction, outbox processing, and result viewing",
     "Consistent 'what just happened' summaries across commerce, logistics, and simulation flows",
     "Next-best-action guidance after reset, transaction, simulation run, and process-outbox",
-    "Functionally complete Commerce, Logistics, and Operations demo frontend"
+    "Functionally complete Commerce, Logistics, and Operations demo frontend",
+    "Sellable Business Simulator product frontend with template selection, guided run flow, recommendation results, saved/shareable runs, and pilot CTA",
+    "Business Simulator frontend renders decisionSummary, recommendedAction, confidenceSummary, watchouts, keyMetric, scoreBreakdown, scenarioRanking, and scoreGap",
+    "Business Simulator saved-result list with empty, loading, error, expired, and not-found states",
+    "Business Simulator pilot CTA with product brief copy for sales handoff",
+    "Graceful API failure states with category, retryable, and userAction error fields in the Business Simulator frontend"
   ],
   "milestones": [
     {
       "title": "Sellable Business Simulator Frontend",
       "goal": "Finish the buyer-facing Business Simulator product UI now that the demo console is functionally complete.",
+      "status": "complete",
       "items": [
-        "Expose template selection for operations-decision, capacity-planning, staffing-plan, and pricing-strategy",
-        "Build the guided assumption and scenario run flow for non-developer buyers",
-        "Render decisionSummary, recommendedAction, confidenceSummary, watchouts, and keyMetric as first-class result content",
-        "Add saved-result list, shareable result loading, expired-result, and not-found states",
-        "Add pilot CTA and product positioning from the Business Simulator product brief",
+        "[DONE] Expose template selection for operations-decision, capacity-planning, staffing-plan, and pricing-strategy",
+        "[DONE] Build the guided assumption and scenario run flow for non-developer buyers",
+        "[DONE] Render decisionSummary, recommendedAction, confidenceSummary, watchouts, keyMetric, scoreBreakdown, scenarioRanking, and scoreGap as first-class result content",
+        "[DONE] Add saved-result list, shareable result loading, expired-result, and not-found states",
+        "[DONE] Add pilot CTA and product positioning from the Business Simulator product brief",
         "Run responsive visual QA on the Business Simulator product path"
       ]
     },

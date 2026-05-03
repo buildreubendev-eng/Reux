@@ -48,7 +48,12 @@
     "Polished public tester flow from landing through reset, transaction, outbox processing, and result viewing",
     "Consistent 'what just happened' summaries across commerce, logistics, and simulation flows",
     "Next-best-action guidance after reset, transaction, simulation run, and process-outbox",
-    "Functionally complete Commerce, Logistics, and Operations demo frontend"
+    "Functionally complete Commerce, Logistics, and Operations demo frontend",
+    "Sellable Business Simulator product frontend with template selection, guided run flow, recommendation results, saved/shareable runs, and pilot CTA",
+    "Business Simulator frontend renders decisionSummary, recommendedAction, confidenceSummary, watchouts, keyMetric, scoreBreakdown, scenarioRanking, and scoreGap",
+    "Business Simulator saved-result list with empty, loading, error, expired, and not-found states",
+    "Business Simulator pilot CTA with product brief copy for sales handoff",
+    "Graceful API failure states with category, retryable, and userAction error fields in the Business Simulator frontend"
   ],
   "capabilityGroups": [
     {
@@ -79,7 +84,7 @@
       "name": "Public Demo",
       "status": "live",
       "summary": "The hosted demo lets public users test commerce, logistics, and Business Simulator workflows with isolated visitor sessions, stable public error envelopes, public API rate limiting, request counters, generic Reux simulation execution, PostgreSQL-backed saved simulation runs, saved-run health checks, and maintenance cleanup tooling.",
-      "capabilityCount": 18
+      "capabilityCount": 21
     },
     {
       "name": "Pilots And Validation",

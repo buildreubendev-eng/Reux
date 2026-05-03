@@ -46,6 +46,11 @@ Current status:
 - Generated simulation catalog helpers so product apps can discover available Reux simulation models.
 - Language-core completion pass for transaction control flow, expression typing, reusable filters, worker contracts, null-aware lowering, and diagnostics.
 - Functionally complete Commerce, Logistics, and Operations demo frontend.
+- Sellable Business Simulator product frontend with template selection, guided run flow, recommendation results, saved/shareable runs, and pilot CTA.
+- Business Simulator frontend renders decisionSummary, recommendedAction, confidenceSummary, watchouts, keyMetric, scoreBreakdown, scenarioRanking, and scoreGap.
+- Business Simulator saved-result list with empty, loading, error, expired, and not-found states.
+- Business Simulator pilot CTA with product brief copy for sales handoff.
+- Graceful API failure states with category, retryable, and userAction error fields in the Business Simulator frontend.
 
 ## Next Milestones
 
@@ -53,13 +58,18 @@ Current status:
 
 Goal: finish the buyer-facing Business Simulator product UI now that the demo console is functionally complete.
 
-Planned work:
+Status: complete (responsive visual QA remaining).
+
+Completed:
 
 - Expose template selection for operations-decision, capacity-planning, staffing-plan, and pricing-strategy.
 - Build the guided assumption and scenario run flow for non-developer buyers.
-- Render decisionSummary, recommendedAction, confidenceSummary, watchouts, and keyMetric as first-class result content.
+- Render decisionSummary, recommendedAction, confidenceSummary, watchouts, keyMetric, scoreBreakdown, scenarioRanking, and scoreGap as first-class result content.
 - Add saved-result list, shareable result loading, expired-result, and not-found states.
 - Add pilot CTA and product positioning from the Business Simulator product brief.
+
+Remaining:
+
 - Run responsive visual QA on the Business Simulator product path.
 
 ### 2. Commercialization Wedge
