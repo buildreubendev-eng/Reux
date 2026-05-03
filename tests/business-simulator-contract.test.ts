@@ -164,7 +164,16 @@ describe("business simulator API contract", () => {
     expect(response.baseline.timeline).toHaveLength(12);
     expect(response.scenarios.map((scenario) => scenario.id)).toEqual(["process-improvement", "quality-issue"]);
     expect(response.comparison.metricDeltasByScenario["process-improvement"].some((delta) => delta.metric === "marginDelta")).toBe(true);
+    expect(response.comparison.scenarioRanking.map((scenario) => scenario.scenarioId)).toEqual(["process-improvement", "quality-issue"]);
+    expect(response.comparison.scenarioRanking[0]).toMatchObject({
+      rank: 1,
+      scenarioId: "process-improvement",
+      recommended: true,
+      scoreGapFromBest: 0,
+    });
     expect(response.comparison.recommendation?.scenarioId).toBe("process-improvement");
+    expect(response.comparison.recommendation?.runnerUpScenarioId).toBe("quality-issue");
+    expect(response.comparison.recommendation?.scoreGap).toBeGreaterThan(0);
     expect(response.comparison.recommendation?.whyThisWon).toContain("Process Improvement is recommended because");
     expect(response.comparison.recommendation?.decisionSummary).toContain("Process Improvement is the");
     expect(response.comparison.recommendation?.recommendedAction).toContain("Process Improvement");
@@ -182,6 +191,13 @@ describe("business simulator API contract", () => {
       "operatingCost",
       "riskScore",
     ]);
+    expect(response.comparison.recommendation?.scoreBreakdown.map((factor) => factor.factor)).toEqual([
+      "margin",
+      "productivity",
+      "operatingCost",
+      "risk",
+    ]);
+    expect(response.comparison.recommendation?.scoreBreakdown[0].summary).toContain("blended-score points");
     expect(response.comparison.recommendation?.riskSummary).toContain("Risk stays flat");
     expect(response.comparison.recommendation?.tradeoffSummary).toBeTruthy();
     expect(response.comparison.recommendation?.watchouts.length).toBeGreaterThan(0);
@@ -256,6 +272,11 @@ describe("business simulator API contract", () => {
 
     expect(comparison.comparison.baselineScenarioId).toBe("baseline");
     expect(comparison.comparison.recommendedScenarioId).toBeTruthy();
+    expect(comparison.comparison.scenarioRanking[0]).toMatchObject({
+      rank: 1,
+      recommended: true,
+      scoreGapFromBest: 0,
+    });
     expect(comparison.comparison.recommendation?.summary).toContain("strongest blended score");
     expect(comparison.comparison.metricDeltasByScenario["process-improvement"]).toHaveLength(businessSimulatorMetricNames.length);
     expect(comparison.generatedAt).toBe("2026-05-01T00:00:00.000Z");

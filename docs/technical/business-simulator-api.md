@@ -93,7 +93,7 @@ Rate values use decimal form. For example, `0.08` means 8%.
 - `simulation`: template metadata.
 - `baseline`: baseline scenario result.
 - `scenarios`: scenario results.
-- `comparison`: deltas and recommendation.
+- `comparison`: deltas, scenario ranking, and recommendation.
 - `reuxSource`: optional read-only Reux source used for transparency panels.
 - `generatedAt`: ISO timestamp.
 
@@ -101,6 +101,7 @@ Recommendation payloads are intentionally frontend-friendly. `comparison.recomme
 
 - `scenarioId` and `scenarioName`: the recommended scenario.
 - `score`: deterministic blended score across margin, productivity, operating cost, and risk.
+- `runnerUpScenarioId`, `runnerUpScenarioName`, `runnerUpScore`, and `scoreGap`: runner-up context when there is more than one scenario.
 - `summary`: short recommendation headline.
 - `decisionSummary`: buyer-facing one-paragraph decision explanation.
 - `recommendedAction`: concrete next action text for the result page.
@@ -109,9 +110,12 @@ Recommendation payloads are intentionally frontend-friendly. `comparison.recomme
 - `whyThisWon`: one plain-language sentence suitable for a result page.
 - `whatChangedFromBaseline`: stable bullet strings describing important assumption and metric changes.
 - `keyMetricDeltas`: direct deltas for margin, productivity, operating cost, and risk so frontends do not need to mine `metricDeltasByScenario`.
+- `scoreBreakdown`: weighted margin, productivity, operating-cost, and risk contributions with display summaries.
 - `riskSummary`: plain-language risk movement against baseline.
 - `tradeoffSummary`: the most important unfavorable movement, or a no-major-tradeoff message.
 - `reasons`, `tradeoffs`, and `watchouts`: supporting bullets for expanded result details.
+
+`comparison.scenarioRanking` lists every scenario in score order with `rank`, `scenarioId`, `scenarioName`, `score`, `scoreGapFromBest`, `recommended`, and a short `summary`. Use it for comparison tables/cards instead of re-sorting in frontend code.
 
 Metric snapshots include:
 

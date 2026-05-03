@@ -167,10 +167,23 @@ export interface BusinessSimulatorMetricDelta {
 
 export type BusinessSimulatorRecommendationConfidence = "low" | "medium" | "high";
 
+export interface BusinessSimulatorRecommendationScoreBreakdown {
+  factor: "margin" | "productivity" | "operatingCost" | "risk";
+  metric: BusinessSimulatorMetricName;
+  label: string;
+  weight: number;
+  contribution: number;
+  summary: string;
+}
+
 export interface BusinessSimulatorRecommendation {
   scenarioId: string;
   scenarioName: string;
   score: number;
+  runnerUpScenarioId?: string;
+  runnerUpScenarioName?: string;
+  runnerUpScore?: number;
+  scoreGap?: number;
   summary: string;
   decisionSummary: string;
   recommendedAction: string;
@@ -179,6 +192,7 @@ export interface BusinessSimulatorRecommendation {
   whyThisWon: string;
   whatChangedFromBaseline: string[];
   keyMetricDeltas: BusinessSimulatorMetricDelta[];
+  scoreBreakdown: BusinessSimulatorRecommendationScoreBreakdown[];
   riskSummary: string;
   tradeoffSummary: string;
   reasons: string[];
@@ -186,10 +200,21 @@ export interface BusinessSimulatorRecommendation {
   watchouts: string[];
 }
 
+export interface BusinessSimulatorScenarioRanking {
+  rank: number;
+  scenarioId: string;
+  scenarioName: string;
+  score: number;
+  scoreGapFromBest: number;
+  recommended: boolean;
+  summary: string;
+}
+
 export interface BusinessSimulatorComparison {
   baselineScenarioId: string;
   recommendedScenarioId?: string;
   metricDeltasByScenario: Record<string, BusinessSimulatorMetricDelta[]>;
+  scenarioRanking: BusinessSimulatorScenarioRanking[];
   recommendation?: BusinessSimulatorRecommendation;
 }
 

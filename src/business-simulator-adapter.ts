@@ -12,9 +12,11 @@ import {
   BusinessSimulatorMetricSnapshot,
   BusinessSimulatorRecommendation,
   BusinessSimulatorRecommendationConfidence,
+  BusinessSimulatorRecommendationScoreBreakdown,
   BusinessSimulatorRunRequest,
   BusinessSimulatorRunResponse,
   BusinessSimulatorScenarioInput,
+  BusinessSimulatorScenarioRanking,
   BusinessSimulatorScenarioResult,
   BusinessSimulatorSummary,
   GetBusinessSimulationResponse,
@@ -351,10 +353,12 @@ export function compareBusinessSimulatorScenarioResults(
     scenarios.map((scenario) => [scenario.id, businessSimulatorMetricNames.map((metric) => metricDelta(metric, baseline.finalMetrics, scenario.finalMetrics))]),
   );
   const recommendation = recommendScenario(baseline, scenarios, metricDeltasByScenario);
+  const scenarioRanking = rankScenarios(scenarios, metricDeltasByScenario);
 
   return {
     baselineScenarioId: baseline.id,
     metricDeltasByScenario,
+    scenarioRanking,
     ...(recommendation ? { recommendedScenarioId: recommendation.scenarioId, recommendation } : {}),
   };
 }
@@ -533,11 +537,18 @@ function recommendScenario(
   if (!best) return undefined;
   const runnerUp = scored[1];
   const confidence = recommendationConfidence(best.score, runnerUp?.score, best.deltas);
+  const scoreGap = runnerUp ? Number((best.score - runnerUp.score).toFixed(4)) : undefined;
 
   return {
     scenarioId: best.scenario.id,
     scenarioName: best.scenario.name,
     score: best.score,
+    ...(runnerUp ? {
+      runnerUpScenarioId: runnerUp.scenario.id,
+      runnerUpScenarioName: runnerUp.scenario.name,
+      runnerUpScore: runnerUp.score,
+      scoreGap,
+    } : {}),
     summary: `${best.scenario.name} has the strongest blended score across margin, productivity, operating cost, and risk.`,
     decisionSummary: decisionSummary(best.scenario, best.deltas, confidence),
     recommendedAction: recommendedAction(best.scenario, best.deltas, confidence, runnerUp?.scenario.name),
@@ -546,12 +557,35 @@ function recommendScenario(
     whyThisWon: recommendationRationale(best.scenario, best.deltas),
     whatChangedFromBaseline: baselineChangeSummary(baseline.assumptions, best.scenario.assumptions, best.deltas),
     keyMetricDeltas: keyMetricDeltas(best.deltas),
+    scoreBreakdown: scoreBreakdown(best.deltas),
     riskSummary: riskSummary(best.deltas),
     tradeoffSummary: tradeoffSummary(best.deltas),
     reasons: recommendationReasons(best.deltas),
     tradeoffs: recommendationTradeoffs(best.deltas),
     watchouts: recommendationWatchouts(best.deltas),
   };
+}
+
+function rankScenarios(
+  scenarios: BusinessSimulatorScenarioResult[],
+  metricDeltasByScenario: Record<string, BusinessSimulatorMetricDelta[]>,
+): BusinessSimulatorScenarioRanking[] {
+  const scored = scenarios
+    .map((scenario) => {
+      const deltas = metricDeltasByScenario[scenario.id] ?? [];
+      return { scenario, deltas, score: recommendationScore(deltas) };
+    })
+    .sort((left, right) => right.score - left.score || left.scenario.name.localeCompare(right.scenario.name));
+  const bestScore = scored[0]?.score ?? 0;
+  return scored.map((entry, index) => ({
+    rank: index + 1,
+    scenarioId: entry.scenario.id,
+    scenarioName: entry.scenario.name,
+    score: entry.score,
+    scoreGapFromBest: Number((bestScore - entry.score).toFixed(4)),
+    recommended: index === 0,
+    summary: rankingSummary(entry.deltas),
+  }));
 }
 
 function recommendationScore(deltas: BusinessSimulatorMetricDelta[]): number {
@@ -562,6 +596,51 @@ function recommendationScore(deltas: BusinessSimulatorMetricDelta[]): number {
     normalized(-(byMetric.get("operatingCost") ?? 0), 250) * 20 +
     normalized(-(byMetric.get("riskScore") ?? 0), 1) * 10;
   return Number(score.toFixed(4));
+}
+
+function scoreBreakdown(deltas: BusinessSimulatorMetricDelta[]): BusinessSimulatorRecommendationScoreBreakdown[] {
+  const byMetric = new Map(deltas.map((delta) => [delta.metric, delta]));
+  return [
+    scoreFactor("margin", "marginDelta", "Margin lift", 45, 1000, byMetric.get("marginDelta"), false),
+    scoreFactor("productivity", "productivity", "Productivity", 25, 1, byMetric.get("productivity"), false),
+    scoreFactor("operatingCost", "operatingCost", "Operating cost", 20, 250, byMetric.get("operatingCost"), true),
+    scoreFactor("risk", "riskScore", "Risk", 10, 1, byMetric.get("riskScore"), true),
+  ];
+}
+
+function scoreFactor(
+  factor: BusinessSimulatorRecommendationScoreBreakdown["factor"],
+  metric: BusinessSimulatorMetricName,
+  label: string,
+  weight: number,
+  scale: number,
+  delta: BusinessSimulatorMetricDelta | undefined,
+  lowerIsBetter: boolean,
+): BusinessSimulatorRecommendationScoreBreakdown {
+  const rawDelta = delta?.delta ?? 0;
+  const scoringDelta = lowerIsBetter ? -rawDelta : rawDelta;
+  const contribution = Number((normalized(scoringDelta, scale) * weight).toFixed(4));
+  return {
+    factor,
+    metric,
+    label,
+    weight,
+    contribution,
+    summary: delta ? scoreFactorSummary(delta, contribution, lowerIsBetter) : `${label} was not available in the scenario comparison.`,
+  };
+}
+
+function scoreFactorSummary(
+  delta: BusinessSimulatorMetricDelta,
+  contribution: number,
+  lowerIsBetter: boolean,
+): string {
+  const directionText = delta.delta === 0
+    ? "stayed flat"
+    : lowerIsBetter
+      ? delta.delta < 0 ? "improved" : "moved against the recommendation"
+      : delta.delta > 0 ? "improved" : "moved against the recommendation";
+  return `${formatMetricName(delta.metric)} ${directionText} by ${formatDelta(delta)}, contributing ${contribution} blended-score points.`;
 }
 
 function recommendationReasons(deltas: BusinessSimulatorMetricDelta[]): string[] {
@@ -677,6 +756,28 @@ function confidenceSummary(
   }
   const gap = Number((bestScore - runnerUp.score).toFixed(4));
   return `${capitalize(confidence)} confidence because the recommendation leads ${runnerUp.scenario.name} by ${gap} blended-score points.`;
+}
+
+function rankingSummary(deltas: BusinessSimulatorMetricDelta[]): string {
+  const margin = deltas.find((delta) => delta.metric === "marginDelta");
+  const productivity = deltas.find((delta) => delta.metric === "productivity");
+  const cost = deltas.find((delta) => delta.metric === "operatingCost");
+  const risk = deltas.find((delta) => delta.metric === "riskScore");
+  const parts = [
+    margin ? `margin ${deltaPhrase(margin, false)}` : undefined,
+    productivity ? `productivity ${deltaPhrase(productivity, false)}` : undefined,
+    cost ? `cost ${deltaPhrase(cost, true)}` : undefined,
+    risk ? `risk ${deltaPhrase(risk, true)}` : undefined,
+  ].filter((part): part is string => Boolean(part));
+  return parts.length > 0
+    ? `${capitalize(parts.join(", "))}.`
+    : "No primary metric movement was available for this scenario.";
+}
+
+function deltaPhrase(delta: BusinessSimulatorMetricDelta, lowerIsBetter: boolean): string {
+  if (delta.delta === 0) return "stays flat";
+  const favorable = lowerIsBetter ? delta.delta < 0 : delta.delta > 0;
+  return `${favorable ? "improves" : "worsens"} by ${formatDelta(delta)}`;
 }
 
 function baselineChangeSummary(
