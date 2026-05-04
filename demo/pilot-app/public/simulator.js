@@ -156,11 +156,12 @@ async function loadTemplates() {
     grid.innerHTML = "";
     for (const sim of data.simulations) {
       const icon = templateIcons[sim.id] || "\uD83D\uDCCB";
-      const card = el("button", { className: "sim-template-card", type: "button", onClick: () => selectTemplate(sim.id) },
+      const isSelected = state.templateId === sim.id;
+      const card = el("button", { className: `sim-template-card${isSelected ? " selected" : ""}`, type: "button", onClick: () => selectTemplate(sim.id) },
         el("span", { className: "sim-template-icon" }, icon),
-        el("strong", {}, sim.name),
-        el("p", {}, sim.description),
-        el("span", { className: "sim-template-domain" }, sim.domain),
+        el("strong", {}, sim.name || sim.id || "Untitled"),
+        el("p", {}, sim.description || "No description available."),
+        el("span", { className: "sim-template-domain" }, sim.domain || "General"),
       );
       grid.append(card);
     }
