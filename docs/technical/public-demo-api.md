@@ -316,6 +316,7 @@ Run the contract/doc drift check:
 
 ```bash
 npm run check:demo-contract
+npm run verify:demo:smoke
 ```
 
 Run hosted checks:
@@ -331,6 +332,8 @@ npm run demo:pilot-leads -- https://your-demo-host.example.com
 Deep mode validates CORS, queue stats, Business Simulator run/compare/validation behavior, scenario ranking, recommendation score breakdown, runner-up score gap metadata, saved-run creation and reload, recent-run listing, missing-run handling, frontend-ready saved-run metadata, generic Reux simulation execution, rate-limit metadata, request counters, health-level saved-run storage metadata, and per-run storage status.
 
 `demo:pilot-leads` creates one Founder Pilot request, verifies operator list/detail access, patches the lead to `scoping` with notes, reloads the detail record, and confirms invalid operator statuses return `pilot_request_operator_update_failed`. It requires the same admin token as the operator UI and never prints the token.
+
+`verify:demo:smoke` starts a local isolated demo server, runs the broad smoke healthcheck, and then runs the same pilot lead workflow smoke against that local server with an internal smoke admin token. It requires `DATABASE_URL` because the demo server needs PostgreSQL.
 
 For Business Simulator fixture parity:
 

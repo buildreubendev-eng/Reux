@@ -5,6 +5,7 @@ const port = process.env.REUX_DEMO_SMOKE_PORT ?? "4185";
 const sessionId = process.env.REUX_HEALTHCHECK_SESSION_ID ?? "healthcheckci";
 const baseUrl = `http://127.0.0.1:${port}`;
 const startupTimeoutMs = Number.parseInt(process.env.REUX_DEMO_SMOKE_STARTUP_TIMEOUT_MS ?? "30000", 10);
+const adminToken = process.env.REUX_DEMO_SETUP_TOKEN ?? process.env.REUX_DEMO_SMOKE_ADMIN_TOKEN ?? "local-smoke-admin-token";
 
 if (!databaseUrl) {
   console.error("DATABASE_URL is not set. Example: postgres://datalang:datalang@127.0.0.1:5432/datalang_dev");
@@ -17,6 +18,7 @@ const server = spawn(process.execPath, ["./demo/pilot-app/server.mjs"], {
     PORT: port,
     REUX_DEMO_PORT: port,
     REUX_DEMO_SESSION_MODE: "isolated",
+    REUX_DEMO_SETUP_TOKEN: adminToken,
   },
   stdio: ["ignore", "pipe", "pipe"],
 });
@@ -33,6 +35,7 @@ server.stderr.on("data", (chunk) => {
 try {
   await waitForHealth(baseUrl);
   await runHealthcheck(baseUrl, sessionId);
+  await runPilotLeadSmoke(baseUrl, adminToken);
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));
   if (stdout.trim()) console.error(`\nDemo server stdout:\n${stdout.trim()}`);
@@ -75,6 +78,21 @@ async function runHealthcheck(url, smokeSessionId) {
   const report = JSON.parse(result.output);
   console.log(
     `demo smoke ok: session=${report.smoke.sessionId} commerce=${report.smoke.commerce.afterAction.health}->${report.smoke.commerce.afterProcess.health} logistics=${report.smoke.logistics.afterAction.health}->${report.smoke.logistics.afterProcess.health}`,
+  );
+}
+
+async function runPilotLeadSmoke(url, token) {
+  const result = await runCommand(process.execPath, [
+    "./scripts/demo-pilot-leads.mjs",
+    url,
+    `--token=${token}`,
+  ]);
+  if (result.exitCode !== 0) {
+    throw new Error(`demo pilot lead smoke failed with exit code ${result.exitCode}\n${result.output.trim()}`);
+  }
+  const report = JSON.parse(result.output);
+  console.log(
+    `demo pilot leads ok: request=${report.summary.requestId} status=${report.summary.operatorStatus} storage=${report.summary.storage}`,
   );
 }
 
