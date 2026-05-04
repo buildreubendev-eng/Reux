@@ -67,6 +67,8 @@ $env:DATABASE_URL='postgres://datalang:datalang@127.0.0.1:5432/datalang_dev'
 npm run demo:pilot-app
 npm run demo:pilot-worker
 npm run demo:healthcheck -- http://127.0.0.1:4173 --deep
+$env:REUX_DEMO_SETUP_TOKEN='your-admin-token'
+npm run demo:pilot-leads -- http://127.0.0.1:4173
 npm run demo:monitor -- http://127.0.0.1:4173 --deep
 node dist/cli.js version
 npm run verify:postgres

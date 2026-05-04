@@ -324,9 +324,13 @@ Run hosted checks:
 npm run demo:healthcheck -- https://your-demo-host.example.com
 npm run demo:healthcheck -- https://your-demo-host.example.com --deep
 npm run demo:healthcheck -- https://your-demo-host.example.com --smoke
+$env:REUX_DEMO_SETUP_TOKEN='...'
+npm run demo:pilot-leads -- https://your-demo-host.example.com
 ```
 
 Deep mode validates CORS, queue stats, Business Simulator run/compare/validation behavior, scenario ranking, recommendation score breakdown, runner-up score gap metadata, saved-run creation and reload, recent-run listing, missing-run handling, frontend-ready saved-run metadata, generic Reux simulation execution, rate-limit metadata, request counters, health-level saved-run storage metadata, and per-run storage status.
+
+`demo:pilot-leads` creates one Founder Pilot request, verifies operator list/detail access, patches the lead to `scoping` with notes, reloads the detail record, and confirms invalid operator statuses return `pilot_request_operator_update_failed`. It requires the same admin token as the operator UI and never prints the token.
 
 For Business Simulator fixture parity:
 
