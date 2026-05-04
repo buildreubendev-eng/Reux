@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   PilotRequestValidationError,
   createPilotRequestSender,
+  createPilotRequestStore,
   formatPilotRequestText,
   normalizePilotRequest,
   submitPilotRequest,
@@ -55,6 +56,7 @@ describe("demo pilot request backend", () => {
   });
 
   it("uses a disabled delivery fallback until Resend is configured", async () => {
+    const store = createPilotRequestStore({ maxRecords: 10 });
     const response = await submitPilotRequest(
       {
         name: "Ada Founder",
@@ -65,6 +67,7 @@ describe("demo pilot request backend", () => {
         now,
         idFactory,
         sender: createPilotRequestSender({ apiKey: "", to: "", fallbackEmail: "pilot@example.com" }),
+        store,
       },
     );
 
@@ -79,8 +82,30 @@ describe("demo pilot request backend", () => {
         channel: "none",
         fallbackEmail: "pilot@example.com",
       },
+      storage: "memory",
     });
     expect(response.delivery.mailto).toContain("mailto:pilot@example.com");
+    expect(store.get("pilot_test123")).toMatchObject({
+      id: "pilot_test123",
+      name: "Ada Founder",
+      email: "ada@example.com",
+      decision: "We need to compare hiring four people against process automation.",
+      delivery: {
+        status: "disabled",
+        channel: "none",
+        fallbackEmail: "pilot@example.com",
+      },
+      storage: "memory",
+    });
+    expect(store.list()).toEqual([
+      expect.objectContaining({
+        id: "pilot_test123",
+        name: "Ada Founder",
+        email: "ada@example.com",
+        deliveryStatus: "disabled",
+        deliveryChannel: "none",
+      }),
+    ]);
   });
 
   it("sends Resend payloads without exposing the API key", async () => {

@@ -61,7 +61,13 @@ import {
   defaultSimulationRunTtlMs,
   recordSummary,
 } from "./simulation-runs.mjs";
-import { createPilotRequestSender, submitPilotRequest } from "./pilot-requests.mjs";
+import {
+  createPilotRequestSender,
+  createPilotRequestStore,
+  defaultMaxPilotRequestRecords,
+  pilotRequestSummary,
+  submitPilotRequest,
+} from "./pilot-requests.mjs";
 
 const rootDir = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 const publicDir = join(rootDir, "demo", "pilot-app", "public");
@@ -84,6 +90,7 @@ const maxSessionContexts = parsePositiveInteger(process.env.REUX_DEMO_MAX_SESSIO
 const sessionIdleMs = parsePositiveInteger(process.env.REUX_DEMO_SESSION_IDLE_MS, defaultSessionIdleMs);
 const maxSimulationRunRecords = parsePositiveInteger(process.env.REUX_DEMO_MAX_SIMULATION_RUNS, defaultMaxSimulationRunRecords);
 const simulationRunTtlMs = parsePositiveInteger(process.env.REUX_DEMO_SIMULATION_RUN_TTL_MS, defaultSimulationRunTtlMs);
+const maxPilotRequestRecords = parsePositiveInteger(process.env.REUX_DEMO_MAX_PILOT_REQUESTS, defaultMaxPilotRequestRecords);
 const apiRateLimiter = createRateLimiter({ maxRequests: rateLimitMaxRequests, windowMs: rateLimitWindowMs });
 const writeRateLimiter = createRateLimiter({ maxRequests: writeRateLimitMaxRequests, windowMs: rateLimitWindowMs });
 const requestStats = createRequestStats();
@@ -92,6 +99,9 @@ const simulationRunStore = createSimulationRunStore({
   ttlMs: simulationRunTtlMs,
 });
 const pilotRequestSender = createPilotRequestSender();
+const pilotRequestStore = createPilotRequestStore({
+  maxRecords: maxPilotRequestRecords,
+});
 const buildId = buildIdentifier();
 const baseDatabaseUrl = process.env[config.databaseUrlEnv];
 const databases = new Map();
@@ -228,7 +238,7 @@ async function route(request, response, url = new URL(request.url ?? "/", `http:
       requests: requestStats.summary(),
       sessionCache: sessionCacheStats(databases, { idleMs: sessionIdleMs, maxContexts: maxSessionContexts }),
       simulationRuns: await simulationRunStats(),
-      pilotRequests: pilotRequestSender.status(),
+      pilotRequests: await pilotRequestStats(),
       domains: Object.keys(domains),
       productSimulations: listProductSimulations().simulations.map((simulation) => simulation.name),
     });
@@ -289,10 +299,21 @@ async function route(request, response, url = new URL(request.url ?? "/", `http:
     return;
   }
 
+  if (url.pathname === "/api/pilot-requests" && method === "GET") {
+    assertAdminAllowed(request);
+    sendJson(response, 200, await pilotRequests(url));
+    return;
+  }
+
+  if (url.pathname.startsWith("/api/pilot-requests/") && method === "GET") {
+    assertAdminAllowed(request);
+    const id = decodeURIComponent(url.pathname.slice("/api/pilot-requests/".length));
+    sendJson(response, 200, await pilotRequestRecord(id));
+    return;
+  }
+
   if (url.pathname === "/api/pilot-requests" && method === "POST") {
-    sendJson(response, 202, await submitPilotRequest(await readJson(request, { limitBytes: jsonBodyLimitBytes }), {
-      sender: pilotRequestSender,
-    }));
+    sendJson(response, 202, await submitStoredPilotRequest(await readJson(request, { limitBytes: jsonBodyLimitBytes })));
     return;
   }
 
@@ -727,6 +748,58 @@ function businessScenarioCompare(body) {
   }
 }
 
+async function submitStoredPilotRequest(body) {
+  return submitPilotRequest(body, {
+    sender: pilotRequestSender,
+    store: {
+      async save({ pilotRequest, delivery }) {
+        const record = pilotRequestStore.save({ pilotRequest, delivery });
+        try {
+          record.storage = "postgres";
+          await savePersistedPilotRequest(record);
+        } catch (error) {
+          record.storage = "memory";
+          record.persistenceWarning = "Pilot request is using temporary in-memory fallback storage.";
+          console.warn(`failed to persist pilot request ${record.id}: ${error.message}`);
+        }
+        pilotRequestStore.save({ pilotRequest: record, delivery: record.delivery, storage: record.storage, persistenceWarning: record.persistenceWarning });
+        return record;
+      },
+    },
+  });
+}
+
+async function pilotRequests(url) {
+  const limit = parsePositiveInteger(Number.parseInt(url.searchParams.get("limit") ?? "", 10), maxPilotRequestRecords);
+  try {
+    return {
+      requests: await listPersistedPilotRequests(limit),
+    };
+  } catch (error) {
+    console.warn(`falling back to in-memory pilot request list: ${error.message}`);
+    return {
+      requests: pilotRequestStore.list({ limit }),
+    };
+  }
+}
+
+async function pilotRequestRecord(id) {
+  try {
+    const record = await getPersistedPilotRequest(id);
+    if (record) return { request: record };
+  } catch (error) {
+    console.warn(`failed to load persisted pilot request ${id}: ${error.message}`);
+  }
+
+  const record = pilotRequestStore.get(id);
+  if (record) return { request: record };
+
+  const error = new Error(`pilot request '${id}' was not found`);
+  error.statusCode = 404;
+  error.code = "not_found";
+  throw error;
+}
+
 async function domainOutboxStats(context, domain) {
   const eventTypes = Object.keys(domain.outboxHandlers);
   const placeholders = eventTypes.map((_, index) => `$${index + 1}`).join(", ");
@@ -858,6 +931,10 @@ function assertSetupAllowed(request, body) {
   }
 }
 
+function assertAdminAllowed(request) {
+  assertSetupAllowed(request, {});
+}
+
 function withStatus(error, statusCode) {
   if (error && typeof error === "object") {
     error.statusCode = statusCode;
@@ -910,6 +987,37 @@ WHERE expires_at > now();
     };
   } catch (error) {
     return {
+      ...fallback,
+      storage: "memory",
+      persistenceError: error.message,
+    };
+  }
+}
+
+async function pilotRequestStats() {
+  const senderStatus = pilotRequestSender.status();
+  const fallback = pilotRequestStore.stats();
+  try {
+    const context = await pilotRequestContext();
+    const result = await context.db.query(`
+SELECT count(*) AS records,
+       min(received_at) AS oldest_received_at,
+       max(received_at) AS newest_received_at
+FROM ${pilotRequestTable(context)};
+`);
+    const row = result.rows[0] ?? {};
+    return {
+      ...senderStatus,
+      records: Number(row.records ?? 0),
+      maxRecords: maxPilotRequestRecords,
+      storage: "postgres",
+      oldestReceivedAt: timestampValue(row.oldest_received_at),
+      newestReceivedAt: timestampValue(row.newest_received_at),
+      memoryFallback: fallback,
+    };
+  } catch (error) {
+    return {
+      ...senderStatus,
       ...fallback,
       storage: "memory",
       persistenceError: error.message,
@@ -1015,6 +1123,90 @@ async function simulationRunContext() {
   return context;
 }
 
+async function savePersistedPilotRequest(record) {
+  const context = await pilotRequestContext();
+  await context.db.query(
+    `
+INSERT INTO ${pilotRequestTable(context)}
+  (id, received_at, name, email, company, role, phone, decision, source_run_id, page_url, delivery, storage)
+VALUES ($1, $2::timestamptz, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12)
+ON CONFLICT (id) DO UPDATE SET
+  received_at = excluded.received_at,
+  name = excluded.name,
+  email = excluded.email,
+  company = excluded.company,
+  role = excluded.role,
+  phone = excluded.phone,
+  decision = excluded.decision,
+  source_run_id = excluded.source_run_id,
+  page_url = excluded.page_url,
+  delivery = excluded.delivery,
+  storage = excluded.storage;
+`,
+    [
+      record.id,
+      record.receivedAt,
+      record.name,
+      record.email,
+      record.company ?? null,
+      record.role ?? null,
+      record.phone ?? null,
+      record.decision,
+      record.sourceRunId ?? null,
+      record.pageUrl ?? null,
+      JSON.stringify(record.delivery ?? {}),
+      "postgres",
+    ],
+  );
+  await prunePersistedPilotRequests(context);
+}
+
+async function listPersistedPilotRequests(limit) {
+  const context = await pilotRequestContext();
+  const result = await context.db.query(
+    `
+SELECT id, received_at, name, email, company, role, phone, decision, source_run_id, page_url, delivery, storage
+FROM ${pilotRequestTable(context)}
+ORDER BY received_at DESC
+LIMIT $1;
+`,
+    [Math.min(limit, maxPilotRequestRecords)],
+  );
+  return result.rows.map((row) => pilotRequestSummary(pilotRequestRecordFromRow(row)));
+}
+
+async function getPersistedPilotRequest(id) {
+  const context = await pilotRequestContext();
+  const result = await context.db.query(
+    `
+SELECT id, received_at, name, email, company, role, phone, decision, source_run_id, page_url, delivery, storage
+FROM ${pilotRequestTable(context)}
+WHERE id = $1;
+`,
+    [id],
+  );
+  const row = result.rows[0];
+  return row ? pilotRequestRecordFromRow(row) : null;
+}
+
+async function prunePersistedPilotRequests(context) {
+  const extra = await context.db.query(
+    `SELECT id FROM ${pilotRequestTable(context)} ORDER BY received_at DESC OFFSET $1;`,
+    [maxPilotRequestRecords],
+  );
+  const ids = extra.rows.map((row) => row.id);
+  if (ids.length > 0) {
+    await context.db.query(`DELETE FROM ${pilotRequestTable(context)} WHERE id = ANY($1::text[]);`, [ids]);
+  }
+}
+
+async function pilotRequestContext() {
+  const context = schemaContext(demoSchema, "");
+  await ensureDemoSchema(context);
+  await ensurePilotRequestTable(context);
+  return context;
+}
+
 async function ensureSimulationRunTable(context) {
   await context.db.query(`
 CREATE TABLE IF NOT EXISTS ${simulationRunTable(context)} (
@@ -1037,6 +1229,31 @@ function simulationRunTable(context) {
   return `${context.quotedSchema}._reux_simulation_runs`;
 }
 
+async function ensurePilotRequestTable(context) {
+  await context.db.query(`
+CREATE TABLE IF NOT EXISTS ${pilotRequestTable(context)} (
+  id text PRIMARY KEY,
+  received_at timestamptz NOT NULL,
+  name text NOT NULL,
+  email text NOT NULL,
+  company text NULL,
+  role text NULL,
+  phone text NULL,
+  decision text NOT NULL,
+  source_run_id text NULL,
+  page_url text NULL,
+  delivery jsonb NOT NULL,
+  storage text NOT NULL DEFAULT 'postgres'
+);
+`);
+  await context.db.query(`CREATE INDEX IF NOT EXISTS _reux_pilot_requests_received_idx ON ${pilotRequestTable(context)} (received_at DESC);`);
+  await context.db.query(`CREATE INDEX IF NOT EXISTS _reux_pilot_requests_source_run_idx ON ${pilotRequestTable(context)} (source_run_id);`);
+}
+
+function pilotRequestTable(context) {
+  return `${context.quotedSchema}._reux_pilot_requests`;
+}
+
 function simulationRunRecordFromRow(row) {
   const record = {
     id: row.id,
@@ -1056,6 +1273,23 @@ function simulationRunRecordFromRow(row) {
     run: recordSummary(record),
   };
   return record;
+}
+
+function pilotRequestRecordFromRow(row) {
+  return {
+    id: row.id,
+    receivedAt: timestampValue(row.received_at),
+    name: row.name,
+    email: row.email,
+    ...(row.company ? { company: row.company } : {}),
+    ...(row.role ? { role: row.role } : {}),
+    ...(row.phone ? { phone: row.phone } : {}),
+    decision: row.decision,
+    ...(row.source_run_id ? { sourceRunId: row.source_run_id } : {}),
+    ...(row.page_url ? { pageUrl: row.page_url } : {}),
+    delivery: jsonValue(row.delivery),
+    storage: row.storage ?? "postgres",
+  };
 }
 
 function schemaContext(schema, sessionId) {

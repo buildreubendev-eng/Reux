@@ -428,7 +428,23 @@
       "path": "/api/pilot-requests",
       "auth": "public",
       "session": "none",
-      "purpose": "Accept a Founder Pilot request and send it through Resend when delivery is configured."
+      "purpose": "Accept and store a Founder Pilot request, then send it through Resend when delivery is configured."
+    },
+    {
+      "name": "listPilotRequests",
+      "method": "GET",
+      "path": "/api/pilot-requests",
+      "auth": "x-reux-demo-token when configured",
+      "session": "operator",
+      "purpose": "List stored Founder Pilot requests for the operator lead view."
+    },
+    {
+      "name": "getPilotRequest",
+      "method": "GET",
+      "path": "/api/pilot-requests/:id",
+      "auth": "x-reux-demo-token when configured",
+      "session": "operator",
+      "purpose": "Load one stored Founder Pilot request including contact, decision, source, delivery, and storage metadata."
     },
     {
       "name": "listReuxSimulations",

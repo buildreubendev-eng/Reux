@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 const defaultFromAddress = "Reuben Pilot <pilot@reuben.dev>";
 const defaultFallbackEmail = "pilot@reuben.dev";
 const resendEndpoint = "https://api.resend.com/emails";
+export const defaultMaxPilotRequestRecords = 500;
 
 export class PilotRequestValidationError extends Error {
   constructor(issues) {
@@ -113,10 +114,63 @@ export function createPilotRequestSender(options = {}) {
   };
 }
 
+export function createPilotRequestStore(options = {}) {
+  const records = new Map();
+  const maxRecords = positiveInteger(options.maxRecords, defaultMaxPilotRequestRecords);
+
+  function save({ pilotRequest, delivery, storage = "memory", persistenceWarning }) {
+    const record = {
+      ...pilotRequest,
+      delivery: omitUndefined(delivery ?? {}),
+      storage,
+      ...(persistenceWarning ? { persistenceWarning } : {}),
+    };
+    records.set(record.id, record);
+    enforceLimit();
+    return record;
+  }
+
+  function get(id) {
+    return records.get(id) ?? null;
+  }
+
+  function list({ limit = maxRecords } = {}) {
+    return [...records.values()]
+      .sort((left, right) => right.receivedAt.localeCompare(left.receivedAt))
+      .slice(0, positiveInteger(limit, maxRecords))
+      .map(pilotRequestSummary);
+  }
+
+  function stats() {
+    const values = [...records.values()].sort((left, right) => left.receivedAt.localeCompare(right.receivedAt));
+    return {
+      records: records.size,
+      maxRecords,
+      oldestReceivedAt: values.at(0)?.receivedAt ?? null,
+      newestReceivedAt: values.at(-1)?.receivedAt ?? null,
+    };
+  }
+
+  function enforceLimit() {
+    const ordered = [...records.values()].sort((left, right) => right.receivedAt.localeCompare(left.receivedAt));
+    for (const record of ordered.slice(maxRecords)) {
+      records.delete(record.id);
+    }
+  }
+
+  return {
+    save,
+    get,
+    list,
+    stats,
+  };
+}
+
 export async function submitPilotRequest(body, options = {}) {
   const pilotRequest = normalizePilotRequest(body, options);
   const sender = options.sender ?? createPilotRequestSender();
   const delivery = await sender.send(pilotRequest);
+  const stored = options.store ? await options.store.save({ pilotRequest, delivery }) : undefined;
   return {
     ok: true,
     request: {
@@ -124,7 +178,30 @@ export async function submitPilotRequest(body, options = {}) {
       receivedAt: pilotRequest.receivedAt,
     },
     delivery: omitUndefined(delivery),
+    ...(stored?.storage ? { storage: stored.storage } : {}),
+    ...(stored?.persistenceWarning ? { persistenceWarning: stored.persistenceWarning } : {}),
   };
+}
+
+export function pilotRequestSummary(record) {
+  return omitUndefined({
+    id: record.id,
+    receivedAt: record.receivedAt,
+    name: record.name,
+    email: record.email,
+    company: record.company,
+    role: record.role,
+    phone: record.phone,
+    decision: record.decision,
+    sourceRunId: record.sourceRunId,
+    pageUrl: record.pageUrl,
+    deliveryStatus: record.delivery?.status,
+    deliveryChannel: record.delivery?.channel,
+    providerId: record.delivery?.providerId,
+    fallbackEmail: record.delivery?.fallbackEmail,
+    storage: record.storage,
+    persistenceWarning: record.persistenceWarning,
+  });
 }
 
 export function formatPilotRequestText(pilotRequest) {
@@ -192,6 +269,10 @@ function pilotRequestMailto(pilotRequest, email) {
 
 function defaultPilotRequestId() {
   return `pilot_${randomUUID().replaceAll("-", "").slice(0, 16)}`;
+}
+
+function positiveInteger(value, fallback) {
+  return Number.isInteger(value) && value > 0 ? value : fallback;
 }
 
 function formatIssues(issues) {
