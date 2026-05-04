@@ -65,6 +65,7 @@ import {
   createPilotRequestSender,
   createPilotRequestStore,
   defaultMaxPilotRequestRecords,
+  normalizePilotRequestOperatorUpdate,
   pilotRequestSummary,
   submitPilotRequest,
 } from "./pilot-requests.mjs";
@@ -309,6 +310,13 @@ async function route(request, response, url = new URL(request.url ?? "/", `http:
     assertAdminAllowed(request);
     const id = decodeURIComponent(url.pathname.slice("/api/pilot-requests/".length));
     sendJson(response, 200, await pilotRequestRecord(id));
+    return;
+  }
+
+  if (url.pathname.startsWith("/api/pilot-requests/") && url.pathname.endsWith("/operator") && method === "PATCH") {
+    assertAdminAllowed(request);
+    const id = decodeURIComponent(url.pathname.slice("/api/pilot-requests/".length, -"/operator".length));
+    sendJson(response, 200, await updatePilotRequestOperator(id, await readJson(request, { limitBytes: jsonBodyLimitBytes })));
     return;
   }
 
@@ -800,6 +808,27 @@ async function pilotRequestRecord(id) {
   throw error;
 }
 
+async function updatePilotRequestOperator(id, body) {
+  const update = normalizePilotRequestOperatorUpdate(body);
+  try {
+    const record = await updatePersistedPilotRequestOperator(id, update);
+    if (record) {
+      pilotRequestStore.updateOperator(id, update);
+      return { request: record };
+    }
+  } catch (error) {
+    console.warn(`failed to update persisted pilot request ${id}: ${error.message}`);
+  }
+
+  const record = pilotRequestStore.updateOperator(id, update);
+  if (record) return { request: record };
+
+  const error = new Error(`pilot request '${id}' was not found`);
+  error.statusCode = 404;
+  error.code = "not_found";
+  throw error;
+}
+
 async function domainOutboxStats(context, domain) {
   const eventTypes = Object.keys(domain.outboxHandlers);
   const placeholders = eventTypes.map((_, index) => `$${index + 1}`).join(", ");
@@ -1165,7 +1194,8 @@ async function listPersistedPilotRequests(limit) {
   const context = await pilotRequestContext();
   const result = await context.db.query(
     `
-SELECT id, received_at, name, email, company, role, phone, decision, source_run_id, page_url, delivery, storage
+SELECT id, received_at, name, email, company, role, phone, decision, source_run_id, page_url, delivery, storage,
+       operator_status, operator_notes, operator_updated_at
 FROM ${pilotRequestTable(context)}
 ORDER BY received_at DESC
 LIMIT $1;
@@ -1179,11 +1209,35 @@ async function getPersistedPilotRequest(id) {
   const context = await pilotRequestContext();
   const result = await context.db.query(
     `
-SELECT id, received_at, name, email, company, role, phone, decision, source_run_id, page_url, delivery, storage
+SELECT id, received_at, name, email, company, role, phone, decision, source_run_id, page_url, delivery, storage,
+       operator_status, operator_notes, operator_updated_at
 FROM ${pilotRequestTable(context)}
 WHERE id = $1;
 `,
     [id],
+  );
+  const row = result.rows[0];
+  return row ? pilotRequestRecordFromRow(row) : null;
+}
+
+async function updatePersistedPilotRequestOperator(id, update) {
+  const context = await pilotRequestContext();
+  const result = await context.db.query(
+    `
+UPDATE ${pilotRequestTable(context)}
+SET operator_status = COALESCE($2, operator_status),
+    operator_notes = COALESCE($3, operator_notes),
+    operator_updated_at = $4::timestamptz
+WHERE id = $1
+RETURNING id, received_at, name, email, company, role, phone, decision, source_run_id, page_url, delivery, storage,
+          operator_status, operator_notes, operator_updated_at;
+`,
+    [
+      id,
+      update.status ?? null,
+      update.notes ?? null,
+      update.operatorUpdatedAt,
+    ],
   );
   const row = result.rows[0];
   return row ? pilotRequestRecordFromRow(row) : null;
@@ -1243,11 +1297,18 @@ CREATE TABLE IF NOT EXISTS ${pilotRequestTable(context)} (
   source_run_id text NULL,
   page_url text NULL,
   delivery jsonb NOT NULL,
-  storage text NOT NULL DEFAULT 'postgres'
+  storage text NOT NULL DEFAULT 'postgres',
+  operator_status text NOT NULL DEFAULT 'new',
+  operator_notes text NOT NULL DEFAULT '',
+  operator_updated_at timestamptz NULL
 );
 `);
+  await context.db.query(`ALTER TABLE ${pilotRequestTable(context)} ADD COLUMN IF NOT EXISTS operator_status text NOT NULL DEFAULT 'new';`);
+  await context.db.query(`ALTER TABLE ${pilotRequestTable(context)} ADD COLUMN IF NOT EXISTS operator_notes text NOT NULL DEFAULT '';`);
+  await context.db.query(`ALTER TABLE ${pilotRequestTable(context)} ADD COLUMN IF NOT EXISTS operator_updated_at timestamptz NULL;`);
   await context.db.query(`CREATE INDEX IF NOT EXISTS _reux_pilot_requests_received_idx ON ${pilotRequestTable(context)} (received_at DESC);`);
   await context.db.query(`CREATE INDEX IF NOT EXISTS _reux_pilot_requests_source_run_idx ON ${pilotRequestTable(context)} (source_run_id);`);
+  await context.db.query(`CREATE INDEX IF NOT EXISTS _reux_pilot_requests_operator_status_idx ON ${pilotRequestTable(context)} (operator_status, received_at DESC);`);
 }
 
 function pilotRequestTable(context) {
@@ -1289,6 +1350,9 @@ function pilotRequestRecordFromRow(row) {
     ...(row.page_url ? { pageUrl: row.page_url } : {}),
     delivery: jsonValue(row.delivery),
     storage: row.storage ?? "postgres",
+    operatorStatus: row.operator_status ?? "new",
+    operatorNotes: row.operator_notes ?? "",
+    ...(row.operator_updated_at ? { operatorUpdatedAt: timestampValue(row.operator_updated_at) } : {}),
   };
 }
 

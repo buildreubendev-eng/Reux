@@ -4,6 +4,7 @@ const defaultFromAddress = "Reuben Pilot <pilot@reuben.dev>";
 const defaultFallbackEmail = "pilot@reuben.dev";
 const resendEndpoint = "https://api.resend.com/emails";
 export const defaultMaxPilotRequestRecords = 500;
+export const pilotRequestOperatorStatuses = ["new", "contacted", "scoping", "closed"];
 
 export class PilotRequestValidationError extends Error {
   constructor(issues) {
@@ -11,6 +12,16 @@ export class PilotRequestValidationError extends Error {
     this.name = "PilotRequestValidationError";
     this.statusCode = 400;
     this.code = "pilot_request_validation_failed";
+    this.issues = issues;
+  }
+}
+
+export class PilotRequestOperatorUpdateValidationError extends Error {
+  constructor(issues) {
+    super(formatIssues(issues));
+    this.name = "PilotRequestOperatorUpdateValidationError";
+    this.statusCode = 400;
+    this.code = "pilot_request_operator_update_failed";
     this.issues = issues;
   }
 }
@@ -54,6 +65,32 @@ export function normalizePilotRequest(body, options = {}) {
     phone,
     sourceRunId,
     pageUrl,
+  });
+}
+
+export function normalizePilotRequestOperatorUpdate(body, options = {}) {
+  const now = options.now ?? new Date();
+  const issues = [];
+  const input = isPlainObject(body) ? body : {};
+
+  if (!isPlainObject(body)) {
+    issues.push({ path: "$", message: "request body must be an object" });
+  }
+
+  const hasStatusInput = Object.hasOwn(input, "status");
+  const hasNotesInput = Object.hasOwn(input, "notes");
+  const status = optionalPilotRequestStatus(input.status, issues);
+  const notes = optionalString(input.notes, "$.notes", "notes", issues, 4000);
+
+  if (!hasStatusInput && !hasNotesInput) {
+    issues.push({ path: "$", message: "status or notes is required" });
+  }
+  if (issues.length > 0) throw new PilotRequestOperatorUpdateValidationError(issues);
+
+  return omitUndefined({
+    status,
+    notes: notes ?? (hasNotesInput ? "" : undefined),
+    operatorUpdatedAt: now.toISOString(),
   });
 }
 
@@ -119,10 +156,14 @@ export function createPilotRequestStore(options = {}) {
   const maxRecords = positiveInteger(options.maxRecords, defaultMaxPilotRequestRecords);
 
   function save({ pilotRequest, delivery, storage = "memory", persistenceWarning }) {
+    const current = records.get(pilotRequest.id);
     const record = {
       ...pilotRequest,
       delivery: omitUndefined(delivery ?? {}),
       storage,
+      operatorStatus: pilotRequest.operatorStatus ?? current?.operatorStatus ?? "new",
+      operatorNotes: pilotRequest.operatorNotes ?? current?.operatorNotes ?? "",
+      ...(pilotRequest.operatorUpdatedAt ?? current?.operatorUpdatedAt ? { operatorUpdatedAt: pilotRequest.operatorUpdatedAt ?? current?.operatorUpdatedAt } : {}),
       ...(persistenceWarning ? { persistenceWarning } : {}),
     };
     records.set(record.id, record);
@@ -132,6 +173,19 @@ export function createPilotRequestStore(options = {}) {
 
   function get(id) {
     return records.get(id) ?? null;
+  }
+
+  function updateOperator(id, update) {
+    const current = records.get(id);
+    if (!current) return null;
+    const record = {
+      ...current,
+      operatorStatus: update.status ?? current.operatorStatus ?? "new",
+      operatorNotes: update.notes ?? current.operatorNotes ?? "",
+      operatorUpdatedAt: update.operatorUpdatedAt,
+    };
+    records.set(id, record);
+    return record;
   }
 
   function list({ limit = maxRecords } = {}) {
@@ -161,6 +215,7 @@ export function createPilotRequestStore(options = {}) {
   return {
     save,
     get,
+    updateOperator,
     list,
     stats,
   };
@@ -200,6 +255,9 @@ export function pilotRequestSummary(record) {
     providerId: record.delivery?.providerId,
     fallbackEmail: record.delivery?.fallbackEmail,
     storage: record.storage,
+    operatorStatus: record.operatorStatus ?? "new",
+    operatorNotes: record.operatorNotes ?? "",
+    operatorUpdatedAt: record.operatorUpdatedAt,
     persistenceWarning: record.persistenceWarning,
   });
 }
@@ -259,6 +317,20 @@ function optionalString(value, path, label, issues, maxLength) {
     issues.push({ path, message: `${label} must be ${maxLength} characters or fewer` });
   }
   return trimmed;
+}
+
+function optionalPilotRequestStatus(value, issues) {
+  if (value === undefined || value === null || value === "") return undefined;
+  if (typeof value !== "string") {
+    issues.push({ path: "$.status", message: "status must be a string" });
+    return undefined;
+  }
+  const normalized = value.trim().toLowerCase();
+  if (!pilotRequestOperatorStatuses.includes(normalized)) {
+    issues.push({ path: "$.status", message: `status must be one of: ${pilotRequestOperatorStatuses.join(", ")}` });
+    return undefined;
+  }
+  return normalized;
 }
 
 function pilotRequestMailto(pilotRequest, email) {

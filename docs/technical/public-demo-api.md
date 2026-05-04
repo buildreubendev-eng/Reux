@@ -66,8 +66,9 @@ Public API responses also include:
 | `POST /api/pilot-requests` | Accept and store a Founder Pilot request, then send it through Resend when delivery is configured. |
 | `GET /api/pilot-requests` | Operator-only list of stored Founder Pilot requests. Requires `x-reux-demo-token` when configured. |
 | `GET /api/pilot-requests/:id` | Operator-only detail view for one stored Founder Pilot request. Requires `x-reux-demo-token` when configured. |
+| `PATCH /api/pilot-requests/:id/operator` | Operator-only status and notes update for one stored Founder Pilot request. Requires `x-reux-demo-token` when configured. |
 
-These routes are public and do not require an admin token or visitor session. They are the contract the Reuben website Business Simulator should use. The ready templates share the same response shape, so the frontend can present `operations-decision`, `capacity-planning`, `staffing-plan`, and `pricing-strategy` as product choices without a separate adapter.
+The Business Simulator run/template routes are public and do not require an admin token. They are the contract the Reuben website Business Simulator should use. The ready templates share the same response shape, so the frontend can present `operations-decision`, `capacity-planning`, `staffing-plan`, and `pricing-strategy` as product choices without a separate adapter.
 
 Template responses include `assumptionFields`, a backend-owned metadata array for the guided assumption UI. Each entry includes labels, helper copy, grouping, units, min/max/step values, select options, and baseline/scenario editability flags so product clients do not need to hard-code field details.
 
@@ -75,7 +76,18 @@ Template responses include `assumptionFields`, a backend-owned metadata array fo
 
 `POST /api/pilot-requests` is the backend handoff for the Founder Pilot CTA. The request body accepts required `name`, `email`, and `decision` fields plus optional `company`, `role`, `phone`, `sourceRunId`, and `pageUrl`. A valid request returns `202` with `ok: true`, a generated `request.id`, `request.receivedAt`, `delivery.status`, and `storage`. When `RESEND_API_KEY`, `REUX_PILOT_REQUEST_TO`, and `REUX_PILOT_REQUEST_FROM` are configured, delivery uses Resend and returns `delivery.status: "sent"`. Without those env vars, the route stays safe for public deployments and returns `delivery.status: "disabled"` plus a `delivery.mailto` fallback. Requests are stored in PostgreSQL with a bounded in-memory fallback; memory fallback responses include `persistenceWarning`. Invalid lead forms return `400` with `code: "pilot_request_validation_failed"` and field-level `issues`.
 
-`GET /api/pilot-requests` and `GET /api/pilot-requests/:id` are operator routes for the Reuben website lead view. They are protected by `x-reux-demo-token` when `REUX_DEMO_SETUP_TOKEN` is configured. The list route returns recent request summaries ordered by `receivedAt` and supports an optional `limit` query parameter. The detail route returns the full stored request including contact fields, decision text, source run/page, delivery metadata, and storage status.
+`GET /api/pilot-requests` and `GET /api/pilot-requests/:id` are operator routes for the Reuben website lead view. They are protected by `x-reux-demo-token` when `REUX_DEMO_SETUP_TOKEN` is configured. The list route returns recent request summaries ordered by `receivedAt` and supports an optional `limit` query parameter. The detail route returns the full stored request including contact fields, decision text, source run/page, delivery metadata, storage status, and operator metadata.
+
+`PATCH /api/pilot-requests/:id/operator` accepts operator-only lead workflow updates:
+
+```json
+{
+  "status": "contacted",
+  "notes": "Sent the founder reply and asked for current staffing numbers."
+}
+```
+
+`status` is optional but, when present, must be one of `new`, `contacted`, `scoping`, or `closed`. `notes` is optional and is capped at 4000 characters. At least one of `status` or `notes` is required. The response returns `{ "request": ... }` with `operatorStatus`, `operatorNotes`, and `operatorUpdatedAt`. Invalid operator updates return `400` with `code: "pilot_request_operator_update_failed"` and field-level `issues`.
 
 ## Generic Reux Simulation Routes
 
@@ -170,6 +182,7 @@ Known public error codes:
 | `business_simulator_validation_failed` | `400` | Run/compare request failed contract validation. |
 | `simulation_execution_validation_failed` | `400` | Generic Reux simulation execution request failed validation. |
 | `pilot_request_validation_failed` | `400` | Founder Pilot request form failed field validation. |
+| `pilot_request_operator_update_failed` | `400` | Operator status/notes update failed field validation. |
 | `invalid_json` | `400` | Request body was not valid JSON. |
 | `request_too_large` | `413` | JSON body exceeded `REUX_DEMO_JSON_BODY_LIMIT_BYTES`. |
 | `rate_limited` | `429` | Visitor exceeded the public demo request limit. |

@@ -5,6 +5,7 @@ import {
   createPilotRequestStore,
   formatPilotRequestText,
   normalizePilotRequest,
+  normalizePilotRequestOperatorUpdate,
   submitPilotRequest,
 } from "../demo/pilot-app/pilot-requests.mjs";
 
@@ -160,5 +161,77 @@ describe("demo pilot request backend", () => {
     expect(text).toContain("New Business Simulator pilot request");
     expect(text).toContain("Decision to model:");
     expect(text).toContain("Request ID: pilot_test123");
+  });
+
+  it("normalizes operator status and notes updates", () => {
+    expect(
+      normalizePilotRequestOperatorUpdate(
+        {
+          status: " Scoping ",
+          notes: "Model workforce impact before intro call.",
+        },
+        { now },
+      ),
+    ).toEqual({
+      status: "scoping",
+      notes: "Model workforce impact before intro call.",
+      operatorUpdatedAt: "2026-05-03T12:00:00.000Z",
+    });
+  });
+
+  it("rejects unsupported operator statuses", () => {
+    expect(() => normalizePilotRequestOperatorUpdate({ status: "waiting" }, { now })).toThrow(
+      expect.objectContaining({
+        code: "pilot_request_operator_update_failed",
+        issues: [
+          {
+            path: "$.status",
+            message: "status must be one of: new, contacted, scoping, closed",
+          },
+        ],
+      }),
+    );
+  });
+
+  it("updates stored operator metadata without changing public request fields", async () => {
+    const store = createPilotRequestStore({ maxRecords: 10 });
+    await submitPilotRequest(
+      {
+        name: "Ada Founder",
+        email: "ada@example.com",
+        decision: "We need to compare hiring four people against process automation.",
+      },
+      {
+        now,
+        idFactory,
+        sender: createPilotRequestSender({ apiKey: "", to: "", fallbackEmail: "pilot@example.com" }),
+        store,
+      },
+    );
+
+    const update = normalizePilotRequestOperatorUpdate(
+      {
+        status: "contacted",
+        notes: "Sent founder reply.",
+      },
+      { now: new Date("2026-05-03T13:00:00.000Z") },
+    );
+    const record = store.updateOperator("pilot_test123", update);
+
+    expect(record).toMatchObject({
+      id: "pilot_test123",
+      name: "Ada Founder",
+      operatorStatus: "contacted",
+      operatorNotes: "Sent founder reply.",
+      operatorUpdatedAt: "2026-05-03T13:00:00.000Z",
+    });
+    expect(store.list()).toEqual([
+      expect.objectContaining({
+        id: "pilot_test123",
+        operatorStatus: "contacted",
+        operatorNotes: "Sent founder reply.",
+        operatorUpdatedAt: "2026-05-03T13:00:00.000Z",
+      }),
+    ]);
   });
 });

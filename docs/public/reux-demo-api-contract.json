@@ -215,6 +215,7 @@
     "business_simulator_validation_failed",
     "simulation_execution_validation_failed",
     "pilot_request_validation_failed",
+    "pilot_request_operator_update_failed",
     "invalid_json",
     "request_too_large",
     "rate_limited",
@@ -445,6 +446,14 @@
       "auth": "x-reux-demo-token when configured",
       "session": "operator",
       "purpose": "Load one stored Founder Pilot request including contact, decision, source, delivery, and storage metadata."
+    },
+    {
+      "name": "updatePilotRequestOperator",
+      "method": "PATCH",
+      "path": "/api/pilot-requests/:id/operator",
+      "auth": "x-reux-demo-token when configured",
+      "session": "operator",
+      "purpose": "Update operator-only status and notes for a Founder Pilot request."
     },
     {
       "name": "listReuxSimulations",
