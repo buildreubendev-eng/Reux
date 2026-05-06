@@ -78,6 +78,12 @@ export function errorMetadata(code, statusCode) {
         retryable: true,
         userAction: "Wait until the retry window opens, then try again.",
       };
+    case "database_not_configured":
+      return {
+        category: "configuration",
+        retryable: true,
+        userAction: "Set the database URL environment variable and redeploy.",
+      };
     case "saved_run_expired":
       return {
         category: "expired",

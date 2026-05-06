@@ -104,11 +104,10 @@ const pilotRequestStore = createPilotRequestStore({
   maxRecords: maxPilotRequestRecords,
 });
 const buildId = buildIdentifier();
-const baseDatabaseUrl = process.env[config.databaseUrlEnv];
 const databases = new Map();
 
-if (!baseDatabaseUrl) {
-  throw new Error(`database URL environment variable ${config.databaseUrlEnv} is not set`);
+if (!process.env[config.databaseUrlEnv]) {
+  console.warn(`Reux pilot app starting without ${config.databaseUrlEnv}; database-backed routes will return 503.`);
 }
 
 const commerceSource = readFileSync(join(rootDir, "examples", "pilot_reux.dl"), "utf8");
@@ -226,6 +225,10 @@ async function route(request, response, url = new URL(request.url ?? "/", `http:
       packageVersion: packageInfo.version,
       build: buildId,
       databaseUrlEnv: config.databaseUrlEnv,
+      database: {
+        configured: Boolean(process.env[config.databaseUrlEnv]),
+        urlEnv: config.databaseUrlEnv,
+      },
       schema: demoSchema,
       sessionMode,
       jsonBodyLimitBytes,
@@ -1362,6 +1365,7 @@ function schemaContext(schema, sessionId) {
   let context = databases.get(schema);
   if (context) return touchSessionContext(context);
 
+  const baseDatabaseUrl = requireDatabaseUrl();
   const quotedSchema = quoteIdentifier(schema);
   const previousUrl = process.env[config.databaseUrlEnv];
   process.env[config.databaseUrlEnv] = databaseUrlWithSearchPath(baseDatabaseUrl, schema, config.databaseUrlEnv);
@@ -1383,6 +1387,16 @@ function schemaContext(schema, sessionId) {
       process.env[config.databaseUrlEnv] = previousUrl;
     }
   }
+}
+
+function requireDatabaseUrl() {
+  const databaseUrl = process.env[config.databaseUrlEnv];
+  if (databaseUrl) return databaseUrl;
+
+  const error = new Error(`database URL environment variable ${config.databaseUrlEnv} is not set`);
+  error.statusCode = 503;
+  error.code = "database_not_configured";
+  throw error;
 }
 
 function pruneSessionContexts(keepSchema = "") {
