@@ -107,7 +107,7 @@ That command starts the demo server on `REUX_DEMO_SMOKE_PORT` or `4185`, waits f
 
 ## Railway
 
-1. Create a new Railway project from `benn4105/Reux`.
+1. Create a new Railway project from `buildreubendev-eng/Reux`.
 2. Add a PostgreSQL service to the same Railway project.
 3. On the Reux service, set:
 

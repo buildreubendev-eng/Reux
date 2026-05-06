@@ -16,7 +16,7 @@ This is the public developer path for trying Reux before the packaged npm beta i
 From a fresh clone:
 
 ```bash
-git clone https://github.com/benn4105/Reux.git
+git clone https://github.com/buildreubendev-eng/Reux.git
 cd Reux
 npm install
 npm run onboarding:doctor

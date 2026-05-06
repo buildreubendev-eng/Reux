@@ -7,10 +7,10 @@
   "license": "UNLICENSED",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/benn4105/Reux.git"
+    "url": "git+https://github.com/buildreubendev-eng/Reux.git"
   },
   "bugs": {
-    "url": "https://github.com/benn4105/Reux/issues"
+    "url": "https://github.com/buildreubendev-eng/Reux/issues"
   },
   "homepage": "https://reuben-web.vercel.app/projects/reux",
   "keywords": [
