@@ -477,6 +477,8 @@ entity User {
       name: "DailyCommandBrief",
       metrics: [
         { name: "openDecisions", expression: "count Decision where status != Approved" },
+        { name: "blockedImpact", expression: "sum Decision.estimatedImpact where status == Blocked" },
+        { name: "averageConfidence", expression: "avg Decision.confidence where status != Approved" },
         { name: "overdueFollowUps", expression: "count FollowUp where status == Overdue" },
         { name: "highRisks", expression: "count RiskItem where severity in [High, Critical]" },
       ],
@@ -526,6 +528,28 @@ entity User {
           },
         },
         {
+          name: "blockedImpact",
+          aggregate: "sum",
+          entity: "Decision",
+          table: "decisions",
+          field: { field: "estimatedImpact", column: "estimated_impact", type: "Decimal<12, 2>" },
+          predicate: {
+            fields: [{ entity: "Decision", field: "status", column: "status" }],
+            enumLiterals: [{ enumName: "DecisionStatus", value: "Blocked" }],
+          },
+        },
+        {
+          name: "averageConfidence",
+          aggregate: "avg",
+          entity: "Decision",
+          table: "decisions",
+          field: { field: "confidence", column: "confidence", type: "Float" },
+          predicate: {
+            fields: [{ entity: "Decision", field: "status", column: "status" }],
+            enumLiterals: [{ enumName: "DecisionStatus", value: "Approved" }],
+          },
+        },
+        {
           name: "overdueFollowUps",
           aggregate: "count",
           entity: "FollowUp",
@@ -549,6 +573,8 @@ entity User {
       [
         "SELECT",
         "  (SELECT count(*) FROM decisions AS \"_row\" WHERE \"_row\".\"status\" <> 'Approved') AS \"openDecisions\",",
+        "  (SELECT sum(\"_row\".\"estimated_impact\") FROM decisions AS \"_row\" WHERE \"_row\".\"status\" = 'Blocked') AS \"blockedImpact\",",
+        "  (SELECT avg(\"_row\".\"confidence\") FROM decisions AS \"_row\" WHERE \"_row\".\"status\" <> 'Approved') AS \"averageConfidence\",",
         "  (SELECT count(*) FROM follow_ups AS \"_row\" WHERE \"_row\".\"status\" = 'Overdue') AS \"overdueFollowUps\",",
         "  (SELECT count(*) FROM risk_items AS \"_row\" WHERE \"_row\".\"severity\" IN ('High', 'Critical')) AS \"highRisks\";",
       ].join("\n"),
@@ -586,7 +612,24 @@ view DailyCommandBrief {
 `,
         "DailyCommandBrief",
       ),
-    ).toThrow("supports count Entity");
+    ).toThrow("sum metrics require Entity.field");
+
+    expect(() =>
+      emitViewIr(
+        `module broken
+
+entity Decision {
+  id: Id<Decision> primary generated
+  title: String
+}
+
+view DailyCommandBrief {
+  titleTotal = sum Decision.title
+}
+`,
+        "DailyCommandBrief",
+      ),
+    ).toThrow("sum requires numeric field Decision.title");
 
     expect(() =>
       emitViewSql(

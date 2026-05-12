@@ -178,6 +178,8 @@ The scaffold intentionally uses Node's built-in `http` module, so it remains dep
 
 Generated servers reject invalid JSON with `400` and request bodies larger than `REUX_HTTP_MAX_BODY_BYTES` with `413`. The default body limit is 1 MiB. Route bodies must be JSON objects whose keys match the generated Reux parameter list; missing required parameters, unknown parameters, and values that do not match the generated parameter kind return `400` before the API client runs.
 
+View SQL constants currently lower command-center metrics to a single dashboard row. Supported metrics are `count Entity`, plus numeric `sum Entity.field`, `avg Entity.field`, `min Entity.field`, and `max Entity.field`, all with optional `where` predicates.
+
 ## TypeScript Worker Scaffold
 
 The compiler can emit a worker scaffold for durable transaction events:

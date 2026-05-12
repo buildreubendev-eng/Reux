@@ -85,7 +85,13 @@ export function viewIrToPostgres(plan: ViewPlanIr): string {
 
 function viewMetricSql(metric: ViewMetricIr): string {
   const where = metric.predicate ? ` WHERE ${viewPredicateSql(metric.predicate.predicate)}` : "";
-  return `(SELECT count(*) FROM ${metric.table} AS ${quoteIdentifier("_row")}${where})`;
+  if (metric.aggregate === "count") {
+    return `(SELECT count(*) FROM ${metric.table} AS ${quoteIdentifier("_row")}${where})`;
+  }
+  if (!metric.field) {
+    throw new DlError(`view metric ${metric.name} is missing aggregate field`);
+  }
+  return `(SELECT ${metric.aggregate}(${quoteIdentifier("_row")}.${quoteIdentifier(metric.field.column)}) FROM ${metric.table} AS ${quoteIdentifier("_row")}${where})`;
 }
 
 function viewPredicateSql(predicate: ViewPredicateIr): string {

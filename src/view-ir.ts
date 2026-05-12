@@ -9,10 +9,18 @@ export interface ViewPlanIr {
 
 export interface ViewMetricIr {
   name: string;
-  aggregate: "count";
+  aggregate: "avg" | "count" | "max" | "min" | "sum";
   entity: string;
   table: string;
+  field?: ViewAggregateFieldIr;
   predicate?: ViewPredicateExpressionIr;
+}
+
+export interface ViewAggregateFieldIr {
+  source: string;
+  field: string;
+  column: string;
+  type: string;
 }
 
 export interface ViewPredicateExpressionIr {
@@ -77,23 +85,55 @@ export function buildViewIr(schema: SchemaIr, view: ViewDeclaration): ViewPlanIr
 }
 
 function metricIr(schema: SchemaIr, view: ViewDeclaration, metricName: string, source: string): ViewMetricIr {
-  const match = source.trim().match(/^count\s+([A-Za-z_][A-Za-z0-9_]*)(?:\s+where\s+(.+))?$/);
+  const match = source
+    .trim()
+    .match(/^(count|sum|avg|min|max)\s+([A-Za-z_][A-Za-z0-9_]*)(?:\.([A-Za-z_][A-Za-z0-9_]*))?(?:\s+where\s+(.+))?$/);
   if (!match) {
-    throw new DlError(`view ${view.name}.${metricName} supports count Entity [where predicate] metrics`);
+    throw new DlError(`view ${view.name}.${metricName} supports count Entity or sum/avg/min/max Entity.field metrics`);
   }
 
-  const entity = findEntity(schema, match[1]);
+  const aggregate = match[1] as ViewMetricIr["aggregate"];
+  const entity = findEntity(schema, match[2]);
   if (!entity) {
-    throw new DlError(`view ${view.name}.${metricName} counts unknown entity ${match[1]}`);
+    throw new DlError(`view ${view.name}.${metricName} ${aggregate}s unknown entity ${match[2]}`);
+  }
+
+  const fieldName = match[3];
+  if (aggregate === "count" && fieldName) {
+    throw new DlError(`view ${view.name}.${metricName} count metrics use count Entity, not count Entity.field`);
+  }
+  if (aggregate !== "count" && !fieldName) {
+    throw new DlError(`view ${view.name}.${metricName} ${aggregate} metrics require Entity.field`);
+  }
+
+  const field = fieldName ? entity.fields.find((candidate) => candidate.name === fieldName) : undefined;
+  if (fieldName && !field) {
+    throw new DlError(`view ${view.name}.${metricName} ${aggregate}s unknown field ${entity.name}.${fieldName}`);
+  }
+  if (field && !isNumericType(field.type.raw)) {
+    throw new DlError(`view ${view.name}.${metricName} ${aggregate} requires numeric field ${entity.name}.${field.name}`);
   }
 
   return {
     name: metricName,
-    aggregate: "count",
+    aggregate,
     entity: entity.name,
     table: entity.tableName,
-    predicate: match[2] ? predicateExpressionIr(schema, view.name, metricName, entity, match[2].trim()) : undefined,
+    field: field
+      ? {
+          source: `${entity.name}.${field.name}`,
+          field: field.name,
+          column: field.columnName,
+          type: field.type.raw,
+        }
+      : undefined,
+    predicate: match[4] ? predicateExpressionIr(schema, view.name, metricName, entity, match[4].trim()) : undefined,
   };
+}
+
+function isNumericType(type: string): boolean {
+  const required = type.endsWith("?") ? type.slice(0, -1) : type;
+  return required === "Int" || required === "Int64" || required === "Float" || required.startsWith("Decimal");
 }
 
 function predicateExpressionIr(

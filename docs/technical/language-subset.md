@@ -280,6 +280,8 @@ Views declare named derived metrics:
 ```dl
 view DailyCommandBrief {
   openDecisions = count Decision where status != Approved
+  blockedImpact = sum Decision.estimatedImpact where status == Blocked
+  averageConfidence = avg Decision.confidence where status != Approved
   overdueFollowUps = count FollowUp where status == Overdue
   highRisks = count RiskItem where severity in [High, Critical]
 }
@@ -299,8 +301,9 @@ Current compiler behavior:
 - parses `view` declarations into the AST;
 - parses `rule` declarations into the AST;
 - validates duplicate view names, duplicate rule names, duplicate view metrics, empty view expressions, missing rule `when` clauses, and missing rule actions;
-- emits View IR for `count Entity [where predicate]` metrics;
+- emits View IR for `count Entity [where predicate]` metrics plus numeric `sum Entity.field`, `avg Entity.field`, `min Entity.field`, and `max Entity.field` metrics;
 - validates view metric entities, fields, and enum literals for supported predicates;
+- validates that field-based view aggregates target numeric fields (`Int`, `Int64`, `Float`, or `Decimal`);
 - lowers supported view metrics to one-row PostgreSQL dashboard SQL;
 - emits Rule IR for single-entity rule predicates;
 - validates executable rule fields, enum literals, `today()`, `mark Entity.field = value`, and `notify field` actions;

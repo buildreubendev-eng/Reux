@@ -8,6 +8,8 @@ entity Decision {
   deadline: Instant
   priority: DecisionPriority
   status: DecisionStatus
+  estimatedImpact: Decimal<12, 2>
+  confidence: Float
   riskIfDelayed: String
   recommendedNextAction: String
 }
@@ -67,6 +69,8 @@ enum RiskSeverity {
 
 view DailyCommandBrief {
   openDecisions = count Decision where status != Approved
+  blockedImpact = sum Decision.estimatedImpact where status == Blocked
+  averageConfidence = avg Decision.confidence where status != Approved
   overdueFollowUps = count FollowUp where status == Overdue
   highRisks = count RiskItem where severity in [High, Critical]
 }

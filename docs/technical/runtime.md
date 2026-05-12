@@ -155,7 +155,7 @@ node dist/cli.js view-run examples/plos_executive.reux DailyCommandBrief
 node dist/cli.js project-view-run DailyCommandBrief
 ```
 
-`view-run` compiles the named view to PostgreSQL SQL, executes it without parameters, and prints the first dashboard row as JSON. This is intended for command-center read models such as PLOS Executive's daily brief.
+`view-run` compiles the named view to PostgreSQL SQL, executes it without parameters, and prints the first dashboard row as JSON. This is intended for command-center read models such as PLOS Executive's daily brief. View metrics currently support `count Entity`, plus numeric `sum Entity.field`, `avg Entity.field`, `min Entity.field`, and `max Entity.field`, each with an optional `where` predicate.
 
 Product backends can call the same path without shelling out:
 

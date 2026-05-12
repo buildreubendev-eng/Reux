@@ -1,6 +1,6 @@
 {
   "project": "Reux",
-  "updatedAt": "2026-05-09",
+  "updatedAt": "2026-05-12",
   "headline": "A data-native language prototype for reliable backend workflows and simulation-driven applications.",
   "status": {
     "demoReadinessPercent": 100,
@@ -31,12 +31,12 @@
     {
       "name": "Language Core",
       "status": "prototype-complete",
-      "summary": "The prototype language core can model schemas, enums, reusable typed queries, guarded transaction functions, durable events, migrations, simulations, executable count-based views, and executable single-entity operating-model rules.",
+      "summary": "The prototype language core can model schemas, enums, reusable typed queries, guarded transaction functions, durable events, migrations, simulations, executable aggregate views, and executable single-entity operating-model rules.",
       "capabilities": [
         "Module, entity, enum, query, transaction, event, simulate, view, and rule declarations",
         "Validated scalar, decimal, currency, enum, reference, generated ID, unique, index, check, and transition-rule metadata",
         "Explicit joins, left joins, alias-remapped reusable filters, cursor pagination, ordering, limits, record projections, null predicate lowering, and narrow aggregation support",
-        "View IR and PostgreSQL lowering for count-based command-center metrics with field, enum, and in-list predicate validation",
+        "View IR and PostgreSQL lowering for count, sum, average, min, and max command-center metrics with numeric-field, enum, and in-list predicate validation",
         "Rule IR and PostgreSQL lowering for single-entity mark actions and duplicate-safe outbox notification actions",
         "Transaction guards, row locking, inserts, mutations, retry metadata, idempotency keys, typed outbox events, typed after-commit hook contracts, nullable expression checks, and null guard lowering",
         "Formula-based simulation forecasts with dimensions, units, scheduled changes, scenarios, objectives, rankings, and explanations"

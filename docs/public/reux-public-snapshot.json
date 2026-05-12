@@ -1,6 +1,6 @@
 {
   "project": "Reux",
-  "updatedAt": "2026-05-09",
+  "updatedAt": "2026-05-12",
   "headline": "A data-native language prototype for reliable backend workflows and simulation-driven applications.",
   "status": {
     "demoReadinessPercent": 100,
@@ -65,7 +65,7 @@
     {
       "name": "Language Core",
       "status": "prototype-complete",
-      "summary": "The prototype language core can model schemas, enums, reusable typed queries, guarded transaction functions, durable events, migrations, simulations, executable count-based views, and executable single-entity operating-model rules.",
+      "summary": "The prototype language core can model schemas, enums, reusable typed queries, guarded transaction functions, durable events, migrations, simulations, executable aggregate views, and executable single-entity operating-model rules.",
       "capabilityCount": 7
     },
     {
