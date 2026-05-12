@@ -87,6 +87,8 @@ The TypeScript simulation contract emitter generates reusable run/result interfa
 node dist/cli.js project-simulation-types-ts
 ```
 
+The package runtime also exposes `createReuxSimulationService(source)` for backend services that need to execute models repeatedly. The service compiles once, supports `list/get/run/compare`, and offers no-throw `runEnvelope` and `compareEnvelope` calls with request IDs, timestamps, durations, and validation issue paths for HTTP APIs.
+
 ## PostgreSQL SQL
 
 The PostgreSQL backend currently emits:

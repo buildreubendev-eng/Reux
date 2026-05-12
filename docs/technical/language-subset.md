@@ -213,7 +213,7 @@ Generated simulation TypeScript contracts include typed dimension names, typed a
 Product backends can also execute simulations through the package API without shelling out to the CLI:
 
 ```ts
-import { runReuxSimulation } from "reux-prototype/simulation";
+import { createReuxSimulationService, runReuxSimulation } from "reux-prototype/simulation";
 
 const result = runReuxSimulation(source, {
   simulationName: "personal_finance",
@@ -237,9 +237,19 @@ const result = runReuxSimulation(source, {
     },
   ],
 });
+
+const service = createReuxSimulationService(source);
+const envelope = service.runEnvelope({
+  simulationName: "personal_finance",
+  assumptions: {
+    income: { value: 6200, unit: "USD" },
+  },
+});
 ```
 
-`listReuxSimulations(source)` returns product-facing metadata for every simulation in a source file, `getReuxSimulation(source, name)` returns one model, and `runReuxSimulation(source, request)` returns the same run/comparison shape as the CLI plus direct `baseline` and non-baseline `scenarios` fields for product callers. Runtime overrides can be primitive values or `{ value, unit }` objects. They must reference declared assumptions, keep the original primitive type, preserve declared units, and keep scenario changes inside the forecast window. Invalid requests throw `ReuxSimulationExecutionError` with `statusCode: 400`, `code: "simulation_execution_validation_failed"`, and stable `issues[].path` values so product APIs can return field-level validation messages.
+`listReuxSimulations(source)` returns product-facing metadata for every simulation in a source file, `getReuxSimulation(source, name)` returns one model, `runReuxSimulation(source, request)` returns the same run/comparison shape as the CLI plus direct `baseline` and non-baseline `scenarios` fields for product callers, and `compareReuxSimulation(source, request)` returns the comparison-focused subset. Runtime overrides can be primitive values or `{ value, unit }` objects. They must reference declared assumptions, keep the original primitive type, preserve declared units, and keep scenario changes inside the forecast window. Invalid requests throw `ReuxSimulationExecutionError` with `statusCode: 400`, `code: "simulation_execution_validation_failed"`, and stable `issues[].path` values so product APIs can return field-level validation messages.
+
+`createReuxSimulationService(source)` compiles once and exposes reusable `list()`, `get(name)`, `run(request)`, `compare(request)`, `runEnvelope(request)`, and `compareEnvelope(request)` methods. The envelope methods do not throw for validation failures. Successful envelopes return `{ ok: true, requestId, generatedAt, durationMs, data }`; validation failures return `{ ok: false, requestId, generatedAt, durationMs, code, category, retryable, userAction, issues }`. Product backends can inject a request-id factory, clock, and duration provider for deterministic tests or hosted API tracing.
 
 The runtime execution API also exports `reuxSimulationExecutionLimits`. Current limits allow up to 12 runtime scenarios, 24 changes per runtime scenario, 64 entries in any override object, and 120 characters per runtime scenario name. These limits keep hosted/demo product APIs predictable while the simulation language is still in prototype form.
 

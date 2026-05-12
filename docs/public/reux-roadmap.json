@@ -38,7 +38,7 @@
     "Executable PLOS habit-consistency example alongside the personal-finance example",
     "Executable business operations simulation example alongside the workforce example",
     "Generated simulation catalog helpers for product apps",
-    "Product-facing generic Reux simulation API for listing, loading, and executing models",
+    "Product-facing generic Reux simulation API for listing, loading, executing, comparing, and no-throw service envelopes",
     "Language-core completion pass for transaction control flow, expression typing, reusable filters, worker contracts, null-aware lowering, and diagnostics",
     "Keep improving public demo copy as new domains are added",
     "Keep monitor alert routing aligned with the final hosting and notification setup",
@@ -104,7 +104,7 @@
         "Add richer time-series and assumption modeling",
         "Add stronger unit and formula validation",
         "Improve comparison reports and explanation output",
-        "Expand simulation APIs from generated catalog discovery into full product-facing execution services"
+        "[DONE] Expand simulation APIs from generated catalog discovery into full product-facing execution services"
       ]
     },
     {

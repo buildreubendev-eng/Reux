@@ -20,10 +20,12 @@ Example import from another TypeScript project after installing the package:
 ```ts
 import { compileSource, emitPostgresSchema } from "reux-prototype";
 import { createPostgresDatabase, runRule, runRuleWorker, runRules, runSqlQuery, runView } from "reux-prototype/runtime";
-import { runReuxSimulation } from "reux-prototype/simulation";
+import { createReuxSimulationService, runReuxSimulation } from "reux-prototype/simulation";
 ```
 
 `runReuxSimulation(source, request)` is the generic backend path for PLOS and business-product prototypes. It accepts runtime baseline/scenario overrides as primitives or `{ value, unit }` inputs, preserves declared Reux units and objectives, and returns a typed run/comparison result plus direct baseline/scenario shortcuts without requiring a custom adapter for every product.
+
+Use `createReuxSimulationService(source)` when an API process needs to serve repeated requests from the same source file. It compiles the source once and exposes `list()`, `get()`, `run()`, `compare()`, plus no-throw `runEnvelope()` and `compareEnvelope()` methods. The envelope methods include `requestId`, `generatedAt`, `durationMs`, and either `{ ok: true, data }` or the stable Reux validation error body, which makes them safer to wire behind HTTP routes.
 
 `runView(db, source, viewName)`, `runRule(db, source, ruleName)`, `runRules(db, source, ruleNames?)`, and `runRuleWorker(db, source, options)` are the backend paths for operating-model read models, rule actions, batch rule application, and long-running rule hygiene. They compile Reux view/rule declarations and execute them through the shared PostgreSQL runtime without shelling out to the CLI. Generated TypeScript APIs also expose `api.views.<view>()` and `api.rules.<rule>()` methods for app code that prefers generated wrappers.
 

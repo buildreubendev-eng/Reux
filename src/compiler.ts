@@ -63,6 +63,8 @@ export {
 export {
   getReuxSimulation,
   listReuxSimulations,
+  compareReuxSimulation,
+  createReuxSimulationService,
   createReuxSimulationExecutionFixture,
   emitReuxSimulationExecutionFixture,
   ReuxSimulationExecutionError,
@@ -110,9 +112,14 @@ export type {
   ReuxSimulationExecutionResponse,
   ReuxSimulationExecutionScenarioInput,
   ReuxSimulationExecutionValue,
+  ReuxSimulationComparisonResponse,
   ReuxSimulationGetResponse,
   ReuxSimulationListResponse,
   ReuxSimulationMetadata,
+  ReuxSimulationService,
+  ReuxSimulationServiceCallOptions,
+  ReuxSimulationServiceEnvelope,
+  ReuxSimulationServiceOptions,
 } from "./simulation-service.js";
 
 export interface CompileResult {

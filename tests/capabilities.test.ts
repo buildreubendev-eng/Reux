@@ -23,7 +23,10 @@ describe("public capabilities", () => {
 
     expect(emitted.project).toBe("Reux");
     expect(emitted.capabilityGroups).toHaveLength(6);
-    expect(emitted.nextResearchTracks).toContain("Product-facing simulation execution APIs");
+    expect(emitted.nextResearchTracks).toContain("Simulation service persistence and hosted model registry");
+    expect(emitted.capabilityGroups[1].capabilities).toContain(
+      "Reusable product-facing simulation service with compile-once list/get/run/compare methods and no-throw request envelopes",
+    );
   });
 
   it("renders a concise markdown capability brief", () => {

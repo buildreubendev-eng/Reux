@@ -97,7 +97,7 @@ Template responses include `assumptionFields`, a backend-owned metadata array fo
 | `GET /api/reux/simulations/:name` | Load one Reux simulation model by name. |
 | `POST /api/reux/simulations/:name/run` | Execute one Reux simulation with optional runtime baseline assumptions and runtime scenarios. |
 
-These routes are public and do not require an admin token or visitor session. They are the generic product-facing path for PLOS and business-product prototypes that want Reux-backed simulation execution without using the specialized Business Simulator contract.
+These routes are public and do not require an admin token or visitor session. They are the generic product-facing path for PLOS and business-product prototypes that want Reux-backed simulation execution without using the specialized Business Simulator contract. Product backends can use `createReuxSimulationService(source)` for the same list/get/run/compare model with no-throw envelopes that include request IDs, timestamps, durations, and stable validation issues.
 
 Runtime execution request:
 

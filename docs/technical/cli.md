@@ -65,7 +65,7 @@ node dist/cli.js project-check
 
 `business-simulator-contract` emits a deterministic JSON fixture for the public Business Simulator API. It includes the endpoint map, operations template, sample run request/response, sample compare request/response, recommendation output, and Reux source transparency text so frontend clients can verify their mock data and adapters against the backend contract.
 
-`simulation-execution-fixture` emits a deterministic JSON fixture for the generic Reux simulation execution API. It includes list/get metadata, execution limits, a sample runtime override request, a run response, and an invalid-request error envelope with stable `issues[].path` values.
+`simulation-execution-fixture` emits a deterministic JSON fixture for the generic Reux simulation execution API. It includes list/get metadata, execution limits, a sample runtime override request, a run response, no-throw service envelopes for run/compare, and an invalid-request error envelope with stable `issues[].path` values.
 
 Format a source file or the single configured project source:
 

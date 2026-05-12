@@ -9,7 +9,7 @@ Updated: 2026-05-12
 - P1 | Simulation Foundation | Richer simulation time-series and assumptions
   Why: Move beyond prototype completion into deeper product and language capability.
   Source: capability-research-track
-- P1 | Simulation Foundation | Product-facing simulation execution APIs
+- P1 | Simulation Foundation | Simulation service persistence and hosted model registry
   Why: Move beyond prototype completion into deeper product and language capability.
   Source: capability-research-track
 - P2 | Developer Experience | Compiler-backed language-server features
@@ -78,7 +78,7 @@ Updated: 2026-05-12
 - P3 | Simulation Foundation | Improve comparison reports and explanation output
   Why: Make Reux useful for structured forecasting and scenario comparison.
   Source: public-roadmap
-- P3 | Simulation Foundation | Expand simulation APIs from generated catalog discovery into full product-facing execution services
+- P3 | Simulation Foundation | [DONE] Expand simulation APIs from generated catalog discovery into full product-facing execution services
   Why: Make Reux useful for structured forecasting and scenario comparison.
   Source: public-roadmap
 - P3 | Product Ecosystem | Build PLOS as a personal simulation product using normal web technology first

@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
+  compareReuxSimulation,
+  createReuxSimulationService,
   getReuxSimulation,
   createReuxSimulationExecutionFixture,
   listReuxSimulations,
@@ -93,6 +95,115 @@ describe("product-facing simulation service", () => {
       ]),
     });
     expect(response.run.comparison?.metricRankings.some((ranking) => ranking.metric === "annual_surplus")).toBe(true);
+  });
+
+  it("compares runtime scenarios through the product-facing comparison API", () => {
+    const response = compareReuxSimulation(
+      financeSource(),
+      {
+        simulationName: "personal_finance",
+        scenarios: [
+          {
+            name: "lower_rent_runtime",
+            overrides: {
+              rent: { value: 1100, unit: "USD" },
+            },
+          },
+        ],
+      },
+      new Date("2026-05-02T00:00:00.000Z"),
+    );
+
+    expect(response.generatedAt).toBe("2026-05-02T00:00:00.000Z");
+    expect(response.baseline.name).toBe("baseline");
+    expect(response.scenarios.map((scenario) => scenario.name)).toEqual(["lower_rent_runtime"]);
+    expect(response.comparison?.scenarios[0]).toMatchObject({
+      name: "lower_rent_runtime",
+    });
+    expect(response.comparison?.metricRankings.some((ranking) => ranking.metric === "cash_flow")).toBe(true);
+  });
+
+  it("creates a reusable no-throw simulation service for product backends", () => {
+    const service = createReuxSimulationService(financeSource(), {
+      requestIdFactory: () => "sim_test_001",
+      clock: () => new Date("2026-05-02T00:00:00.000Z"),
+      durationMs: () => 7,
+    });
+
+    expect(service.list().simulations[0]?.name).toBe("personal_finance");
+    expect(service.get("personal_finance").simulation.forecast.periods).toBe(12);
+
+    const run = service.runEnvelope({
+      simulationName: "personal_finance",
+      assumptions: {
+        income: { value: 6200, unit: "USD" },
+      },
+    });
+
+    expect(run).toMatchObject({
+      ok: true,
+      requestId: "sim_test_001",
+      generatedAt: "2026-05-02T00:00:00.000Z",
+      durationMs: 7,
+      data: {
+        simulation: {
+          name: "personal_finance",
+        },
+      },
+    });
+
+    const comparison = service.compareEnvelope({
+      simulationName: "personal_finance",
+      scenarios: [
+        {
+          name: "lower_rent_runtime",
+          overrides: {
+            rent: { value: 1100, unit: "USD" },
+          },
+        },
+      ],
+    });
+
+    expect(comparison).toMatchObject({
+      ok: true,
+      requestId: "sim_test_001",
+      data: {
+        comparison: {
+          scenarios: [
+            {
+              name: "lower_rent_runtime",
+            },
+          ],
+        },
+      },
+    });
+  });
+
+  it("returns stable validation envelopes from the reusable service", () => {
+    const service = createReuxSimulationService(financeSource(), {
+      requestIdFactory: () => "sim_test_bad",
+      clock: () => new Date("2026-05-02T00:00:00.000Z"),
+      durationMs: () => 3,
+    });
+
+    expect(service.runEnvelope({ simulationName: "missing_simulation" })).toEqual({
+      ok: false,
+      requestId: "sim_test_bad",
+      generatedAt: "2026-05-02T00:00:00.000Z",
+      durationMs: 3,
+      error: "$.simulationName: simulation 'missing_simulation' was not found",
+      message: "$.simulationName: simulation 'missing_simulation' was not found",
+      code: "simulation_execution_validation_failed",
+      category: "validation",
+      retryable: false,
+      userAction: "Fix the request fields and try again.",
+      issues: [
+        {
+          path: "$.simulationName",
+          message: "simulation 'missing_simulation' was not found",
+        },
+      ],
+    });
   });
 
   it("rejects runtime override unit mismatches with field-level issue paths", () => {
@@ -210,7 +321,7 @@ describe("product-facing simulation service", () => {
 
     expect(fixture).toMatchObject({
       contract: "reux-simulation-execution",
-      version: "2026-05-02",
+      version: "2026-05-12",
       generatedAt: "2026-05-02T00:00:00.000Z",
       runRequest: {
         simulationName: "personal_finance",
@@ -223,5 +334,15 @@ describe("product-facing simulation service", () => {
     expect(fixture.limits.maxScenarios).toBe(reuxSimulationExecutionLimits.maxScenarios);
     expect(fixture.runResponse.run.name).toBe("personal_finance");
     expect(fixture.invalidRunResponse.issues[0]?.path).toBe("$.assumptions.income");
+    expect(fixture.serviceRunEnvelope).toMatchObject({
+      ok: true,
+      requestId: "sim_fixture_0001",
+      data: {
+        run: {
+          name: "personal_finance",
+        },
+      },
+    });
+    expect(fixture.serviceCompareEnvelope.data.comparison?.metricRankings.some((ranking) => ranking.metric === "annual_surplus")).toBe(true);
   });
 });

@@ -1,6 +1,8 @@
+import { randomUUID } from "node:crypto";
 import { parseProgram } from "./parser.js";
 import {
   buildSimulationCatalog,
+  SimulationComparisonResult,
   runSimulationIr,
   SimulationChangeIr,
   SimulationIr,
@@ -36,6 +38,24 @@ export interface ReuxSimulationExecutionRequest {
   scenarios?: ReuxSimulationExecutionScenarioInput[];
 }
 
+export interface ReuxSimulationServiceOptions {
+  requestIdFactory?: () => string;
+  clock?: () => Date;
+  durationMs?: () => number;
+}
+
+export interface ReuxSimulationServiceCallOptions {
+  requestId?: string;
+  now?: Date;
+  durationMs?: number;
+}
+
+interface ResolvedReuxSimulationServiceCallOptions {
+  requestId: string;
+  now: Date;
+  durationMs?: number;
+}
+
 export interface ReuxSimulationMetadata {
   name: string;
   dimensions: Record<string, string>;
@@ -62,8 +82,27 @@ export interface ReuxSimulationExecutionResponse {
   generatedAt: string;
 }
 
+export interface ReuxSimulationComparisonResponse {
+  simulation: ReuxSimulationMetadata;
+  baseline: SimulationScenarioRunResult;
+  scenarios: SimulationScenarioRunResult[];
+  comparison: SimulationComparisonResult | null;
+  generatedAt: string;
+}
+
+export interface ReuxSimulationServiceEnvelope<T> {
+  ok: true;
+  requestId: string;
+  generatedAt: string;
+  durationMs: number;
+  data: T;
+}
+
 export interface ReuxSimulationExecutionErrorResponse {
   ok: false;
+  requestId?: string;
+  generatedAt?: string;
+  durationMs?: number;
   error: string;
   message: string;
   code: "simulation_execution_validation_failed";
@@ -84,6 +123,8 @@ export interface ReuxSimulationExecutionFixture {
   runResponse: ReuxSimulationExecutionResponse;
   invalidRunRequest: ReuxSimulationExecutionRequest;
   invalidRunResponse: ReuxSimulationExecutionErrorResponse;
+  serviceRunEnvelope: ReuxSimulationServiceEnvelope<ReuxSimulationExecutionResponse>;
+  serviceCompareEnvelope: ReuxSimulationServiceEnvelope<ReuxSimulationComparisonResponse>;
 }
 
 export interface ReuxSimulationExecutionIssue {
@@ -103,10 +144,25 @@ export class ReuxSimulationExecutionError extends Error {
   }
 }
 
+export interface ReuxSimulationService {
+  list(): ReuxSimulationListResponse;
+  get(simulationName?: string): ReuxSimulationGetResponse;
+  run(request?: ReuxSimulationExecutionRequest, now?: Date): ReuxSimulationExecutionResponse;
+  compare(request?: ReuxSimulationExecutionRequest, now?: Date): ReuxSimulationComparisonResponse;
+  runEnvelope(
+    request?: ReuxSimulationExecutionRequest,
+    options?: ReuxSimulationServiceCallOptions,
+  ): ReuxSimulationServiceEnvelope<ReuxSimulationExecutionResponse> | ReuxSimulationExecutionErrorResponse;
+  compareEnvelope(
+    request?: ReuxSimulationExecutionRequest,
+    options?: ReuxSimulationServiceCallOptions,
+  ): ReuxSimulationServiceEnvelope<ReuxSimulationComparisonResponse> | ReuxSimulationExecutionErrorResponse;
+}
+
 export const reuxSimulationExecutionFixtureDate = "2026-05-02T00:00:00.000Z";
 
 export function listReuxSimulations(source: string): ReuxSimulationListResponse {
-  return { simulations: compileSimulations(source).map((simulation) => simulationMetadata(simulation)) };
+  return listCompiledReuxSimulations(compileSimulations(source));
 }
 
 export function getReuxSimulation(source: string, simulationName?: string): ReuxSimulationGetResponse {
@@ -114,8 +170,56 @@ export function getReuxSimulation(source: string, simulationName?: string): Reux
 }
 
 export function runReuxSimulation(source: string, request: ReuxSimulationExecutionRequest = {}, now: Date = new Date()): ReuxSimulationExecutionResponse {
+  return runCompiledReuxSimulation(compileSimulations(source), request, now);
+}
+
+export function compareReuxSimulation(source: string, request: ReuxSimulationExecutionRequest = {}, now: Date = new Date()): ReuxSimulationComparisonResponse {
+  return compareCompiledReuxSimulation(compileSimulations(source), request, now);
+}
+
+export function createReuxSimulationService(source: string, options: ReuxSimulationServiceOptions = {}): ReuxSimulationService {
+  const simulations = compileSimulations(source);
+  const requestIdFactory = options.requestIdFactory ?? (() => `sim_${randomUUID()}`);
+  const clock = options.clock ?? (() => new Date());
+  const durationMs = options.durationMs;
+
+  const callOptions = (input: ReuxSimulationServiceCallOptions = {}) => ({
+    requestId: input.requestId ?? requestIdFactory(),
+    now: input.now ?? clock(),
+    durationMs: input.durationMs ?? durationMs?.(),
+  });
+
+  return {
+    list() {
+      return listCompiledReuxSimulations(simulations);
+    },
+    get(simulationName?: string) {
+      return { simulation: simulationMetadata(selectSimulation(simulations, simulationName)) };
+    },
+    run(request: ReuxSimulationExecutionRequest = {}, now: Date = clock()) {
+      return runCompiledReuxSimulation(simulations, request, now);
+    },
+    compare(request: ReuxSimulationExecutionRequest = {}, now: Date = clock()) {
+      return compareCompiledReuxSimulation(simulations, request, now);
+    },
+    runEnvelope(request: ReuxSimulationExecutionRequest = {}, options: ReuxSimulationServiceCallOptions = {}) {
+      const context = callOptions(options);
+      return serviceEnvelope(context, () => runCompiledReuxSimulation(simulations, request, context.now));
+    },
+    compareEnvelope(request: ReuxSimulationExecutionRequest = {}, options: ReuxSimulationServiceCallOptions = {}) {
+      const context = callOptions(options);
+      return serviceEnvelope(context, () => compareCompiledReuxSimulation(simulations, request, context.now));
+    },
+  };
+}
+
+function listCompiledReuxSimulations(simulations: SimulationIr[]): ReuxSimulationListResponse {
+  return { simulations: simulations.map((simulation) => simulationMetadata(simulation)) };
+}
+
+function runCompiledReuxSimulation(simulations: SimulationIr[], request: ReuxSimulationExecutionRequest = {}, now: Date = new Date()): ReuxSimulationExecutionResponse {
   assertExecutionRequest(request);
-  const simulation = selectSimulation(compileSimulations(source), request.simulationName);
+  const simulation = selectSimulationForExecution(simulations, request.simulationName);
   const executable = applyExecutionRequest(simulation, request);
   const run = runSimulationIr(executable);
   const baseline = run.scenarios?.find((scenario) => scenario.name === "baseline") ?? {
@@ -133,6 +237,17 @@ export function runReuxSimulation(source: string, request: ReuxSimulationExecuti
   };
 }
 
+function compareCompiledReuxSimulation(simulations: SimulationIr[], request: ReuxSimulationExecutionRequest = {}, now: Date = new Date()): ReuxSimulationComparisonResponse {
+  const response = runCompiledReuxSimulation(simulations, request, now);
+  return {
+    simulation: response.simulation,
+    baseline: response.baseline,
+    scenarios: response.scenarios,
+    comparison: response.run.comparison ?? null,
+    generatedAt: response.generatedAt,
+  };
+}
+
 export function createReuxSimulationExecutionFixture(
   source: string,
   simulationName?: string,
@@ -143,10 +258,15 @@ export function createReuxSimulationExecutionFixture(
   const getResponse = getReuxSimulation(source, selectedName);
   const runRequest = sampleRunRequest(getResponse.simulation);
   const invalidRunRequest = sampleInvalidRunRequest(getResponse.simulation);
+  const service = createReuxSimulationService(source, {
+    requestIdFactory: () => "sim_fixture_0001",
+    clock: () => now,
+    durationMs: () => 0,
+  });
 
   return {
     contract: "reux-simulation-execution",
-    version: "2026-05-02",
+    version: "2026-05-12",
     generatedAt: now.toISOString(),
     limits: reuxSimulationExecutionLimits,
     listResponse,
@@ -155,6 +275,8 @@ export function createReuxSimulationExecutionFixture(
     runResponse: runReuxSimulation(source, runRequest, now),
     invalidRunRequest,
     invalidRunResponse: simulationErrorResponse(captureExecutionError(source, invalidRunRequest)),
+    serviceRunEnvelope: service.runEnvelope(runRequest) as ReuxSimulationServiceEnvelope<ReuxSimulationExecutionResponse>,
+    serviceCompareEnvelope: service.compareEnvelope(runRequest) as ReuxSimulationServiceEnvelope<ReuxSimulationComparisonResponse>,
   };
 }
 
@@ -174,6 +296,21 @@ function selectSimulation(simulations: SimulationIr[], simulationName?: string):
   }
   const simulation = simulations.find((candidate) => candidate.name === simulationName);
   if (!simulation) throw new Error(`simulation '${simulationName}' was not found`);
+  return simulation;
+}
+
+function selectSimulationForExecution(simulations: SimulationIr[], simulationName?: string): SimulationIr {
+  if (!simulationName) {
+    const first = simulations[0];
+    if (!first) {
+      throw new ReuxSimulationExecutionError([{ path: "$.simulationName", message: "no simulations were found in the source" }]);
+    }
+    return first;
+  }
+  const simulation = simulations.find((candidate) => candidate.name === simulationName);
+  if (!simulation) {
+    throw new ReuxSimulationExecutionError([{ path: "$.simulationName", message: `simulation '${simulationName}' was not found` }]);
+  }
   return simulation;
 }
 
@@ -458,9 +595,41 @@ function captureExecutionError(source: string, request: ReuxSimulationExecutionR
   throw new Error("sample invalid simulation request unexpectedly passed validation");
 }
 
-function simulationErrorResponse(error: ReuxSimulationExecutionError): ReuxSimulationExecutionErrorResponse {
+function serviceEnvelope<T>(
+  context: ResolvedReuxSimulationServiceCallOptions,
+  operation: () => T,
+): ReuxSimulationServiceEnvelope<T> | ReuxSimulationExecutionErrorResponse {
+  const startedAt = Date.now();
+  try {
+    return {
+      ok: true,
+      requestId: context.requestId,
+      generatedAt: context.now.toISOString(),
+      durationMs: resolveDurationMs(context, startedAt),
+      data: operation(),
+    };
+  } catch (error) {
+    if (error instanceof ReuxSimulationExecutionError) {
+      return simulationErrorResponse(error, context, startedAt);
+    }
+    throw error;
+  }
+}
+
+function simulationErrorResponse(
+  error: ReuxSimulationExecutionError,
+  context?: ResolvedReuxSimulationServiceCallOptions,
+  startedAt?: number,
+): ReuxSimulationExecutionErrorResponse {
   return {
     ok: false,
+    ...(context
+      ? {
+          requestId: context.requestId,
+          generatedAt: context.now.toISOString(),
+          durationMs: resolveDurationMs(context, startedAt),
+        }
+      : {}),
     error: error.message,
     message: error.message,
     code: error.code,
@@ -469,6 +638,10 @@ function simulationErrorResponse(error: ReuxSimulationExecutionError): ReuxSimul
     userAction: "Fix the request fields and try again.",
     issues: error.issues,
   };
+}
+
+function resolveDurationMs(context: ResolvedReuxSimulationServiceCallOptions, startedAt = Date.now()): number {
+  return context.durationMs ?? Math.max(0, Date.now() - startedAt);
 }
 
 function metricNames(run: SimulationRunResult): string[] {

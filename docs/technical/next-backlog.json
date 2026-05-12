@@ -13,7 +13,7 @@
     {
       "priority": "P1",
       "ownerTrack": "Simulation Foundation",
-      "title": "Product-facing simulation execution APIs",
+      "title": "Simulation service persistence and hosted model registry",
       "why": "Move beyond prototype completion into deeper product and language capability.",
       "source": "capability-research-track"
     },
@@ -174,7 +174,7 @@
     {
       "priority": "P3",
       "ownerTrack": "Simulation Foundation",
-      "title": "Expand simulation APIs from generated catalog discovery into full product-facing execution services",
+      "title": "[DONE] Expand simulation APIs from generated catalog discovery into full product-facing execution services",
       "why": "Make Reux useful for structured forecasting and scenario comparison.",
       "source": "public-roadmap"
     },

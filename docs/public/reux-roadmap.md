@@ -44,6 +44,7 @@ Current status:
 - Executable PLOS habit-consistency example alongside the personal-finance example.
 - Executable business operations simulation example alongside the workforce example.
 - Generated simulation catalog helpers so product apps can discover available Reux simulation models.
+- Product-facing generic Reux simulation API for listing, loading, executing, comparing, and no-throw service envelopes.
 - Language-core completion pass for transaction control flow, expression typing, reusable filters, worker contracts, null-aware lowering, and diagnostics.
 - Functionally complete Commerce, Logistics, and Operations demo frontend.
 - Sellable Business Simulator product frontend with template selection, guided run flow, recommendation results, saved/shareable runs, and pilot CTA.
@@ -114,7 +115,7 @@ Planned work:
 - Add richer time-series and assumption modeling.
 - Add stronger unit and formula validation.
 - Improve comparison reports and explanation output.
-- Expand simulation APIs from generated catalog discovery into full product-facing execution services.
+- [DONE] Expand simulation APIs from generated catalog discovery into full product-facing execution services.
 
 ### 6. Product Ecosystem
 

@@ -46,6 +46,7 @@ The prototype language core can model schemas, enums, reusable typed queries, gu
 - Rule IR and PostgreSQL lowering for single-entity mark actions and duplicate-safe outbox notification actions.
 - Transaction guards, row locking, inserts, mutations, retry metadata, idempotency keys, typed outbox events, typed after-commit hook contracts, nullable expression checks, and null guard lowering.
 - Formula-based simulation forecasts with dimensions, units, scheduled changes, scenarios, objectives, rankings, and explanations.
+- Reusable product-facing simulation service with compile-once list/get/run/compare methods and no-throw request envelopes.
 
 ### Runtime And Database
 
@@ -118,5 +119,5 @@ Commerce, logistics, clinic, PLOS, and business operations examples keep Reux gr
 ## Next Research Tracks
 
 - Richer simulation time-series and assumptions.
-- Product-facing simulation execution APIs.
+- Simulation service persistence and hosted model registry.
 - Compiler-backed language-server features.

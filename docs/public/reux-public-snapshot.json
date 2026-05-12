@@ -40,7 +40,7 @@
     "Executable PLOS habit-consistency example alongside the personal-finance example",
     "Executable business operations simulation example alongside the workforce example",
     "Generated simulation catalog helpers for product apps",
-    "Product-facing generic Reux simulation API for listing, loading, and executing models",
+    "Product-facing generic Reux simulation API for listing, loading, executing, comparing, and no-throw service envelopes",
     "Language-core completion pass for transaction control flow, expression typing, reusable filters, worker contracts, null-aware lowering, and diagnostics",
     "Keep improving public demo copy as new domains are added",
     "Keep monitor alert routing aligned with the final hosting and notification setup",
@@ -66,7 +66,7 @@
       "name": "Language Core",
       "status": "prototype-complete",
       "summary": "The prototype language core can model schemas, enums, reusable typed queries, guarded transaction functions, durable events, migrations, simulations, executable aggregate views, and executable single-entity operating-model rules.",
-      "capabilityCount": 7
+      "capabilityCount": 8
     },
     {
       "name": "Runtime And Database",
@@ -139,7 +139,7 @@
   ],
   "nextResearchTracks": [
     "Richer simulation time-series and assumptions",
-    "Product-facing simulation execution APIs",
+    "Simulation service persistence and hosted model registry",
     "Compiler-backed language-server features"
   ],
   "notYet": [
