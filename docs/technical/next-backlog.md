@@ -2,7 +2,7 @@
 
 The prototype bar is complete. This backlog tracks the next work that should make Reux more useful, marketable, and product-backed.
 
-Updated: 2026-05-02
+Updated: 2026-05-09
 
 ## Items
 

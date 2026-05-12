@@ -1,6 +1,6 @@
 {
   "project": "Reux",
-  "updatedAt": "2026-05-02",
+  "updatedAt": "2026-05-09",
   "headline": "A data-native language prototype for reliable backend workflows and simulation-driven applications.",
   "status": {
     "demoReadinessPercent": 100,
@@ -65,14 +65,14 @@
     {
       "name": "Language Core",
       "status": "prototype-complete",
-      "summary": "The prototype language core can model schemas, enums, reusable typed queries, guarded transaction functions, durable events, migrations, and simulations.",
-      "capabilityCount": 5
+      "summary": "The prototype language core can model schemas, enums, reusable typed queries, guarded transaction functions, durable events, migrations, simulations, executable count-based views, and executable single-entity operating-model rules.",
+      "capabilityCount": 7
     },
     {
       "name": "Runtime And Database",
       "status": "prototype-complete",
       "summary": "The runtime path uses PostgreSQL today and supports compiled query execution, transaction execution, migrations, seeds, and outbox processing.",
-      "capabilityCount": 5
+      "capabilityCount": 6
     },
     {
       "name": "Developer Experience",

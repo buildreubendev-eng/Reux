@@ -148,6 +148,62 @@ Parameter arrays can also be read from files:
 node dist/cli.js query-run examples/commerce.dl highValueUsers @params.json
 ```
 
+## View Run
+
+```bash
+node dist/cli.js view-run examples/plos_executive.reux DailyCommandBrief
+node dist/cli.js project-view-run DailyCommandBrief
+```
+
+`view-run` compiles the named view to PostgreSQL SQL, executes it without parameters, and prints the first dashboard row as JSON. This is intended for command-center read models such as PLOS Executive's daily brief.
+
+Product backends can call the same path without shelling out:
+
+```ts
+import { runView } from "reux-prototype/runtime";
+
+const brief = await runView(db, source, "DailyCommandBrief");
+```
+
+## Rule Run
+
+```bash
+node dist/cli.js rule-run examples/plos_executive.reux overdue_follow_up
+node dist/cli.js rules-run examples/plos_executive.reux
+node dist/cli.js rules-run examples/plos_executive.reux overdue_follow_up critical_risk_attention
+node dist/cli.js project-rule-run overdue_follow_up
+node dist/cli.js project-rules-run
+```
+
+`rule-run` compiles the named rule to PostgreSQL SQL, runs the generated action statements inside a transaction, and prints JSON with `statements`, `rowCounts`, `returnedRows`, and `outboxEvents`. Notification rules create `_dl_outbox` and `_dl_rule_notifications` before inserting events. `_dl_rule_notifications` behaves like a small rule inbox: it prevents duplicate open notifications for the same entity record and recipient field, tracks `open`/`resolved` status, updates `last_seen_at`, and can reopen a resolved notification when the rule matches again.
+
+`rules-run` runs all rule declarations in source order, or the selected rule names passed after the source file. It returns per-rule results plus a summary. This is the easiest command-line path for applying operating rules before reading a command brief.
+
+Product backends can also execute compiled rules directly:
+
+```ts
+import { runRule, runRuleWorker, runRules } from "reux-prototype/runtime";
+
+const result = await runRule(db, source, "overdue_follow_up");
+const batch = await runRules(db, source);
+
+await runRuleWorker(db, source, {
+  intervalMs: 60_000,
+  signal: abortController.signal,
+});
+```
+
+Manage rule notification inbox records:
+
+```bash
+node dist/cli.js rule-notifications-list
+node dist/cli.js rule-notifications-list resolved 25
+node dist/cli.js rule-notification-resolve critical_risk_attention RiskItem risk-1 owner
+node dist/cli.js rule-notification-reopen critical_risk_attention RiskItem risk-1 owner
+```
+
+Product backends can call `listRuleNotifications`, `resolveRuleNotification`, and `reopenRuleNotification` directly from the runtime package. This gives PLOS and business command centers a durable notification lifecycle before richer escalation policies exist.
+
 ## Data Insert
 
 Insert one row for an entity:

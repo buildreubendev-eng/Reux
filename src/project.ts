@@ -19,6 +19,8 @@ export interface ProjectSummary {
     simulations: number;
     transactions: number;
     transitions: number;
+    views: number;
+    rules: number;
   };
 }
 
@@ -31,6 +33,8 @@ export interface ProjectFileSummary {
   simulations: string[];
   transactions: string[];
   transitions: string[];
+  views: string[];
+  rules: string[];
 }
 
 export function discoverSourceFiles(config: DlConfig, cwd = process.cwd()): ProjectSourceFile[] {
@@ -61,6 +65,12 @@ export function summarizeProject(config: DlConfig, cwd = process.cwd()): Project
       transitions: result.program.declarations
         .filter((declaration) => declaration.kind === "transition")
         .map((declaration) => `${declaration.entity}.${declaration.field}`),
+      views: result.program.declarations
+        .filter((declaration) => declaration.kind === "view")
+        .map((declaration) => declaration.name),
+      rules: result.program.declarations
+        .filter((declaration) => declaration.kind === "rule")
+        .map((declaration) => declaration.name),
     };
   });
 
@@ -75,6 +85,8 @@ export function summarizeProject(config: DlConfig, cwd = process.cwd()): Project
       simulations: sum(files, (file) => file.simulations.length),
       transactions: sum(files, (file) => file.transactions.length),
       transitions: sum(files, (file) => file.transitions.length),
+      views: sum(files, (file) => file.views.length),
+      rules: sum(files, (file) => file.rules.length),
     },
   };
 }
@@ -87,6 +99,8 @@ function projectDiagnostics(files: ProjectFileSummary[]): string[] {
   diagnostics.push(...duplicateDeclarations(files, "simulation", (file) => file.simulations));
   diagnostics.push(...duplicateDeclarations(files, "transaction", (file) => file.transactions));
   diagnostics.push(...duplicateDeclarations(files, "transition", (file) => file.transitions));
+  diagnostics.push(...duplicateDeclarations(files, "view", (file) => file.views));
+  diagnostics.push(...duplicateDeclarations(files, "rule", (file) => file.rules));
   return diagnostics;
 }
 

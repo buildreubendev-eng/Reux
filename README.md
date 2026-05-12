@@ -1,5 +1,35 @@
 # Reux Prototype
 
+## PLOS MVP
+
+A standalone Next.js MVP for PLOS, Reuben's Personal Life Operating System, has been added under `apps/lifepilot`. It includes the dashboard, AI Inbox, generated tasks, item detail view, weekly briefing, documents, settings/privacy panel, mock data, prioritization logic, local status updates, and a Gemini-facing UI/UX roadmap.
+
+PLOS Executive has also been added as a new project under the existing Reuben/PLOS umbrella at `apps/lifepilot/src/app/executive`. In this context PLOS means Professional Life Operating System: an executive command center that tells leaders what matters, what is stuck, what needs a decision, and what requires follow-up before the day gets hijacked.
+
+PLOS Executive MVP features:
+
+- Today's Command Brief with summary, date, executive metrics, main priority, attention items, meeting preview, decision preview, follow-up preview, and risk preview.
+- Decision Queue with realistic decisions, owner/deadline/priority/status fields, status and priority filters, search, risk if delayed, recommended action, and local approval state.
+- Follow-Ups with person/topic/source/due date/status/last touch/suggested action, filtering, search, and local completion state.
+- Meetings with expandable Meeting Prep Brief cards.
+- Delegation Tracker for executive-level ownership, blockers, last update, and attention-needed signals.
+- Risk Radar with severity filtering, search, business impact, recommended action, and owner.
+- Settings placeholders for calendar, email, Slack/Teams, AI briefing, and company data integrations.
+
+The Executive MVP is now split into frontend and backend boundaries. Frontend code lives under `apps/lifepilot/src/frontend/executive`, backend contracts/mock repositories/services live under `apps/lifepilot/src/backend/executive`, and read-only API routes live under `apps/lifepilot/src/app/api/executive`.
+
+The backend foundation now includes typed request validation, query filters, detail endpoints, cross-work search, a repository boundary, local JSON persistence, create/update endpoints for executive work, command endpoints for approving decisions and completing follow-ups, and an audit trail. This is still intentionally local/mock-backed so real auth, hosted database persistence, and integrations can be added deliberately.
+
+Run it with:
+
+```bash
+cd apps/lifepilot
+npm install
+npm run dev
+```
+
+Open `http://localhost:3000` for the Life Admin MVP or `http://localhost:3000/executive` for PLOS Executive. See `apps/lifepilot/README.md` for product architecture, verification commands, and the PLOS Executive roadmap.
+
 This repository is the first executable slice of the Reux language architecture. It starts with the document's recommended path: a modest compiler/runtime for a data/application subset before any custom database engine.
 
 Current scope:

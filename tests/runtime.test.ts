@@ -12,6 +12,7 @@ import {
   claimOutboxEvents,
   Database,
   listOutboxEvents,
+  listRuleNotifications,
   markOutboxFailed,
   markOutboxProcessed,
   migrationStatus,
@@ -24,8 +25,15 @@ import {
   readMigrationFiles,
   requeueOutboxEvent,
   requeueStaleOutboxEvents,
+  reopenRuleNotification,
+  resolveRuleNotification,
   runOutboxWorker,
+  runRule,
+  runRuleWorker,
+  runRules,
+  runRuleSql,
   runTransactionSql,
+  runView,
 } from "../src/runtime.js";
 
 describe("runtime spine", () => {
@@ -998,6 +1006,232 @@ COMMIT;`,
     expect(result.returnedRows).toEqual(result.outboxEvents);
   });
 
+  it("runs rule SQL transactionally and reports returned rows", async () => {
+    const db = new FakeDb();
+
+    const result = await runRuleSql(
+      db,
+      `UPDATE follow_ups AS "_row"
+SET "status" = 'Overdue'
+WHERE "_row"."status" <> 'Complete' AND "_row"."due_date" < CURRENT_DATE
+RETURNING "_row".*;`,
+    );
+
+    expect(db.queries).toEqual([
+      "BEGIN;",
+      `UPDATE follow_ups AS "_row"
+SET "status" = 'Overdue'
+WHERE "_row"."status" <> 'Complete' AND "_row"."due_date" < CURRENT_DATE
+RETURNING "_row".*;`,
+      "COMMIT;",
+    ]);
+    expect(result).toEqual({
+      statements: 1,
+      rowCounts: [1],
+      returnedRows: [{ id: "follow-up-1", status: "Overdue" }],
+      outboxEvents: [],
+    });
+  });
+
+  it("runs compiled views through the backend helper API", async () => {
+    const db = new FakeDb();
+
+    const result = await runView(
+      db,
+      `module plos_executive
+
+entity Decision {
+  id: Id<Decision> primary generated
+  status: DecisionStatus
+}
+
+enum DecisionStatus {
+  Pending
+  Approved
+}
+
+view DailyCommandBrief {
+  openDecisions = count Decision where status != Approved
+}
+`,
+      "DailyCommandBrief",
+    );
+
+    expect(result).toEqual({
+      row: { openDecisions: "3" },
+      rows: [{ openDecisions: "3" }],
+      rowCount: 1,
+    });
+    expect(db.queries[0]).toContain("SELECT");
+    expect(db.queries[0]).toContain("FROM decisions");
+  });
+
+  it("runs compiled rules through the backend helper API", async () => {
+    const db = new FakeDb();
+
+    const result = await runRule(
+      db,
+      `module plos_executive
+
+entity FollowUp {
+  id: Id<FollowUp> primary generated
+  status: FollowUpStatus
+  dueDate: Instant
+}
+
+enum FollowUpStatus {
+  Open
+  Complete
+  Overdue
+}
+
+rule overdue_follow_up {
+  when FollowUp.status != Complete and FollowUp.dueDate < today()
+  then mark FollowUp.status = Overdue
+}
+`,
+      "overdue_follow_up",
+    );
+
+    expect(result.rowCounts).toEqual([1]);
+    expect(result.returnedRows).toEqual([{ id: "follow-up-1", status: "Overdue" }]);
+    expect(result.outboxEvents).toEqual([]);
+  });
+
+  it("runs all compiled rules through the batch helper API", async () => {
+    const db = new FakeDb();
+
+    const result = await runRules(db, plosRulesSource());
+
+    expect(result.summary).toEqual({
+      rules: 2,
+      statements: 2,
+      returnedRows: 2,
+      outboxEvents: 1,
+    });
+    expect(result.rules.map((rule) => rule.ruleName)).toEqual(["overdue_follow_up", "critical_risk_attention"]);
+  });
+
+  it("runs selected compiled rules through the batch helper API", async () => {
+    const db = new FakeDb();
+
+    const result = await runRules(db, plosRulesSource(), ["critical_risk_attention"]);
+
+    expect(result.summary).toEqual({
+      rules: 1,
+      statements: 1,
+      returnedRows: 1,
+      outboxEvents: 1,
+    });
+    expect(result.rules.map((rule) => rule.ruleName)).toEqual(["critical_risk_attention"]);
+  });
+
+  it("runs compiled rules in a bounded worker loop", async () => {
+    const db = new FakeDb();
+    const iterations: number[] = [];
+
+    const result = await runRuleWorker(db, plosRulesSource(), {
+      intervalMs: 1,
+      maxIterations: 2,
+      onIteration: (iteration) => {
+        iterations.push(iteration.iteration);
+      },
+    });
+
+    expect(iterations).toEqual([1, 2]);
+    expect(result).toEqual({
+      iterations: 2,
+      rules: 4,
+      statements: 4,
+      returnedRows: 3,
+      outboxEvents: 1,
+      stopped: "maxIterations",
+    });
+  });
+
+  it("runs notification rule SQL and reports enqueued outbox events", async () => {
+    const db = new FakeDb();
+    const sql = `WITH matched AS (
+  SELECT "_row"."id"::text AS record_id, "_row"."owner"::text AS recipient
+  FROM risk_items AS "_row"
+  WHERE "_row"."severity" = 'Critical'
+), inserted_keys AS (
+  INSERT INTO _dl_rule_notifications (rule_name, entity_name, record_id, recipient_field, recipient)
+  SELECT 'critical_risk_attention', 'RiskItem', matched.record_id, 'owner', matched.recipient
+  FROM matched
+  ON CONFLICT (rule_name, entity_name, record_id, recipient_field) DO UPDATE
+  SET recipient = EXCLUDED.recipient,
+      status = 'open',
+      resolved_at = NULL,
+      last_seen_at = now()
+  WHERE _dl_rule_notifications.status <> 'open'
+     OR _dl_rule_notifications.resolved_at IS NOT NULL
+     OR _dl_rule_notifications.recipient IS DISTINCT FROM EXCLUDED.recipient
+  RETURNING rule_name, entity_name, record_id, recipient_field, recipient
+)
+INSERT INTO _dl_outbox (event_type, payload)
+SELECT 'RuleNotificationRequested', jsonb_build_object('rule', rule_name, 'entity', entity_name, 'recordId', record_id, 'recipientField', recipient_field, 'recipient', recipient)
+FROM inserted_keys
+RETURNING id, event_type, payload;`;
+
+    const result = await runRuleSql(db, sql);
+
+    expect(db.queries[0]).toContain("CREATE TABLE IF NOT EXISTS _dl_outbox");
+    expect(db.queries.some((query) => query.includes("CREATE TABLE IF NOT EXISTS _dl_rule_notifications"))).toBe(true);
+    expect(db.queries).toContain("BEGIN;");
+    expect(result.statements).toBe(1);
+    expect(result.rowCounts).toEqual([1]);
+    expect(result.outboxEvents).toEqual(result.returnedRows);
+    expect(result.outboxEvents).toHaveLength(1);
+
+    const duplicate = await runRuleSql(db, sql);
+
+    expect(duplicate.rowCounts).toEqual([0]);
+    expect(duplicate.returnedRows).toEqual([]);
+    expect(duplicate.outboxEvents).toEqual([]);
+  });
+
+  it("lists, resolves, and reopens rule notification inbox records", async () => {
+    const db = new FakeDb();
+    await runRules(db, plosRulesSource(), ["critical_risk_attention"]);
+
+    const open = await listRuleNotifications(db);
+    expect(open).toEqual([
+      expect.objectContaining({
+        ruleName: "critical_risk_attention",
+        entityName: "RiskItem",
+        recordId: "risk-1",
+        recipientField: "owner",
+        recipient: "ops-owner",
+        status: "open",
+        resolvedAt: null,
+      }),
+    ]);
+
+    const key = {
+      ruleName: "critical_risk_attention",
+      entityName: "RiskItem",
+      recordId: "risk-1",
+      recipientField: "owner",
+    };
+    const resolved = await resolveRuleNotification(db, key);
+    expect(resolved).toMatchObject({
+      ...key,
+      status: "resolved",
+      resolvedAt: FakeDb.now.toISOString(),
+    });
+    expect(await listRuleNotifications(db)).toEqual([]);
+    expect(await listRuleNotifications(db, 50, "resolved")).toHaveLength(1);
+
+    const reopened = await reopenRuleNotification(db, key);
+    expect(reopened).toMatchObject({
+      ...key,
+      status: "open",
+      resolvedAt: null,
+    });
+    expect(await listRuleNotifications(db)).toHaveLength(1);
+  });
+
   it("lists pending outbox events", async () => {
     const db = new FakeDb();
     db.outbox.push({
@@ -1556,6 +1790,7 @@ class FakeDb implements Database {
   readonly queryCalls: { sql: string; params?: unknown[] }[] = [];
   readonly applied: { filename: string; hash: string }[] = [];
   readonly outbox: FakeOutboxRow[] = [];
+  private readonly ruleNotifications = new Map<string, FakeRuleNotificationRow>();
   private failed = false;
 
   constructor(private readonly options: { failOnceOn?: string; error?: unknown } = {}) {}
@@ -1601,9 +1836,21 @@ class FakeDb implements Database {
         rowCount: 1,
       };
     }
+    if (sql.startsWith("SELECT") && sql.includes("FROM decisions")) {
+      return {
+        rows: [{ openDecisions: "3" }] as T[],
+        rowCount: 1,
+      };
+    }
     if (sql.startsWith("INSERT INTO payments")) {
       return {
         rows: [{ id: `payment-${this.queryCalls.filter((call) => call.sql.startsWith("INSERT INTO payments")).length}` }] as T[],
+        rowCount: 1,
+      };
+    }
+    if (sql.startsWith("UPDATE follow_ups")) {
+      return {
+        rows: [{ id: "follow-up-1", status: "Overdue" }] as T[],
         rowCount: 1,
       };
     }
@@ -1613,11 +1860,42 @@ class FakeDb implements Database {
         rowCount: 1,
       };
     }
-    if (sql.startsWith("INSERT INTO _dl_outbox")) {
+    if (sql.includes("INSERT INTO _dl_outbox")) {
+      const ruleNotificationKey = sql.includes("_dl_rule_notifications")
+        ? "critical_risk_attention:RiskItem:risk-1:owner"
+        : undefined;
+      if (ruleNotificationKey) {
+        const existing = this.ruleNotifications.get(ruleNotificationKey);
+        if (existing?.status === "open" && existing.resolved_at === null && existing.recipient === "ops-owner") {
+          return {
+            rows: [] as T[],
+            rowCount: 0,
+          };
+        }
+        this.ruleNotifications.set(ruleNotificationKey, {
+          rule_name: "critical_risk_attention",
+          entity_name: "RiskItem",
+          record_id: "risk-1",
+          recipient_field: "owner",
+          recipient: "ops-owner",
+          status: "open",
+          created_at: existing?.created_at ?? "2026-04-25T00:00:00.000Z",
+          last_seen_at: FakeDb.now.toISOString(),
+          resolved_at: null,
+        });
+      }
       const row = {
         id: `outbox-${this.outbox.length + 1}`,
-        event_type: "RewardGranted",
-        payload: { user: params?.[0] },
+        event_type: ruleNotificationKey ? "RuleNotificationRequested" : "RewardGranted",
+        payload: ruleNotificationKey
+          ? {
+              rule: "critical_risk_attention",
+              entity: "RiskItem",
+              recordId: "risk-1",
+              recipientField: "owner",
+              recipient: "ops-owner",
+            }
+          : { user: params?.[0] },
         status: "pending",
         attempts: 0,
         last_error: null,
@@ -1631,6 +1909,27 @@ class FakeDb implements Database {
       return {
         rows: [row] as T[],
         rowCount: 1,
+      };
+    }
+    if (sql.includes("UPDATE _dl_rule_notifications")) {
+      const key = `${params?.[0]}:${params?.[1]}:${params?.[2]}:${params?.[3]}`;
+      const row = this.ruleNotifications.get(key);
+      if (!row) return { rows: [], rowCount: 0 };
+      row.status = params?.[4] as "open" | "resolved";
+      if (row.status === "resolved") {
+        row.resolved_at = FakeDb.now.toISOString();
+      } else {
+        row.resolved_at = null;
+        row.last_seen_at = FakeDb.now.toISOString();
+      }
+      return { rows: [row] as T[], rowCount: 1 };
+    }
+    if (sql.includes("FROM _dl_rule_notifications")) {
+      const status = params?.[1] as string | undefined;
+      const rows = [...this.ruleNotifications.values()].filter((row) => !status || row.status === status);
+      return {
+        rows: rows as T[],
+        rowCount: rows.length,
       };
     }
     if (sql.includes("UPDATE _dl_outbox")) {
@@ -1736,6 +2035,57 @@ interface FakeOutboxRow {
   next_attempt_at?: string | null;
   dead_lettered_at?: string | null;
   processed_at: string | null;
+}
+
+interface FakeRuleNotificationRow {
+  rule_name: string;
+  entity_name: string;
+  record_id: string;
+  recipient_field: string;
+  recipient: string | null;
+  status: "open" | "resolved";
+  created_at: string;
+  last_seen_at: string;
+  resolved_at: string | null;
+}
+
+function plosRulesSource(): string {
+  return `module plos_executive
+
+entity FollowUp {
+  id: Id<FollowUp> primary generated
+  status: FollowUpStatus
+  dueDate: Instant
+}
+
+entity RiskItem {
+  id: Id<RiskItem> primary generated
+  severity: RiskSeverity
+  owner: String
+}
+
+enum FollowUpStatus {
+  Open
+  Complete
+  Overdue
+}
+
+enum RiskSeverity {
+  Low
+  High
+  Critical
+}
+
+rule overdue_follow_up {
+  when FollowUp.status != Complete and FollowUp.dueDate < today()
+  then mark FollowUp.status = Overdue
+}
+
+rule critical_risk_attention {
+  when RiskItem.severity == Critical
+  then notify owner
+}
+`;
 }
 
 function makeTempDir(): string {

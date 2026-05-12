@@ -1,9 +1,11 @@
 import { EntityIr, FieldIr, findEntity, SchemaIr, snakeCase } from "./schema.js";
 import { DlError } from "./errors.js";
 import { buildQueryIr, ExpressionIr, ProjectionIr, QueryInputIr, QueryPlanIr } from "./query-ir.js";
-import { QueryDeclaration, TransactionDeclaration } from "./ast.js";
+import { QueryDeclaration, RuleDeclaration, TransactionDeclaration, ViewDeclaration } from "./ast.js";
 import { buildTransactionIr, TransactionIr } from "./transaction-ir.js";
 import { parseObjectLiteral } from "./object-literal.js";
+import { buildViewIr, ViewMetricIr, ViewPlanIr, ViewPredicateIr, ViewPredicateOperandIr } from "./view-ir.js";
+import { buildRuleIr, RuleActionIr, RuleOperandIr, RulePlanIr, RulePredicateIr } from "./rule-ir.js";
 
 export function schemaToPostgres(schema: SchemaIr): string {
   const extensionSql = [
@@ -49,6 +51,14 @@ export function queryToPostgres(schema: SchemaIr, query: QueryDeclaration): stri
   return queryIrToPostgres(buildQueryIr(schema, query));
 }
 
+export function viewToPostgres(schema: SchemaIr, view: ViewDeclaration): string {
+  return viewIrToPostgres(buildViewIr(schema, view));
+}
+
+export function ruleToPostgres(schema: SchemaIr, rule: RuleDeclaration): string {
+  return ruleIrToPostgres(buildRuleIr(schema, rule));
+}
+
 export function transactionToPostgres(schema: SchemaIr, transaction: TransactionDeclaration): string {
   return transactionIrToPostgres(schema, buildTransactionIr(schema, transaction));
 }
@@ -67,6 +77,138 @@ export function queryIrToPostgres(plan: QueryPlanIr): string {
     .filter(Boolean)
     .join("\n")
     .concat(";");
+}
+
+export function viewIrToPostgres(plan: ViewPlanIr): string {
+  return `SELECT\n${plan.metrics.map((metric) => `  ${viewMetricSql(metric)} AS ${quoteIdentifier(metric.name)}`).join(",\n")};`;
+}
+
+function viewMetricSql(metric: ViewMetricIr): string {
+  const where = metric.predicate ? ` WHERE ${viewPredicateSql(metric.predicate.predicate)}` : "";
+  return `(SELECT count(*) FROM ${metric.table} AS ${quoteIdentifier("_row")}${where})`;
+}
+
+function viewPredicateSql(predicate: ViewPredicateIr): string {
+  switch (predicate.kind) {
+    case "And":
+    case "Or": {
+      const operator = predicate.kind === "And" ? "AND" : "OR";
+      return `${viewPredicateSql(predicate.left)} ${operator} ${viewPredicateSql(predicate.right)}`;
+    }
+    case "Group":
+      return `(${viewPredicateSql(predicate.predicate)})`;
+    case "In":
+      return `${viewOperandSql(predicate.left)} IN (${predicate.values.map((value) => viewOperandSql(value, predicate.left)).join(", ")})`;
+    case "Comparison": {
+      const operator = predicate.operator === "!=" ? "<>" : predicate.operator === "==" ? "=" : predicate.operator;
+      const left = viewOperandSql(predicate.left, predicate.right);
+      const right = viewOperandSql(predicate.right, predicate.left);
+      if (predicate.operator === "==" && predicate.right.kind === "Null") return `${left} IS NULL`;
+      if (predicate.operator === "==" && predicate.left.kind === "Null") return `${right} IS NULL`;
+      if (predicate.operator === "!=" && predicate.right.kind === "Null") return `${left} IS NOT NULL`;
+      if (predicate.operator === "!=" && predicate.left.kind === "Null") return `${right} IS NOT NULL`;
+      return `${left} ${operator} ${right}`;
+    }
+  }
+}
+
+function viewOperandSql(operand: ViewPredicateOperandIr, other?: ViewPredicateOperandIr): string {
+  if (operand.kind === "Field") return `${quoteIdentifier("_row")}.${quoteIdentifier(operand.column)}`;
+  if (operand.kind === "String") return quoteLiteral(operand.value);
+  if (operand.kind === "Number") return operand.value;
+  if (operand.kind === "Boolean") return operand.value ? "TRUE" : "FALSE";
+  if (operand.kind === "Null") return "NULL";
+  if (operand.kind === "Identifier" && other?.kind === "Field") return quoteLiteral(operand.name);
+  return quoteLiteral(operand.name);
+}
+
+export function ruleIrToPostgres(plan: RulePlanIr): string {
+  return plan.actions.map((action) => ruleActionSql(plan, action)).join("\n\n");
+}
+
+function ruleActionSql(plan: RulePlanIr, action: RuleActionIr): string {
+  const where = rulePredicateSql(plan.condition.predicate);
+  if (action.kind === "Mark") {
+    return [
+      `UPDATE ${plan.table} AS ${quoteIdentifier("_row")}`,
+      `SET ${quoteIdentifier(action.field.column)} = ${ruleOperandSql(action.value, { kind: "Field", source: action.field.source, entity: action.field.entity, field: action.field.field, column: action.field.column, type: action.field.type })}`,
+      `WHERE ${where}`,
+      `RETURNING ${quoteIdentifier("_row")}.*;`,
+    ].join("\n");
+  }
+
+  return [
+    "WITH matched AS (",
+    `  SELECT ${ruleColumnSql(plan.primaryKey.column)}::text AS record_id, ${ruleColumnSql(action.recipient.column)}::text AS recipient`,
+    `  FROM ${plan.table} AS ${quoteIdentifier("_row")}`,
+    `  WHERE ${where}`,
+    "), inserted_keys AS (",
+    "  INSERT INTO _dl_rule_notifications (rule_name, entity_name, record_id, recipient_field, recipient)",
+    `  SELECT ${quoteLiteral(plan.name)}, ${quoteLiteral(plan.entity)}, matched.record_id, ${quoteLiteral(action.recipient.field)}, matched.recipient`,
+    "  FROM matched",
+    "  ON CONFLICT (rule_name, entity_name, record_id, recipient_field) DO UPDATE",
+    "  SET recipient = EXCLUDED.recipient,",
+    "      status = 'open',",
+    "      resolved_at = NULL,",
+    "      last_seen_at = now()",
+    "  WHERE _dl_rule_notifications.status <> 'open'",
+    "     OR _dl_rule_notifications.resolved_at IS NOT NULL",
+    "     OR _dl_rule_notifications.recipient IS DISTINCT FROM EXCLUDED.recipient",
+    "  RETURNING rule_name, entity_name, record_id, recipient_field, recipient",
+    ")",
+    "INSERT INTO _dl_outbox (event_type, payload)",
+    `SELECT ${quoteLiteral("RuleNotificationRequested")}, jsonb_build_object(${[
+      quoteLiteral("rule"),
+      "rule_name",
+      quoteLiteral("entity"),
+      "entity_name",
+      quoteLiteral("recordId"),
+      "record_id",
+      quoteLiteral("recipientField"),
+      "recipient_field",
+      quoteLiteral("recipient"),
+      "recipient",
+    ].join(", ")})`,
+    "FROM inserted_keys",
+    "RETURNING id, event_type, payload;",
+  ].join("\n");
+}
+
+function rulePredicateSql(predicate: RulePredicateIr): string {
+  switch (predicate.kind) {
+    case "And":
+    case "Or": {
+      const operator = predicate.kind === "And" ? "AND" : "OR";
+      return `${rulePredicateSql(predicate.left)} ${operator} ${rulePredicateSql(predicate.right)}`;
+    }
+    case "Group":
+      return `(${rulePredicateSql(predicate.predicate)})`;
+    case "Comparison": {
+      const operator = predicate.operator === "!=" ? "<>" : predicate.operator === "==" ? "=" : predicate.operator;
+      const left = ruleOperandSql(predicate.left, predicate.right);
+      const right = ruleOperandSql(predicate.right, predicate.left);
+      if (predicate.operator === "==" && predicate.right.kind === "Null") return `${left} IS NULL`;
+      if (predicate.operator === "==" && predicate.left.kind === "Null") return `${right} IS NULL`;
+      if (predicate.operator === "!=" && predicate.right.kind === "Null") return `${left} IS NOT NULL`;
+      if (predicate.operator === "!=" && predicate.left.kind === "Null") return `${right} IS NOT NULL`;
+      return `${left} ${operator} ${right}`;
+    }
+  }
+}
+
+function ruleOperandSql(operand: RuleOperandIr, other?: RuleOperandIr): string {
+  if (operand.kind === "Field") return ruleColumnSql(operand.column);
+  if (operand.kind === "String") return quoteLiteral(operand.value);
+  if (operand.kind === "Number") return operand.value;
+  if (operand.kind === "Boolean") return operand.value ? "TRUE" : "FALSE";
+  if (operand.kind === "Null") return "NULL";
+  if (operand.kind === "Today") return "CURRENT_DATE";
+  if (operand.kind === "Identifier" && other?.kind === "Field") return quoteLiteral(operand.name);
+  return quoteLiteral(operand.name);
+}
+
+function ruleColumnSql(column: string): string {
+  return `${quoteIdentifier("_row")}.${quoteIdentifier(column)}`;
 }
 
 export function columnSql(schema: SchemaIr, field: FieldIr): string {
@@ -667,4 +809,4 @@ function quoteIdentifier(value: string): string {
   return `"${value.replaceAll('"', '""')}"`;
 }
 
-export { quoteLiteral };
+export { quoteIdentifier, quoteLiteral };

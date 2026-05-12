@@ -4,9 +4,11 @@ export type Declaration =
   | EventDeclaration
   | QueryDeclaration
   | QueryFragmentDeclaration
+  | RuleDeclaration
   | SimulationDeclaration
   | TransactionDeclaration
-  | TransitionDeclaration;
+  | TransitionDeclaration
+  | ViewDeclaration;
 
 export interface Program {
   moduleName: string;
@@ -72,6 +74,28 @@ export interface QueryFragmentDeclaration {
   rangeName: string;
   sourceEntity: string;
   where: string;
+}
+
+export interface ViewDeclaration {
+  kind: "view";
+  name: string;
+  metrics: ViewMetricDeclaration[];
+}
+
+export interface ViewMetricDeclaration {
+  name: string;
+  expression: string;
+}
+
+export interface RuleDeclaration {
+  kind: "rule";
+  name: string;
+  when: string;
+  actions: RuleActionDeclaration[];
+}
+
+export interface RuleActionDeclaration {
+  source: string;
 }
 
 export interface SimulationDeclaration {

@@ -9,6 +9,8 @@ This prototype implements the first data-module subset of Reux. It is intentiona
 - `enum <Name> { ... }`
 - `event <Name> { ... }`
 - `transition <Entity>.<field> { ... }`
+- `view <Name> { ... }`
+- `rule <name> { ... }`
 - `query fragment <name>(range in Entity) = where ...`
 - `query <name>(params): Query<T> = from ...`
 - `simulate <name> { ... }`
@@ -268,6 +270,57 @@ Inspect transition rules with:
 node dist/cli.js transition-rules examples/pilot_reux.dl
 node dist/cli.js transition-rules examples/pilot_reux.dl Order.status
 ```
+
+## View And Rule Declarations
+
+Views and rules are the first slice of a richer operating-model layer. They let product modules name command-center read models and business signals while the compiler starts proving safe lowering paths.
+
+Views declare named derived metrics:
+
+```dl
+view DailyCommandBrief {
+  openDecisions = count Decision where status != Approved
+  overdueFollowUps = count FollowUp where status == Overdue
+  highRisks = count RiskItem where severity in [High, Critical]
+}
+```
+
+Rules declare a trigger condition and one or more actions:
+
+```dl
+rule overdue_follow_up {
+  when FollowUp.status != Complete and FollowUp.dueDate < today()
+  then mark FollowUp.status = Overdue
+}
+```
+
+Current compiler behavior:
+
+- parses `view` declarations into the AST;
+- parses `rule` declarations into the AST;
+- validates duplicate view names, duplicate rule names, duplicate view metrics, empty view expressions, missing rule `when` clauses, and missing rule actions;
+- emits View IR for `count Entity [where predicate]` metrics;
+- validates view metric entities, fields, and enum literals for supported predicates;
+- lowers supported view metrics to one-row PostgreSQL dashboard SQL;
+- emits Rule IR for single-entity rule predicates;
+- validates executable rule fields, enum literals, `today()`, `mark Entity.field = value`, and `notify field` actions;
+- lowers supported rules to PostgreSQL updates or idempotent `_dl_outbox` notification inserts guarded by `_dl_rule_notifications`;
+- tracks notification lifecycle status (`open` and `resolved`) for `notify` actions so product apps can show a durable inbox and reopen resolved notifications when a matching rule appears again;
+- includes views and rules in diagnostics and project summaries.
+
+Inspect a supported view with:
+
+```sh
+node dist/cli.js view-ir examples/plos_executive.reux DailyCommandBrief
+node dist/cli.js view-sql examples/plos_executive.reux DailyCommandBrief
+node dist/cli.js view-run examples/plos_executive.reux DailyCommandBrief
+node dist/cli.js rule-ir examples/plos_executive.reux overdue_follow_up
+node dist/cli.js rule-sql examples/plos_executive.reux overdue_follow_up
+node dist/cli.js rule-run examples/plos_executive.reux overdue_follow_up
+node dist/cli.js rules-run examples/plos_executive.reux
+```
+
+The executable rule subset is intentionally narrow. It supports one target entity per rule condition, comparison predicates joined with `and`/`or`, enum literals, `today()`, mark actions, duplicate-safe notification actions, notification list/resolve/reopen lifecycle helpers, batch rule execution, and an embeddable rule worker loop. The next language layer should add richer action types and escalation policies.
 
 ## Query Subset
 

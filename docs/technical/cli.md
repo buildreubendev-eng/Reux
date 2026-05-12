@@ -130,6 +130,13 @@ Emit query and transaction artifacts from the active configured source:
 node dist/cli.js project-query-ir highValueUsers
 node dist/cli.js project-query-sql highValueUsers
 node dist/cli.js project-query-run highValueUsers '[1000]'
+node dist/cli.js project-view-ir DailyCommandBrief
+node dist/cli.js project-view-sql DailyCommandBrief
+node dist/cli.js project-view-run DailyCommandBrief
+node dist/cli.js project-rule-ir overdue_follow_up
+node dist/cli.js project-rule-sql overdue_follow_up
+node dist/cli.js project-rule-run overdue_follow_up
+node dist/cli.js project-rules-run
 node dist/cli.js project-explain highValueUsers
 node dist/cli.js project-tx-ir rewardUser
 node dist/cli.js project-tx-sql rewardUser
@@ -402,6 +409,21 @@ node dist/cli.js outbox-requeue-stale 300 50
 ```
 
 The first argument is the minimum claimed age in seconds. The optional second argument is the maximum number of events to requeue.
+
+List rule notification inbox records created by `notify` rule actions:
+
+```bash
+node dist/cli.js rule-notifications-list
+node dist/cli.js rule-notifications-list all 50
+node dist/cli.js rule-notifications-list resolved 25
+```
+
+Resolve or reopen one rule notification:
+
+```bash
+node dist/cli.js rule-notification-resolve critical_risk_attention RiskItem risk-1 owner
+node dist/cli.js rule-notification-reopen critical_risk_attention RiskItem risk-1 owner
+```
 
 ## Exit Behavior
 

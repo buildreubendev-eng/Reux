@@ -1,0 +1,82 @@
+module plos_executive
+
+entity Decision {
+  id: Id<Decision> primary generated
+  title: String
+  owner: String
+  department: String
+  deadline: Instant
+  priority: DecisionPriority
+  status: DecisionStatus
+  riskIfDelayed: String
+  recommendedNextAction: String
+}
+
+entity FollowUp {
+  id: Id<FollowUp> primary generated
+  person: String
+  topic: String
+  dueDate: Instant
+  status: FollowUpStatus
+}
+
+entity RiskItem {
+  id: Id<RiskItem> primary generated
+  title: String
+  area: RiskArea
+  severity: RiskSeverity
+  owner: String
+}
+
+enum DecisionPriority {
+  Low
+  Medium
+  High
+  Critical
+}
+
+enum DecisionStatus {
+  Pending
+  InReview
+  Approved
+  Blocked
+}
+
+enum FollowUpStatus {
+  Open
+  Waiting
+  Complete
+  Overdue
+}
+
+enum RiskArea {
+  Operations
+  Finance
+  People
+  Customer
+  Strategy
+  Compliance
+}
+
+enum RiskSeverity {
+  Low
+  Medium
+  High
+  Critical
+}
+
+view DailyCommandBrief {
+  openDecisions = count Decision where status != Approved
+  overdueFollowUps = count FollowUp where status == Overdue
+  highRisks = count RiskItem where severity in [High, Critical]
+}
+
+rule overdue_follow_up {
+  when FollowUp.status != Complete and FollowUp.dueDate < today()
+  then mark FollowUp.status = Overdue
+}
+
+rule critical_risk_attention {
+  when RiskItem.severity == Critical
+  then notify owner
+}

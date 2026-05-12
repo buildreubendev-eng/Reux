@@ -11,14 +11,16 @@ import {
   QueryFragmentDeclaration,
   QueryParameter,
   QueryProjection,
+  RuleDeclaration,
   SimulationDeclaration,
   TransitionDeclaration,
   TransactionDeclaration,
   TypeRef,
+  ViewDeclaration,
 } from "./ast.js";
 import { DlError } from "./errors.js";
 
-const declarationStart = /^(entity|enum|event|query(?:\s+fragment)?|simulate|transition|transaction\s+function)\s+/;
+const declarationStart = /^(entity|enum|event|query(?:\s+fragment)?|rule|simulate|transition|transaction\s+function|view)\s+/;
 
 export function parseProgram(source: string): Program {
   const lines = normalizeLines(source);
@@ -73,6 +75,20 @@ export function parseProgram(source: string): Program {
 
     if (text.startsWith("query ")) {
       const parsed = parseQuery(lines, index);
+      declarations.push(parsed.declaration);
+      index = parsed.nextIndex;
+      continue;
+    }
+
+    if (text.startsWith("view ")) {
+      const parsed = parseView(lines, index);
+      declarations.push(parsed.declaration);
+      index = parsed.nextIndex;
+      continue;
+    }
+
+    if (text.startsWith("rule ")) {
+      const parsed = parseRule(lines, index);
       declarations.push(parsed.declaration);
       index = parsed.nextIndex;
       continue;
@@ -143,6 +159,106 @@ function parseTransition(lines: SourceLine[], start: number): { declaration: Tra
   }
 
   throw new DlError(`line ${lines[start].number}: transition '${match[1]}.${match[2]}' is missing a closing brace`);
+}
+
+function parseView(lines: SourceLine[], start: number): { declaration: ViewDeclaration; nextIndex: number } {
+  const header = lines[start].text.trim();
+  const match = header.match(/^view\s+([A-Za-z_][A-Za-z0-9_]*)\s*\{$/);
+  if (!match) {
+    throw new DlError(`line ${lines[start].number}: expected 'view Name {'`);
+  }
+
+  const metrics: ViewDeclaration["metrics"] = [];
+  let index = start + 1;
+  while (index < lines.length) {
+    const line = lines[index];
+    const text = line.text.trim();
+    if (!text) {
+      index += 1;
+      continue;
+    }
+    if (text === "}") {
+      if (metrics.length === 0) {
+        throw new DlError(`line ${line.number}: view '${match[1]}' must declare at least one metric`);
+      }
+      return {
+        declaration: {
+          kind: "view",
+          name: match[1],
+          metrics,
+        },
+        nextIndex: index + 1,
+      };
+    }
+    const metric = text.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+)$/);
+    if (!metric) {
+      throw new DlError(`line ${line.number}: expected view metric like 'openDecisions = count Decision where status != Approved'`);
+    }
+    metrics.push({ name: metric[1], expression: metric[2].trim() });
+    index += 1;
+  }
+
+  throw new DlError(`line ${lines[start].number}: view '${match[1]}' is missing a closing brace`);
+}
+
+function parseRule(lines: SourceLine[], start: number): { declaration: RuleDeclaration; nextIndex: number } {
+  const header = lines[start].text.trim();
+  const match = header.match(/^rule\s+([A-Za-z_][A-Za-z0-9_]*)\s*\{$/);
+  if (!match) {
+    throw new DlError(`line ${lines[start].number}: expected 'rule name {'`);
+  }
+
+  let when: string | undefined;
+  const actions: RuleDeclaration["actions"] = [];
+  let index = start + 1;
+  while (index < lines.length) {
+    const line = lines[index];
+    const text = line.text.trim();
+    if (!text) {
+      index += 1;
+      continue;
+    }
+    if (text === "}") {
+      if (!when) {
+        throw new DlError(`line ${line.number}: rule '${match[1]}' is missing a when clause`);
+      }
+      if (actions.length === 0) {
+        throw new DlError(`line ${line.number}: rule '${match[1]}' is missing a then action`);
+      }
+      return {
+        declaration: {
+          kind: "rule",
+          name: match[1],
+          when,
+          actions,
+        },
+        nextIndex: index + 1,
+      };
+    }
+    if (text.startsWith("when ")) {
+      if (when) {
+        throw new DlError(`line ${line.number}: rule '${match[1]}' declares more than one when clause`);
+      }
+      when = text.slice("when ".length).trim();
+      if (!when) {
+        throw new DlError(`line ${line.number}: rule '${match[1]}' when clause cannot be empty`);
+      }
+      index += 1;
+      continue;
+    }
+    if (text.startsWith("then ")) {
+      const source = text.slice("then ".length).trim();
+      if (!source) {
+        throw new DlError(`line ${line.number}: rule '${match[1]}' then action cannot be empty`);
+      }
+      actions.push({ source });
+      index += 1;
+      continue;
+    }
+    throw new DlError(`line ${line.number}: expected rule clause starting with 'when' or 'then'`);
+  }
+
+  throw new DlError(`line ${lines[start].number}: rule '${match[1]}' is missing a closing brace`);
 }
 
 function parseTransaction(lines: SourceLine[], start: number): { declaration: TransactionDeclaration; nextIndex: number } {

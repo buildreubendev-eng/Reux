@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import pg from "pg";
+import { compileSource, emitRuleSql, emitViewSql } from "./compiler.js";
 import { DlConfig, databaseUrl } from "./config.js";
 import { mapDatabaseError } from "./db-errors.js";
 
@@ -33,6 +34,10 @@ export interface MigrationStatus {
 export interface QueryRunResult {
   rows: unknown[];
   rowCount: number | null;
+}
+
+export interface ViewRunResult extends QueryRunResult {
+  row: unknown | null;
 }
 
 export interface OutboxEvent {
@@ -141,6 +146,65 @@ export interface TransactionRunResult {
   bindings?: Record<string, unknown>;
 }
 
+export interface RuleRunResult {
+  statements: number;
+  rowCounts: (number | null)[];
+  returnedRows: unknown[];
+  outboxEvents: unknown[];
+}
+
+export type RuleNotificationListStatus = "open" | "resolved" | "all";
+
+export interface RuleNotificationKey {
+  ruleName: string;
+  entityName: string;
+  recordId: string;
+  recipientField: string;
+}
+
+export interface RuleNotification extends RuleNotificationKey {
+  recipient: string | null;
+  status: "open" | "resolved";
+  createdAt: string;
+  lastSeenAt: string;
+  resolvedAt: string | null;
+}
+
+export interface RuleBatchRunResult {
+  rules: RuleBatchRuleResult[];
+  summary: {
+    rules: number;
+    statements: number;
+    returnedRows: number;
+    outboxEvents: number;
+  };
+}
+
+export interface RuleBatchRuleResult extends RuleRunResult {
+  ruleName: string;
+}
+
+export interface RuleWorkerOptions {
+  ruleNames?: string[];
+  intervalMs?: number;
+  maxIterations?: number;
+  signal?: AbortSignal;
+  onIteration?(result: RuleWorkerIterationResult): void | Promise<void>;
+}
+
+export interface RuleWorkerIterationResult extends RuleBatchRunResult {
+  iteration: number;
+}
+
+export interface RuleWorkerResult {
+  iterations: number;
+  rules: number;
+  statements: number;
+  returnedRows: number;
+  outboxEvents: number;
+  stopped: "maxIterations" | "aborted";
+}
+
 export function createPostgresDatabase(config: DlConfig): Database {
   return new Pool({
     connectionString: databaseUrl(config),
@@ -190,6 +254,28 @@ CREATE TABLE IF NOT EXISTS _dl_idempotency_keys (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 `);
+}
+
+export async function ensureRuleNotificationTable(db: Database): Promise<void> {
+  await db.query(`
+CREATE TABLE IF NOT EXISTS _dl_rule_notifications (
+  rule_name text NOT NULL,
+  entity_name text NOT NULL,
+  record_id text NOT NULL,
+  recipient_field text NOT NULL,
+  recipient text NULL,
+  status text NOT NULL DEFAULT 'open',
+  created_at timestamptz NOT NULL DEFAULT now(),
+  last_seen_at timestamptz NOT NULL DEFAULT now(),
+  resolved_at timestamptz NULL,
+  PRIMARY KEY (rule_name, entity_name, record_id, recipient_field)
+);
+`);
+  await db.query("ALTER TABLE _dl_rule_notifications ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'open';");
+  await db.query("ALTER TABLE _dl_rule_notifications ADD COLUMN IF NOT EXISTS last_seen_at timestamptz NOT NULL DEFAULT now();");
+  await db.query("ALTER TABLE _dl_rule_notifications ADD COLUMN IF NOT EXISTS resolved_at timestamptz NULL;");
+  await db.query("CREATE INDEX IF NOT EXISTS _dl_rule_notifications_status_created_at_idx ON _dl_rule_notifications (status, created_at);");
+  await db.query("CREATE INDEX IF NOT EXISTS _dl_rule_notifications_recipient_status_idx ON _dl_rule_notifications (recipient, status);");
 }
 
 export async function listOutboxEvents(
@@ -483,6 +569,30 @@ function timestampValue(value: string | Date | null): string | null {
   return value instanceof Date ? value.toISOString() : String(value);
 }
 
+async function updateRuleNotificationStatus(
+  db: Database,
+  key: RuleNotificationKey,
+  status: "open" | "resolved",
+): Promise<RuleNotification | undefined> {
+  await ensureRuleNotificationTable(db);
+  const result = await db.query<RuleNotificationRow>(
+    `
+UPDATE _dl_rule_notifications
+SET status = $5,
+    resolved_at = CASE WHEN $5 = 'resolved' THEN now() ELSE NULL END,
+    last_seen_at = CASE WHEN $5 = 'open' THEN now() ELSE last_seen_at END
+WHERE rule_name = $1
+  AND entity_name = $2
+  AND record_id = $3
+  AND recipient_field = $4
+RETURNING rule_name, entity_name, record_id, recipient_field, recipient, status, created_at, last_seen_at, resolved_at;
+`,
+    [key.ruleName, key.entityName, key.recordId, key.recipientField, status],
+  );
+  const row = result.rows[0];
+  return row ? ruleNotificationRow(row) : undefined;
+}
+
 export function parseAfterCommitHook(call: string): AfterCommitHook {
   const match = call.match(/^([A-Za-z_][A-Za-z0-9_]*)\((.*)\)$/);
   if (!match) {
@@ -589,6 +699,95 @@ export async function runSqlQuery(db: Database, sql: string, params: unknown[]):
   };
 }
 
+export async function runView(db: Database, source: string, viewName: string): Promise<ViewRunResult> {
+  const result = await runSqlQuery(db, emitViewSql(source, viewName), []);
+  return {
+    ...result,
+    row: result.rows[0] ?? null,
+  };
+}
+
+export async function listRuleNotifications(
+  db: Database,
+  limit = 50,
+  status: RuleNotificationListStatus = "open",
+): Promise<RuleNotification[]> {
+  await ensureRuleNotificationTable(db);
+  const params = status === "all" ? [limit] : [limit, status];
+  const result = await db.query<RuleNotificationRow>(
+    status === "all"
+      ? `
+SELECT rule_name, entity_name, record_id, recipient_field, recipient, status, created_at, last_seen_at, resolved_at
+FROM _dl_rule_notifications
+ORDER BY created_at ASC
+LIMIT $1;
+`
+      : `
+SELECT rule_name, entity_name, record_id, recipient_field, recipient, status, created_at, last_seen_at, resolved_at
+FROM _dl_rule_notifications
+WHERE status = $2
+ORDER BY created_at ASC
+LIMIT $1;
+`,
+    params,
+  );
+  return result.rows.map(ruleNotificationRow);
+}
+
+export async function resolveRuleNotification(db: Database, key: RuleNotificationKey): Promise<RuleNotification | undefined> {
+  return updateRuleNotificationStatus(db, key, "resolved");
+}
+
+export async function reopenRuleNotification(db: Database, key: RuleNotificationKey): Promise<RuleNotification | undefined> {
+  return updateRuleNotificationStatus(db, key, "open");
+}
+
+export async function runRule(db: Database, source: string, ruleName: string): Promise<RuleRunResult> {
+  return runRuleSql(db, emitRuleSql(source, ruleName));
+}
+
+export async function runRules(db: Database, source: string, ruleNames?: string[]): Promise<RuleBatchRunResult> {
+  const names = ruleNames && ruleNames.length > 0 ? ruleNames : sourceRuleNames(source);
+  const rules: RuleBatchRuleResult[] = [];
+  for (const ruleName of names) {
+    rules.push({
+      ruleName,
+      ...(await runRule(db, source, ruleName)),
+    });
+  }
+  return {
+    rules,
+    summary: summarizeRuleBatch(rules),
+  };
+}
+
+export async function runRuleWorker(db: Database, source: string, options: RuleWorkerOptions = {}): Promise<RuleWorkerResult> {
+  const intervalMs = options.intervalMs ?? 1000;
+  let iterations = 0;
+  let rules = 0;
+  let statements = 0;
+  let returnedRows = 0;
+  let outboxEvents = 0;
+
+  while (!options.signal?.aborted) {
+    const result = await runRules(db, source, options.ruleNames);
+    iterations += 1;
+    rules += result.summary.rules;
+    statements += result.summary.statements;
+    returnedRows += result.summary.returnedRows;
+    outboxEvents += result.summary.outboxEvents;
+    await options.onIteration?.({ ...result, iteration: iterations });
+
+    if (options.maxIterations !== undefined && iterations >= options.maxIterations) {
+      return { iterations, rules, statements, returnedRows, outboxEvents, stopped: "maxIterations" };
+    }
+    if (options.signal?.aborted) break;
+    await delay(intervalMs, options.signal);
+  }
+
+  return { iterations, rules, statements, returnedRows, outboxEvents, stopped: "aborted" };
+}
+
 export async function runTransactionSql(
   db: Database,
   sql: string,
@@ -651,6 +850,43 @@ export async function runTransactionSql(
   }
 
   throw new Error("transaction retry loop exited unexpectedly");
+}
+
+export async function runRuleSql(db: Database, sql: string): Promise<RuleRunResult> {
+  const statements = splitSqlStatements(sql);
+  const usesOutbox = statements.some((statement) => statement.includes("INSERT INTO _dl_outbox"));
+  const usesRuleNotifications = statements.some((statement) => statement.includes("_dl_rule_notifications"));
+  if (usesOutbox) {
+    await ensureOutboxTable(db);
+  }
+  if (usesRuleNotifications) {
+    await ensureRuleNotificationTable(db);
+  }
+
+  await db.query("BEGIN;");
+  try {
+    const rowCounts: (number | null)[] = [];
+    const returnedRows: unknown[] = [];
+    const outboxEvents: unknown[] = [];
+    for (const statement of statements) {
+      const result = await db.query(statement);
+      rowCounts.push(result.rowCount);
+      returnedRows.push(...result.rows);
+      if (statement.includes("INSERT INTO _dl_outbox")) {
+        outboxEvents.push(...result.rows);
+      }
+    }
+    await db.query("COMMIT;");
+    return {
+      statements: statements.length,
+      rowCounts,
+      returnedRows,
+      outboxEvents,
+    };
+  } catch (error) {
+    await db.query("ROLLBACK;");
+    throw error;
+  }
 }
 
 export function readMigrationFiles(migrationsDir: string): MigrationFile[] {
@@ -733,6 +969,52 @@ export function parseTransactionSql(sql: string): {
   }
 
   return usesIdempotency ? { statements, afterCommit, usesOutbox, usesIdempotency } : { statements, afterCommit, usesOutbox };
+}
+
+function splitSqlStatements(sql: string): string[] {
+  const statements: string[] = [];
+  let quote: string | undefined;
+  let start = 0;
+  for (let index = 0; index < sql.length; index += 1) {
+    const char = sql[index];
+    if (quote) {
+      if (char === quote) {
+        if (sql[index + 1] === quote) {
+          index += 1;
+          continue;
+        }
+        quote = undefined;
+      }
+      continue;
+    }
+    if (char === "'" || char === "\"") {
+      quote = char;
+      continue;
+    }
+    if (char !== ";") continue;
+    const statement = sql.slice(start, index + 1).trim();
+    if (statement) statements.push(statement);
+    start = index + 1;
+  }
+  const trailing = sql.slice(start).trim();
+  if (trailing) statements.push(trailing.endsWith(";") ? trailing : `${trailing};`);
+  return statements;
+}
+
+function sourceRuleNames(source: string): string[] {
+  const { program } = compileSource(source);
+  return program.declarations
+    .filter((declaration) => declaration.kind === "rule")
+    .map((declaration) => declaration.name);
+}
+
+function summarizeRuleBatch(rules: RuleBatchRuleResult[]): RuleBatchRunResult["summary"] {
+  return {
+    rules: rules.length,
+    statements: rules.reduce((sum, rule) => sum + rule.statements, 0),
+    returnedRows: rules.reduce((sum, rule) => sum + rule.returnedRows.length, 0),
+    outboxEvents: rules.reduce((sum, rule) => sum + rule.outboxEvents.length, 0),
+  };
 }
 
 function maxPlaceholder(sql: string): number {
@@ -894,6 +1176,32 @@ interface OutboxEventRow {
   last_error: string | null;
   created_at: Date | string;
   processed_at: Date | string | null;
+}
+
+interface RuleNotificationRow {
+  rule_name: string;
+  entity_name: string;
+  record_id: string;
+  recipient_field: string;
+  recipient: string | null;
+  status: "open" | "resolved";
+  created_at: Date | string;
+  last_seen_at: Date | string;
+  resolved_at: Date | string | null;
+}
+
+function ruleNotificationRow(row: RuleNotificationRow): RuleNotification {
+  return {
+    ruleName: row.rule_name,
+    entityName: row.entity_name,
+    recordId: row.record_id,
+    recipientField: row.recipient_field,
+    recipient: row.recipient,
+    status: row.status,
+    createdAt: timestampValue(row.created_at) ?? "",
+    lastSeenAt: timestampValue(row.last_seen_at) ?? "",
+    resolvedAt: timestampValue(row.resolved_at),
+  };
 }
 
 function outboxRow(row: OutboxEventRow): OutboxEvent {

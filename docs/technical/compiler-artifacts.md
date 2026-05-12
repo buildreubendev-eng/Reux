@@ -162,7 +162,8 @@ The generated client includes:
 - row interfaces for entities and query projections;
 - parameter interfaces for queries and transactions;
 - embedded SQL constants;
-- a `create<Module>Api(db)` factory that calls `runSqlQuery` and `runTransactionSql`.
+- embedded view and rule SQL constants;
+- a `create<Module>Api(db)` factory that calls `runSqlQuery`, `runTransactionSql`, view helpers, and rule helpers.
 
 Entity parameters are represented as the underlying UUID string handle. Decimal values, including bounded forms such as `Decimal<12,2>`, accept `number | string` so callers can avoid losing precision when they need exact PostgreSQL numeric behavior.
 
@@ -173,7 +174,7 @@ node dist/cli.js api-server-ts examples/pilot_reux.dl ./api.js ./config.js ./run
 node dist/cli.js project-api-server-ts ./api.js ./config.js ./runtime.js
 ```
 
-The scaffold intentionally uses Node's built-in `http` module, so it remains dependency-light. It wires `GET /health`, `POST /queries/<queryName>`, and `POST /transactions/<transactionName>` to the generated API client. Applications can copy the scaffold into an app package, then replace or wrap the plain HTTP handling with their framework of choice.
+The scaffold intentionally uses Node's built-in `http` module, so it remains dependency-light. It wires `GET /health`, `POST /queries/<queryName>`, `POST /transactions/<transactionName>`, `POST /views/<viewName>`, and `POST /rules/<ruleName>` to the generated API client. Applications can copy the scaffold into an app package, then replace or wrap the plain HTTP handling with their framework of choice.
 
 Generated servers reject invalid JSON with `400` and request bodies larger than `REUX_HTTP_MAX_BODY_BYTES` with `413`. The default body limit is 1 MiB. Route bodies must be JSON objects whose keys match the generated Reux parameter list; missing required parameters, unknown parameters, and values that do not match the generated parameter kind return `400` before the API client runs.
 

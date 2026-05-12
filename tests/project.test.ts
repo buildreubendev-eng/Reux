@@ -65,6 +65,15 @@ transaction function touchUser(userRef: User) writes User {
   let user = load userRef for update
   save user
 }
+
+view UserOps {
+  userCount = count User
+}
+
+rule touch_attention {
+  when User.id != null
+  then notify owner
+}
 `,
     );
 
@@ -87,6 +96,8 @@ transaction function touchUser(userRef: User) writes User {
           simulations: [],
           transactions: ["touchUser"],
           transitions: [],
+          views: ["UserOps"],
+          rules: ["touch_attention"],
         },
       ],
       diagnostics: [],
@@ -98,6 +109,8 @@ transaction function touchUser(userRef: User) writes User {
         simulations: 0,
         transactions: 1,
         transitions: 0,
+        views: 1,
+        rules: 1,
       },
     });
   });

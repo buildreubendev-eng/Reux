@@ -1,4 +1,4 @@
-import { Program, QueryDeclaration, TransactionDeclaration } from "./ast.js";
+import { Program, QueryDeclaration, RuleDeclaration, TransactionDeclaration, ViewDeclaration } from "./ast.js";
 import { insertEntityStatement, InsertStatement } from "./data.js";
 import { formatSource } from "./formatter.js";
 import { parseSchemaManifest, schemaManifestJson } from "./manifest.js";
@@ -11,10 +11,12 @@ import {
   planMigration,
 } from "./migration.js";
 import { parseProgram } from "./parser.js";
-import { queryToPostgres, schemaToPostgres, transactionToPostgres } from "./postgres.js";
+import { queryToPostgres, ruleToPostgres, schemaToPostgres, transactionToPostgres, viewToPostgres } from "./postgres.js";
 import { buildQueryIr } from "./query-ir.js";
 import { buildSchema, SchemaIr, TransitionIr } from "./schema.js";
 import { buildTransactionIr } from "./transaction-ir.js";
+import { buildViewIr } from "./view-ir.js";
+import { buildRuleIr } from "./rule-ir.js";
 import { buildSimulationCatalog, runSimulationIr, SimulationIr } from "./simulation-ir.js";
 import { describeSimulationPacks, formatSimulationPackReports } from "./simulation-packs.js";
 import { DlAggregateError } from "./errors.js";
@@ -130,6 +132,8 @@ export interface DiagnosticReport {
     simulations: number;
     transactions: number;
     transitions: number;
+    views: number;
+    rules: number;
   };
 }
 
@@ -183,6 +187,8 @@ export function diagnoseSource(source: string): DiagnosticReport {
         simulations: result.simulations.length,
         transactions: result.program.declarations.filter((declaration) => declaration.kind === "transaction").length,
         transitions: result.program.declarations.filter((declaration) => declaration.kind === "transition").length,
+        views: result.program.declarations.filter((declaration) => declaration.kind === "view").length,
+        rules: result.program.declarations.filter((declaration) => declaration.kind === "rule").length,
       },
     };
   } catch (error) {
@@ -227,6 +233,26 @@ export function emitQueryIr(source: string, queryName: string): string {
 export function emitQuerySql(source: string, queryName: string): string {
   const { program, schema } = compileSource(source);
   return queryToPostgres(schema, findQuery(program, queryName));
+}
+
+export function emitViewIr(source: string, viewName: string): string {
+  const { program, schema } = compileSource(source);
+  return `${JSON.stringify(buildViewIr(schema, findView(program, viewName)), null, 2)}\n`;
+}
+
+export function emitViewSql(source: string, viewName: string): string {
+  const { program, schema } = compileSource(source);
+  return viewToPostgres(schema, findView(program, viewName));
+}
+
+export function emitRuleIr(source: string, ruleName: string): string {
+  const { program, schema } = compileSource(source);
+  return `${JSON.stringify(buildRuleIr(schema, findRule(program, ruleName)), null, 2)}\n`;
+}
+
+export function emitRuleSql(source: string, ruleName: string): string {
+  const { program, schema } = compileSource(source);
+  return ruleToPostgres(schema, findRule(program, ruleName));
 }
 
 export function emitInsertStatement(source: string, entityName: string, record: Record<string, unknown>): InsertStatement {
@@ -368,6 +394,26 @@ function findTransaction(program: Program, transactionName: string): Transaction
     throw new Error(`transaction '${transactionName}' was not found`);
   }
   return transaction;
+}
+
+function findView(program: Program, viewName: string): ViewDeclaration {
+  const view = program.declarations.find(
+    (declaration): declaration is ViewDeclaration => declaration.kind === "view" && declaration.name === viewName,
+  );
+  if (!view) {
+    throw new Error(`view '${viewName}' was not found`);
+  }
+  return view;
+}
+
+function findRule(program: Program, ruleName: string): RuleDeclaration {
+  const rule = program.declarations.find(
+    (declaration): declaration is RuleDeclaration => declaration.kind === "rule" && declaration.name === ruleName,
+  );
+  if (!rule) {
+    throw new Error(`rule '${ruleName}' was not found`);
+  }
+  return rule;
 }
 
 function findSimulation(simulations: SimulationIr[], simulationName?: string): SimulationIr {

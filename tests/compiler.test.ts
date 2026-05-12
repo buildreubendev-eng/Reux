@@ -12,6 +12,8 @@ import {
   emitPostgresSchema,
   emitQueryIr,
   emitQuerySql,
+  emitRuleIr,
+  emitRuleSql,
   emitSchemaManifest,
   emitSimulationIr,
   emitSimulationPacks,
@@ -20,6 +22,8 @@ import {
   emitTransitionRules,
   emitTransactionIr,
   emitTransactionSql,
+  emitViewIr,
+  emitViewSql,
   emitWorker,
   explainQuery,
   formatReuxSource,
@@ -461,6 +465,288 @@ entity User {
       ok: false,
       diagnostics: [{ severity: "error", message: "User.email uses unknown type MissingType" }],
     });
+  });
+
+  it("parses compiler-visible view and rule declarations", () => {
+    const result = compileSource(readFileSync("examples/plos_executive.reux", "utf8"));
+    const view = result.program.declarations.find((declaration) => declaration.kind === "view");
+    const rules = result.program.declarations.filter((declaration) => declaration.kind === "rule");
+
+    expect(view).toEqual({
+      kind: "view",
+      name: "DailyCommandBrief",
+      metrics: [
+        { name: "openDecisions", expression: "count Decision where status != Approved" },
+        { name: "overdueFollowUps", expression: "count FollowUp where status == Overdue" },
+        { name: "highRisks", expression: "count RiskItem where severity in [High, Critical]" },
+      ],
+    });
+    expect(rules).toEqual([
+      {
+        kind: "rule",
+        name: "overdue_follow_up",
+        when: "FollowUp.status != Complete and FollowUp.dueDate < today()",
+        actions: [{ source: "mark FollowUp.status = Overdue" }],
+      },
+      {
+        kind: "rule",
+        name: "critical_risk_attention",
+        when: "RiskItem.severity == Critical",
+        actions: [{ source: "notify owner" }],
+      },
+    ]);
+  });
+
+  it("includes views and rules in diagnosis summaries", () => {
+    const report = diagnoseSource(readFileSync("examples/plos_executive.reux", "utf8"));
+
+    expect(report.ok).toBe(true);
+    expect(report.summary).toMatchObject({
+      views: 1,
+      rules: 2,
+    });
+  });
+
+  it("emits View IR and SQL for PLOS Executive command briefs", () => {
+    const source = readFileSync("examples/plos_executive.reux", "utf8");
+    const viewIr = JSON.parse(emitViewIr(source, "DailyCommandBrief"));
+    const sql = emitViewSql(source, "DailyCommandBrief");
+
+    expect(viewIr).toMatchObject({
+      name: "DailyCommandBrief",
+      metrics: [
+        {
+          name: "openDecisions",
+          aggregate: "count",
+          entity: "Decision",
+          table: "decisions",
+          predicate: {
+            fields: [{ entity: "Decision", field: "status", column: "status" }],
+            enumLiterals: [{ enumName: "DecisionStatus", value: "Approved" }],
+          },
+        },
+        {
+          name: "overdueFollowUps",
+          aggregate: "count",
+          entity: "FollowUp",
+          table: "follow_ups",
+        },
+        {
+          name: "highRisks",
+          aggregate: "count",
+          entity: "RiskItem",
+          table: "risk_items",
+          predicate: {
+            enumLiterals: [
+              { enumName: "RiskSeverity", value: "High" },
+              { enumName: "RiskSeverity", value: "Critical" },
+            ],
+          },
+        },
+      ],
+    });
+    expect(sql).toBe(
+      [
+        "SELECT",
+        "  (SELECT count(*) FROM decisions AS \"_row\" WHERE \"_row\".\"status\" <> 'Approved') AS \"openDecisions\",",
+        "  (SELECT count(*) FROM follow_ups AS \"_row\" WHERE \"_row\".\"status\" = 'Overdue') AS \"overdueFollowUps\",",
+        "  (SELECT count(*) FROM risk_items AS \"_row\" WHERE \"_row\".\"severity\" IN ('High', 'Critical')) AS \"highRisks\";",
+      ].join("\n"),
+    );
+  });
+
+  it("rejects duplicate view metrics", () => {
+    expect(() =>
+      compileSource(`module broken
+
+entity Decision {
+  id: Id<Decision> primary generated
+}
+
+view DailyCommandBrief {
+  openDecisions = count Decision
+  openDecisions = count Decision
+}
+`),
+    ).toThrow(DlAggregateError);
+  });
+
+  it("rejects unsupported and invalid view metrics", () => {
+    expect(() =>
+      emitViewIr(
+        `module broken
+
+entity Decision {
+  id: Id<Decision> primary generated
+}
+
+view DailyCommandBrief {
+  openDecisions = sum Decision
+}
+`,
+        "DailyCommandBrief",
+      ),
+    ).toThrow("supports count Entity");
+
+    expect(() =>
+      emitViewSql(
+        `module broken
+
+entity Decision {
+  id: Id<Decision> primary generated
+  status: DecisionStatus
+}
+
+enum DecisionStatus {
+  Pending
+  Approved
+}
+
+view DailyCommandBrief {
+  openDecisions = count Decision where status == Missing
+}
+`,
+        "DailyCommandBrief",
+      ),
+    ).toThrow("unknown value Missing for Decision.status");
+  });
+
+  it("emits Rule IR and SQL for PLOS Executive operating rules", () => {
+    const source = readFileSync("examples/plos_executive.reux", "utf8");
+    const overdueRule = JSON.parse(emitRuleIr(source, "overdue_follow_up"));
+    const overdueSql = emitRuleSql(source, "overdue_follow_up");
+    const notifyRule = JSON.parse(emitRuleIr(source, "critical_risk_attention"));
+    const notifySql = emitRuleSql(source, "critical_risk_attention");
+
+    expect(overdueRule).toMatchObject({
+      name: "overdue_follow_up",
+      entity: "FollowUp",
+      table: "follow_ups",
+      condition: {
+        fields: [
+          { entity: "FollowUp", field: "status", column: "status" },
+          { entity: "FollowUp", field: "dueDate", column: "due_date" },
+        ],
+        enumLiterals: [{ enumName: "FollowUpStatus", value: "Complete" }],
+      },
+      actions: [
+        {
+          kind: "Mark",
+          entity: "FollowUp",
+          field: { field: "status", column: "status" },
+          value: { kind: "Identifier", name: "Overdue" },
+        },
+      ],
+    });
+    expect(overdueSql).toBe(
+      [
+        'UPDATE follow_ups AS "_row"',
+        'SET "status" = \'Overdue\'',
+        'WHERE "_row"."status" <> \'Complete\' AND "_row"."due_date" < CURRENT_DATE',
+        'RETURNING "_row".*;',
+      ].join("\n"),
+    );
+
+    expect(notifyRule).toMatchObject({
+      name: "critical_risk_attention",
+      entity: "RiskItem",
+      table: "risk_items",
+      actions: [
+        {
+          kind: "Notify",
+          recipient: { field: "owner", column: "owner" },
+        },
+      ],
+    });
+    expect(notifySql).toBe(
+      [
+        "WITH matched AS (",
+        '  SELECT "_row"."id"::text AS record_id, "_row"."owner"::text AS recipient',
+        '  FROM risk_items AS "_row"',
+        '  WHERE "_row"."severity" = \'Critical\'',
+        "), inserted_keys AS (",
+        "  INSERT INTO _dl_rule_notifications (rule_name, entity_name, record_id, recipient_field, recipient)",
+        "  SELECT 'critical_risk_attention', 'RiskItem', matched.record_id, 'owner', matched.recipient",
+        "  FROM matched",
+        "  ON CONFLICT (rule_name, entity_name, record_id, recipient_field) DO UPDATE",
+        "  SET recipient = EXCLUDED.recipient,",
+        "      status = 'open',",
+        "      resolved_at = NULL,",
+        "      last_seen_at = now()",
+        "  WHERE _dl_rule_notifications.status <> 'open'",
+        "     OR _dl_rule_notifications.resolved_at IS NOT NULL",
+        "     OR _dl_rule_notifications.recipient IS DISTINCT FROM EXCLUDED.recipient",
+        "  RETURNING rule_name, entity_name, record_id, recipient_field, recipient",
+        ")",
+        "INSERT INTO _dl_outbox (event_type, payload)",
+        "SELECT 'RuleNotificationRequested', jsonb_build_object('rule', rule_name, 'entity', entity_name, 'recordId', record_id, 'recipientField', recipient_field, 'recipient', recipient)",
+        "FROM inserted_keys",
+        "RETURNING id, event_type, payload;",
+      ].join("\n"),
+    );
+  });
+
+  it("rejects unsupported and invalid executable rules", () => {
+    expect(() =>
+      emitRuleSql(
+        `module broken
+
+entity FollowUp {
+  id: Id<FollowUp> primary generated
+  status: FollowUpStatus
+}
+
+enum FollowUpStatus {
+  Open
+  Complete
+}
+
+rule bad_value {
+  when FollowUp.status == Missing
+  then mark FollowUp.status = Complete
+}
+`,
+        "bad_value",
+      ),
+    ).toThrow("unknown value Missing for FollowUp.status");
+
+    expect(() =>
+      emitRuleIr(
+        `module broken
+
+entity FollowUp {
+  id: Id<FollowUp> primary generated
+  status: FollowUpStatus
+}
+
+enum FollowUpStatus {
+  Open
+  Complete
+}
+
+rule bad_action {
+  when FollowUp.status != Complete
+  then archive FollowUp
+}
+`,
+        "bad_action",
+      ),
+    ).toThrow("is not executable yet");
+  });
+
+  it("rejects malformed rule declarations", () => {
+    expect(() =>
+      compileSource(`module broken
+
+entity Decision {
+  id: Id<Decision> primary generated
+}
+
+rule missing_action {
+  when Decision.id != null
+}
+`),
+    ).toThrow("missing a then action");
   });
 
   it("parses simulation declarations and emits prototype forecast runs", () => {
@@ -1112,7 +1398,7 @@ entity Invoice {
   it("emits a TypeScript API client for queries and transactions", () => {
     const api = emitApiClient(readFileSync("examples/pilot_reux.dl", "utf8"), { runtimeImport: "@reux/runtime" });
 
-    expect(api).toContain('import type { Database, QueryRunResult, TransactionRunResult } from "@reux/runtime";');
+    expect(api).toContain('import type { Database, QueryRunResult, RuleRunResult, TransactionRunResult, ViewRunResult } from "@reux/runtime";');
     expect(api).toContain("export interface PilotApi");
     expect(api).toContain("export type OrderStatus = \"Pending\" | \"Paid\" | \"Cancelled\" | \"Refunded\";");
     expect(api).toContain("export interface OpenOrdersParams");
@@ -1123,6 +1409,23 @@ entity Invoice {
     expect(api).toContain("capturePayment(params: CapturePaymentParams): Promise<TransactionRunResult>;");
     expect(api).toContain("return runSqlQuery(db, querySql.openOrders, [params.minTotal]) as Promise<ReuxQueryResult<OpenOrdersRow>>;");
     expect(api).toContain("return runTransactionSql(db, transactionSql.capturePayment, [params.orderRef, params.amount], 3);");
+  });
+
+  it("emits TypeScript API helpers for views and rules", () => {
+    const api = emitApiClient(readFileSync("examples/plos_executive.reux", "utf8"), { runtimeImport: "@reux/runtime" });
+
+    expect(api).toContain('import { runRuleSql, runSqlQuery, runTransactionSql } from "@reux/runtime";');
+    expect(api).toContain("views: {");
+    expect(api).toContain("DailyCommandBrief(): Promise<ViewRunResult>;");
+    expect(api).toContain("rules: {");
+    expect(api).toContain("overdue_follow_up(): Promise<RuleRunResult>;");
+    expect(api).toContain("const viewSql = {");
+    expect(api).toContain("DailyCommandBrief:");
+    expect(api).toContain("const ruleSql = {");
+    expect(api).toContain("critical_risk_attention:");
+    expect(api).toContain("const result = await runSqlQuery(db, viewSql.DailyCommandBrief, []);");
+    expect(api).toContain("return { ...result, row: result.rows[0] ?? null } as ViewRunResult;");
+    expect(api).toContain("return runRuleSql(db, ruleSql.overdue_follow_up);");
   });
 
   it("emits a TypeScript HTTP API server scaffold", () => {
@@ -1149,6 +1452,20 @@ entity Invoice {
     expect(server).toContain('sendJson(response, 413, { error: "request body too large" });');
     expect(server).toContain('sendJson(response, 400, { error: "invalid JSON request body" });');
     expect(server).toContain("Reux API server listening on http://127.0.0.1:${port}");
+  });
+
+  it("emits HTTP routes for generated views and rules", () => {
+    const server = emitApiServer(readFileSync("examples/plos_executive.reux", "utf8"), {
+      apiImport: "./plos-api.js",
+      configImport: "./plos-config.js",
+      runtimeImport: "./plos-runtime.js",
+    });
+
+    expect(server).toContain("views: {");
+    expect(server).toContain("DailyCommandBrief: async (body: unknown) => api.views.DailyCommandBrief(),");
+    expect(server).toContain("rules: {");
+    expect(server).toContain("overdue_follow_up: async (body: unknown) => api.rules.overdue_follow_up(),");
+    expect(server).toContain("return value === \"queries\" || value === \"transactions\" || value === \"views\" || value === \"rules\";");
   });
 
   it("emits a TypeScript worker scaffold for outbox events", () => {

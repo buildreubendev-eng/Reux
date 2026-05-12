@@ -16,6 +16,8 @@ import {
   emitPostgresSchema,
   emitQueryIr,
   emitQuerySql,
+  emitRuleIr,
+  emitRuleSql,
   emitSchemaManifest,
   emitSimulationIr,
   emitReuxSimulationExecutionFixture,
@@ -25,6 +27,8 @@ import {
   emitTransitionRules,
   emitTransactionIr,
   emitTransactionSql,
+  emitViewIr,
+  emitViewSql,
   emitWorker,
   explainQuery,
   transactionRetryAttempts,
@@ -42,6 +46,7 @@ import {
   claimOutboxEvents,
   createPostgresDatabase,
   listOutboxEvents,
+  listRuleNotifications,
   markOutboxFailed,
   markOutboxProcessed,
   migrationStatus,
@@ -50,7 +55,12 @@ import {
   requeueOutboxEvent,
   requeueStaleOutboxEvents,
   parseJsonParams,
+  reopenRuleNotification,
+  resolveRuleNotification,
+  runRule,
+  runRules,
   runTransactionSql,
+  runView,
   runSqlQuery,
 } from "./runtime.js";
 
@@ -186,6 +196,21 @@ try {
       const events = await requeueStaleOutboxEvents(db, olderThanSeconds, Number.isFinite(limit) ? limit : 50);
       console.log(JSON.stringify(events, null, 2));
     });
+  } else if (command === "rule-notifications-list") {
+    const { status, limit } = parseRuleNotificationListArgs(file, extra);
+    await withDatabase(async (db) => {
+      console.log(JSON.stringify(await listRuleNotifications(db, limit, status), null, 2));
+    });
+  } else if (command === "rule-notification-resolve") {
+    const key = parseRuleNotificationKey(file, extra, extra2, args[4], command);
+    await withDatabase(async (db) => {
+      console.log(JSON.stringify(await resolveRuleNotification(db, key), null, 2));
+    });
+  } else if (command === "rule-notification-reopen") {
+    const key = parseRuleNotificationKey(file, extra, extra2, args[4], command);
+    await withDatabase(async (db) => {
+      console.log(JSON.stringify(await reopenRuleNotification(db, key), null, 2));
+    });
   } else if (command === "project-check") {
     const config = loadConfig();
     const files = discoverSourceFiles(config);
@@ -194,7 +219,9 @@ try {
     }
     for (const sourceFile of files) {
       const result = compileSource(readFileSync(sourceFile.path, "utf8"));
-      console.log(`ok: ${sourceFile.relativePath} (${result.schema.entities.length} entities, ${result.schema.enums.length} enums, ${result.simulations.length} simulations)`);
+      const views = result.program.declarations.filter((declaration) => declaration.kind === "view").length;
+      const rules = result.program.declarations.filter((declaration) => declaration.kind === "rule").length;
+      console.log(`ok: ${sourceFile.relativePath} (${result.schema.entities.length} entities, ${result.schema.enums.length} enums, ${result.simulations.length} simulations, ${views} views, ${rules} rules)`);
     }
     console.log(`checked ${files.length} source file${files.length === 1 ? "" : "s"}`);
   } else if (command === "project-summary") {
@@ -290,6 +317,40 @@ try {
     } else {
       console.log(explainQuery(source, file));
     }
+  } else if (command === "project-view-ir" || command === "project-view-sql" || command === "project-view-run") {
+    if (!file) {
+      throw new Error(`${command} requires a view name`);
+    }
+    const source = readSingleProjectSource(loadConfig(), command);
+    if (command === "project-view-ir") {
+      console.log(emitViewIr(source, file));
+    } else if (command === "project-view-sql") {
+      console.log(emitViewSql(source, file));
+    } else {
+      await withDatabase(async (db) => {
+        console.log(JSON.stringify((await runView(db, source, file)).row, null, 2));
+      });
+    }
+  } else if (command === "project-rule-ir" || command === "project-rule-sql" || command === "project-rule-run") {
+    if (!file) {
+      throw new Error(`${command} requires a rule name`);
+    }
+    const source = readSingleProjectSource(loadConfig(), command);
+    if (command === "project-rule-ir") {
+      console.log(emitRuleIr(source, file));
+    } else if (command === "project-rule-sql") {
+      console.log(emitRuleSql(source, file));
+    } else {
+      await withDatabase(async (db) => {
+        console.log(JSON.stringify(await runRule(db, source, file), null, 2));
+      });
+    }
+  } else if (command === "project-rules-run") {
+    const source = readSingleProjectSource(loadConfig(), command);
+    const ruleNames = args.slice(1);
+    await withDatabase(async (db) => {
+      console.log(JSON.stringify(await runRules(db, source, ruleNames), null, 2));
+    });
   } else if (command === "project-tx-ir" || command === "project-tx-sql") {
     if (!file) {
       throw new Error(`${command} requires a transaction function name`);
@@ -429,7 +490,9 @@ try {
       if (!report.ok) process.exitCode = 1;
     } else if (command === "check") {
       const result = compileSource(source);
-      console.log(`ok: ${basename(file)} (${result.schema.entities.length} entities, ${result.schema.enums.length} enums, ${result.simulations.length} simulations)`);
+      const views = result.program.declarations.filter((declaration) => declaration.kind === "view").length;
+      const rules = result.program.declarations.filter((declaration) => declaration.kind === "rule").length;
+      console.log(`ok: ${basename(file)} (${result.schema.entities.length} entities, ${result.schema.enums.length} enums, ${result.simulations.length} simulations, ${views} views, ${rules} rules)`);
     } else if (command === "sql") {
       console.log(emitPostgresSchema(source));
     } else if (command === "manifest") {
@@ -462,6 +525,45 @@ try {
         throw new Error("query-sql requires a query name");
       }
       console.log(emitQuerySql(source, extra));
+    } else if (command === "view-ir") {
+      if (!extra) {
+        throw new Error("view-ir requires a view name");
+      }
+      console.log(emitViewIr(source, extra));
+    } else if (command === "view-sql") {
+      if (!extra) {
+        throw new Error("view-sql requires a view name");
+      }
+      console.log(emitViewSql(source, extra));
+    } else if (command === "view-run") {
+      if (!extra) {
+        throw new Error("view-run requires a view name");
+      }
+      await withDatabase(async (db) => {
+        console.log(JSON.stringify((await runView(db, source, extra)).row, null, 2));
+      });
+    } else if (command === "rule-ir") {
+      if (!extra) {
+        throw new Error("rule-ir requires a rule name");
+      }
+      console.log(emitRuleIr(source, extra));
+    } else if (command === "rule-sql") {
+      if (!extra) {
+        throw new Error("rule-sql requires a rule name");
+      }
+      console.log(emitRuleSql(source, extra));
+    } else if (command === "rule-run") {
+      if (!extra) {
+        throw new Error("rule-run requires a rule name");
+      }
+      await withDatabase(async (db) => {
+        console.log(JSON.stringify(await runRule(db, source, extra), null, 2));
+      });
+    } else if (command === "rules-run") {
+      const ruleNames = args.slice(2);
+      await withDatabase(async (db) => {
+        console.log(JSON.stringify(await runRules(db, source, ruleNames), null, 2));
+      });
     } else if (command === "query-run") {
       if (!extra) {
         throw new Error("query-run requires a query name");
@@ -639,6 +741,48 @@ function isOutboxListStatus(value: string): value is OutboxListStatus {
   return value === "pending" || value === "processing" || value === "processed" || value === "failed" || value === "dead" || value === "all";
 }
 
+function parseRuleNotificationListArgs(
+  first: string | undefined,
+  second: string | undefined,
+): { status: "open" | "resolved" | "all"; limit: number } {
+  const defaultLimit = 50;
+  if (!first) {
+    return { status: "open", limit: defaultLimit };
+  }
+
+  const firstAsLimit = Number.parseInt(first, 10);
+  if (Number.isFinite(firstAsLimit) && String(firstAsLimit) === first) {
+    return { status: "open", limit: firstAsLimit };
+  }
+
+  if (!isRuleNotificationListStatus(first)) {
+    throw new Error(`unknown rule notification status ${first}`);
+  }
+
+  const secondAsLimit = second ? Number.parseInt(second, 10) : defaultLimit;
+  return {
+    status: first,
+    limit: Number.isFinite(secondAsLimit) ? secondAsLimit : defaultLimit,
+  };
+}
+
+function isRuleNotificationListStatus(value: string): value is "open" | "resolved" | "all" {
+  return value === "open" || value === "resolved" || value === "all";
+}
+
+function parseRuleNotificationKey(
+  ruleName: string | undefined,
+  entityName: string | undefined,
+  recordId: string | undefined,
+  recipientField: string | undefined,
+  commandName: string,
+) {
+  if (!ruleName || !entityName || !recordId || !recipientField) {
+    throw new Error(`${commandName} requires <rule-name> <entity-name> <record-id> <recipient-field>`);
+  }
+  return { ruleName, entityName, recordId, recipientField };
+}
+
 function parseApiServerOptions(apiImport?: string, configImport?: string, runtimeImport?: string): Parameters<typeof emitApiServer>[1] {
   return {
     apiImport,
@@ -715,6 +859,8 @@ function formatProjectSummary(summary: ProjectSummary): string {
     `simulations: ${summary.totals.simulations}`,
     `transactions: ${summary.totals.transactions}`,
     `transitions: ${summary.totals.transitions}`,
+    `views: ${summary.totals.views}`,
+    `rules: ${summary.totals.rules}`,
     "",
   ];
 
@@ -735,6 +881,8 @@ function formatProjectSummary(summary: ProjectSummary): string {
     lines.push(`  simulations: ${formatList(file.simulations)}`);
     lines.push(`  transactions: ${formatList(file.transactions)}`);
     lines.push(`  transitions: ${formatList(file.transitions)}`);
+    lines.push(`  views: ${formatList(file.views)}`);
+    lines.push(`  rules: ${formatList(file.rules)}`);
   }
 
   return lines.join("\n");
@@ -757,6 +905,8 @@ function formatDiagnosticReport(path: string, report: ReturnType<typeof diagnose
       `  simulations: ${summary.simulations}`,
       `  transactions: ${summary.transactions}`,
       `  transitions: ${summary.transitions}`,
+      `  views: ${summary.views}`,
+      `  rules: ${summary.rules}`,
     ].join("\n");
   }
 

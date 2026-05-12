@@ -5,8 +5,10 @@ import {
   Program,
   QueryDeclaration,
   QueryProjection,
+  RuleDeclaration,
   TransitionDeclaration,
   TypeRef,
+  ViewDeclaration,
 } from "./ast.js";
 import { DlAggregateError } from "./errors.js";
 import { parseObjectLiteral } from "./object-literal.js";
@@ -99,6 +101,8 @@ export function buildSchema(program: Program): SchemaIr {
   const enumDecls = program.declarations.filter((decl) => decl.kind === "enum");
   const eventDecls = program.declarations.filter((decl): decl is EventDeclaration => decl.kind === "event");
   const queryDecls = program.declarations.filter((decl): decl is QueryDeclaration => decl.kind === "query");
+  const viewDecls = program.declarations.filter((decl): decl is ViewDeclaration => decl.kind === "view");
+  const ruleDecls = program.declarations.filter((decl): decl is RuleDeclaration => decl.kind === "rule");
   const transactionDecls = program.declarations.filter((decl) => decl.kind === "transaction");
   const transitionDecls = program.declarations.filter((decl): decl is TransitionDeclaration => decl.kind === "transition");
   const entityNames = new Set(entityDecls.map((entity) => entity.name));
@@ -115,6 +119,12 @@ export function buildSchema(program: Program): SchemaIr {
   }
   for (const duplicate of duplicates(queryDecls.map((query) => query.name))) {
     diagnostics.push(`duplicate query declaration ${duplicate}`);
+  }
+  for (const duplicate of duplicates(viewDecls.map((view) => view.name))) {
+    diagnostics.push(`duplicate view declaration ${duplicate}`);
+  }
+  for (const duplicate of duplicates(ruleDecls.map((rule) => rule.name))) {
+    diagnostics.push(`duplicate rule declaration ${duplicate}`);
   }
   for (const duplicate of duplicates(transactionDecls.map((transaction) => transaction.name))) {
     diagnostics.push(`duplicate transaction declaration ${duplicate}`);
@@ -184,6 +194,31 @@ export function buildSchema(program: Program): SchemaIr {
     }
     for (const param of query.parameters) {
       validateType({ name: param.name, type: param.type, attributes: emptyAttrs(), source: param.type.raw }, `query ${query.name}`, entityNames, enumNames, diagnostics);
+    }
+  }
+
+  for (const view of viewDecls) {
+    for (const duplicate of duplicates(view.metrics.map((metric) => metric.name))) {
+      diagnostics.push(`view ${view.name} declares duplicate metric ${duplicate}`);
+    }
+    for (const metric of view.metrics) {
+      if (!metric.expression.trim()) {
+        diagnostics.push(`view ${view.name}.${metric.name} must declare an expression`);
+      }
+    }
+  }
+
+  for (const rule of ruleDecls) {
+    if (!rule.when.trim()) {
+      diagnostics.push(`rule ${rule.name} must declare a non-empty when clause`);
+    }
+    if (rule.actions.length === 0) {
+      diagnostics.push(`rule ${rule.name} must declare at least one action`);
+    }
+    for (const action of rule.actions) {
+      if (!action.source.trim()) {
+        diagnostics.push(`rule ${rule.name} declares an empty action`);
+      }
     }
   }
 

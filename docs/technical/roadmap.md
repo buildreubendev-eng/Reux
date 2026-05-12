@@ -8,7 +8,7 @@ Reux is currently a data-native language prototype that compiles a focused schem
 
 Implemented today:
 
-- Schema declarations for modules, entities, enums, typed events, indexes, checks, generated IDs, references, transition rules, bounded decimals, and currency codes.
+- Schema declarations for modules, entities, enums, typed events, indexes, checks, generated IDs, references, transition rules, executable count-based views, executable single-entity rules, bounded decimals, and currency codes.
 - Query declarations with explicit joins, left joins, reusable filter fragments, compound predicates, cursor pagination, inferred record result types, ordering, limits, record projections, and a narrow aggregation subset.
 - Transaction functions with row locking, mutations, inserts, retry metadata, idempotency keys, require guards, transition guards, typed durable outbox events, and after-commit hooks.
 - Simulation declarations with domain dimensions, advisory PLOS/business domain pack reports with coverage scoring, static assumptions, lightweight unit-compatibility checks, formulas, maximize/minimize objectives, shared and scenario-specific time-varying changes, scenarios, forecast windows, Simulation IR, period-level comparison reports, objective-aware metric rankings, explanation summaries, generated TypeScript contracts, typed comparison helpers, and prototype formula forecast runners for finance, habits, and workforce examples.
@@ -49,7 +49,8 @@ The next big engineering work should move in this order.
 5. Project packaging: complete for the prototype with typed package entrypoints, packaged docs/examples/editor assets, tarball guidance, versioning notes, release preflight checks, package dry-run command, public release plan, and cross-repo upgrade guidance.
 6. Editor tooling: complete for the prototype with CLI formatting, a local VS Code grammar, CLI-backed line-aware diagnostics, heuristic symbol/field diagnostic targeting, CLI-backed document formatting, lightweight completions, query-alias field completions, insert/enqueue object-field completions, hover text, and current-file go-to-definition for `.dl` and `.reux` files; future work is compiler-backed semantic completion, cross-file navigation, rename, and a proper language-server process.
 7. Additional pilots: complete for this prototype with logistics and clinic domains validating Reux beyond commerce; future work is deeper product-specific pilots for PLOS and enterprise operations.
-8. Query expressiveness follow-through: broaden expression typing beyond simple projections, add reusable join fragments, support multi-column cursors, and deepen aggregate semantics.
+8. Operating-model language layer: started with `view` and `rule` declarations plus IR and PostgreSQL lowering for count-based dashboard metrics, mark actions, and duplicate-safe outbox notification actions; next work is richer typed view expressions, read-model API generation, notification reset/escalation policies, and running rules as deterministic jobs or transaction guards.
+9. Query expressiveness follow-through: broaden expression typing beyond simple projections, add reusable join fragments, support multi-column cursors, and deepen aggregate semantics.
 
 ## Deliberately Out Of Scope For Now
 
